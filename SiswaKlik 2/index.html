@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiswaKlik | Gerbang Mahasiswa</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-[#f8f9fa] min-h-screen text-gray-800 flex">
+
+    <div id="sidebar-container"></div>
+
+    <div class="flex-1">
+        <nav class="bg-white/80 backdrop-blur-md border-b border-gray-200 sticky top-0 z-50">
+            <div class="max-w-7xl mx-auto px-6 h-16 flex justify-between items-center">
+                <div class="flex items-center gap-4">
+                    <span class="font-semibold text-gray-900">SiswaKlik Overview</span>
+                </div>
+                <div class="flex items-center gap-2 text-xs text-green-600 bg-green-50 px-3 py-1.5 rounded-full font-medium">
+                    <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    Synced with GitHub
+                </div>
+            </div>
+        </nav>
+
+        <main id="main-content" class="max-w-7xl mx-auto p-6 lg:p-10">
+            </main>
+    </div>
+
+    <script>
+        // Fungsi untuk load fail HTML ke dalam element
+        async function loadComponent(id, file) {
+            const response = await fetch(file);
+            const content = await response.text();
+            document.getElementById(id).innerHTML = content;
+        }
+
+        // Load komponen awal
+        window.onload = () => {
+            loadComponent('sidebar-container', 'components/sidebar.html');
+            loadComponent('main-content', 'components/dashboard.html');
+        };
+    </script>
+</body>
+</html>
