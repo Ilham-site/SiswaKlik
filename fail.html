@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiswaKlik | Fail Peribadi</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+</head>
+<body class="bg-[#f8f9fa] min-h-screen flex">
+
+    <aside class="w-[260px] bg-white border-r border-gray-200 hidden lg:flex flex-col sticky top-0 h-screen">
+        <div class="p-6 border-b border-gray-100 flex items-center gap-3">
+            <div class="bg-blue-600 p-2 rounded-lg text-white"><i class="fas fa-graduation-cap"></i></div>
+            <span class="text-xl font-bold text-gray-900">SiswaKlik</span>
+        </div>
+        <nav class="flex-1 p-4 space-y-2">
+            <a href="index.html" class="flex items-center gap-3 p-3 text-gray-500 hover:bg-gray-50 rounded-xl transition">
+                <i class="fas fa-th-large w-5"></i> Dashboard
+            </a>
+            <a href="kalendar.html" class="flex items-center gap-3 p-3 text-gray-500 hover:bg-gray-50 rounded-xl transition">
+                <i class="fas fa-calendar-alt w-5"></i> Kalendar
+            </a>
+            <a href="fail.html" class="flex items-center gap-3 p-3 bg-blue-50 text-blue-600 rounded-xl font-semibold">
+                <i class="fas fa-file-alt w-5"></i> Fail Peribadi
+            </a>
+        </nav>
+    </aside>
+
+    <main class="flex-1 p-10">
+        <div class="flex justify-between items-center mb-8">
+            <h1 class="text-3xl font-bold text-gray-900">Fail Peribadi</h1>
+            <button class="bg-blue-600 text-white px-4 py-2 rounded-lg text-sm font-bold shadow-md">+ Muat Naik Fail</button>
+        </div>
+
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+            <div class="bg-white p-6 rounded-2xl border text-center">
+                <i class="fas fa-file-pdf text-red-500 text-4xl mb-4"></i>
+                <p class="font-bold text-sm">Nota_Termo_Bab1.pdf</p>
+                <p class="text-[10px] text-gray-400 mt-1">2.4 MB • 2 hari lepas</p>
+            </div>
+            <div class="bg-white p-6 rounded-2xl border text-center">
+                <i class="fas fa-file-word text-blue-500 text-4xl mb-4"></i>
+                <p class="font-bold text-sm">Draft_Laporan_Lab.docx</p>
+                <p class="text-[10px] text-gray-400 mt-1">1.1 MB • 5 jam lepas</p>
+            </div>
+        </div>
+    </main>
+</body>
+</html>
