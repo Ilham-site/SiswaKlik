@@ -1,7 +1,7 @@
 <div class="animate-fade-in space-y-6">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] text-white shadow-xl">
         <div>
-            <h2 class="text-3xl font-bold mb-1">Rancang Hari Anda, Sahabat! 🌟</h2>
+            <h2 class="text-3xl font-bold mb-1">Rancang Hari Anda, Genius! 🌟</h2>
             <p class="opacity-90 font-medium">Urus masa dengan bijak untuk keberkatan ilmu.</p>
         </div>
         <div class="flex flex-wrap gap-3">
@@ -15,7 +15,7 @@
     </div>
 
     <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors duration-300">
-        <div id='calendar' class="min-h-[600px]"></div>
+        <div id='calendar' class="min-h-[600px] text-gray-800 dark:text-slate-200"></div>
     </div>
 
     <div class="bg-blue-50 dark:bg-slate-800/50 p-6 rounded-[2rem] border border-blue-100 dark:border-slate-700">
@@ -41,31 +41,31 @@
 
 <div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-zoom-in">
-        <div class="p-8">
+        <div class="p-8 text-center md:text-left">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold text-gray-800 dark:text-white">Tambah Aktiviti Baru</h3>
-                <button onclick="closeEventModal()" class="text-gray-400 hover:text-red-500"><i class="fas fa-times-circle text-2xl"></i></button>
+                <button onclick="closeEventModal()" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times-circle text-2xl"></i></button>
             </div>
             
-            <form id="eventForm" class="space-y-4 text-left">
-                <input type="text" placeholder="Tajuk Aktiviti (cth: Lab Test)" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500" required>
+            <form id="eventForm" class="space-y-4">
+                <input type="text" placeholder="Tajuk Aktiviti (cth: Lab Test)" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white dark:placeholder-gray-500" required>
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="text-xs font-bold text-gray-400 ml-2 uppercase">Mula</label>
-                        <input type="datetime-local" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500">
+                        <input type="datetime-local" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white">
                     </div>
                     <div>
                         <label class="text-xs font-bold text-gray-400 ml-2 uppercase">Tamat</label>
-                        <input type="datetime-local" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500">
+                        <input type="datetime-local" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white">
                     </div>
                 </div>
 
-                <textarea placeholder="Description" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 h-24"></textarea>
+                <textarea placeholder="Description" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 h-24 dark:text-white dark:placeholder-gray-500"></textarea>
 
                 <div>
                     <label class="text-xs font-bold text-gray-400 ml-2 uppercase mb-2 block">Pilihan Warna Tema</label>
-                    <div class="flex gap-3 px-2">
+                    <div class="flex justify-center md:justify-start gap-3 px-2">
                         <div class="w-8 h-8 rounded-full bg-red-500 cursor-pointer ring-offset-2 hover:ring-2 ring-red-500" onclick="selectColor('#ef4444')"></div>
                         <div class="w-8 h-8 rounded-full bg-orange-500 cursor-pointer ring-offset-2 hover:ring-2 ring-orange-500" onclick="selectColor('#f97316')"></div>
                         <div class="w-8 h-8 rounded-full bg-yellow-400 cursor-pointer ring-offset-2 hover:ring-2 ring-yellow-400" onclick="selectColor('#facd15')"></div>
@@ -100,9 +100,16 @@
     .fc-daygrid-day-top { flex-direction: row-reverse !important; justify-content: space-between !important; padding: 8px !important; }
     .hijri-date { font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
     
-    .dark .fc .fc-toolbar-title { color: white; }
-    .dark .fc-daygrid-day { background: #0f172a; }
+    /* DARK MODE FIXES */
+    .dark .fc .fc-toolbar-title { color: white !important; }
+    .dark .fc-daygrid-day { background: transparent !important; }
+    .dark .fc-theme-standard td, .dark .fc-theme-standard th { border-color: #334155 !important; }
     .dark .fc-day-today { background: #1e293b !important; }
+    .dark .fc-daygrid-day-number { color: #f1f5f9 !important; }
+    .dark .fc-col-header-cell-cushion { color: #94a3b8 !important; }
+    
+    /* Gaya untuk butang navigasi kalendar dalam dark mode */
+    .dark .fc .fc-button-primary:disabled { background-color: #1e293b !important; opacity: 0.5; }
 
     @keyframes slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .animate-slide-up { animation: slide-up 0.4s ease-out; }
@@ -121,9 +128,7 @@
                 center: 'title',
                 right: 'dayGridMonth,timeGridWeek'
             },
-            // Logic untuk paparkan tarikh Hijrah
             dayCellDidMount: function(arg) {
-                // Sini kita boleh integrasi library HijriJS
                 let hijri = new Intl.DateTimeFormat('ms-MY-u-ca-islamic-uma', {day:'numeric', month:'short'}).format(arg.date);
                 let container = arg.el.querySelector('.fc-daygrid-day-top');
                 let span = document.createElement('span');
@@ -153,7 +158,6 @@
             display.classList.remove('hidden');
             if (navigator.geolocation) {
                 navigator.geolocation.getCurrentPosition(async (pos) => {
-                    // Integrasi API Aladhan (Waktu Solat berdasarkan GPS)
                     const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&method=11`);
                     const data = await res.json();
                     const times = data.data.timings;
@@ -181,6 +185,5 @@
             return;
         }
         alert("Menghubungkan dengan Google Calendar API... Memuat turun jadual akademik anda.");
-        // Guna gapi.client.calendar.events.list
     }
 </script>
