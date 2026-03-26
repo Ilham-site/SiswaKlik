@@ -1,7 +1,7 @@
 <div class="animate-fade-in space-y-6">
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] text-white shadow-xl">
         <div>
-            <h2 class="text-3xl font-bold mb-1">Rancang Hari Anda, Genius! 🌟</h2>
+            <h2 id="welcomeGreeting" class="text-3xl font-bold mb-1">Rancang Hari Anda, Genius! 🌟</h2>
             <p class="opacity-90 font-medium">Urus masa dengan bijak untuk keberkatan ilmu.</p>
         </div>
         <div class="flex flex-wrap gap-3">
@@ -15,7 +15,7 @@
     </div>
 
     <div class="bg-white dark:bg-slate-900 p-6 rounded-[2.5rem] shadow-sm border border-gray-100 dark:border-slate-800 transition-colors duration-300">
-        <div id='calendar' class="min-h-[600px] text-gray-800 dark:text-slate-200"></div>
+        <div id='calendar' class="min-h-[600px]"></div>
     </div>
 
     <div class="bg-blue-50 dark:bg-slate-800/50 p-6 rounded-[2rem] border border-blue-100 dark:border-slate-700">
@@ -34,45 +34,44 @@
                 <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
             </label>
         </div>
-        <div id="prayerDisplay" class="hidden mt-6 grid grid-cols-2 md:grid-cols-6 gap-4 animate-slide-up">
-            </div>
+        <div id="prayerDisplay" class="hidden mt-6 grid grid-cols-2 md:grid-cols-6 gap-4 animate-slide-up"></div>
     </div>
 </div>
 
 <div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
     <div class="bg-white dark:bg-slate-900 w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-zoom-in">
-        <div class="p-8 text-center md:text-left">
+        <div class="p-8">
             <div class="flex justify-between items-center mb-6">
                 <h3 class="text-2xl font-bold text-gray-800 dark:text-white">Tambah Aktiviti Baru</h3>
-                <button onclick="closeEventModal()" class="text-gray-400 hover:text-red-500 transition-colors"><i class="fas fa-times-circle text-2xl"></i></button>
+                <button onclick="closeEventModal()" class="text-gray-400 hover:text-red-500"><i class="fas fa-times-circle text-2xl"></i></button>
             </div>
             
-            <form id="eventForm" class="space-y-4">
-                <input type="text" placeholder="Tajuk Aktiviti (cth: Lab Test)" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white dark:placeholder-gray-500" required>
+            <form id="eventForm" class="space-y-4 text-left">
+                <input type="text" id="eventTitle" placeholder="Tajuk Aktiviti (cth: Lab Test)" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white" required>
                 
                 <div class="grid grid-cols-2 gap-4">
                     <div>
                         <label class="text-xs font-bold text-gray-400 ml-2 uppercase">Mula</label>
-                        <input type="datetime-local" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white">
+                        <input type="datetime-local" id="startTime" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white">
                     </div>
                     <div>
                         <label class="text-xs font-bold text-gray-400 ml-2 uppercase">Tamat</label>
-                        <input type="datetime-local" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white">
+                        <input type="datetime-local" id="endTime" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 dark:text-white">
                     </div>
                 </div>
 
-                <textarea placeholder="Description" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 h-24 dark:text-white dark:placeholder-gray-500"></textarea>
+                <textarea id="eventDesc" placeholder="Description" class="w-full px-5 py-4 bg-gray-50 dark:bg-slate-800 border-none rounded-2xl focus:ring-2 focus:ring-blue-500 h-24 dark:text-white"></textarea>
 
                 <div>
                     <label class="text-xs font-bold text-gray-400 ml-2 uppercase mb-2 block">Pilihan Warna Tema</label>
-                    <div class="flex justify-center md:justify-start gap-3 px-2">
-                        <div class="w-8 h-8 rounded-full bg-red-500 cursor-pointer ring-offset-2 hover:ring-2 ring-red-500" onclick="selectColor('#ef4444')"></div>
-                        <div class="w-8 h-8 rounded-full bg-orange-500 cursor-pointer ring-offset-2 hover:ring-2 ring-orange-500" onclick="selectColor('#f97316')"></div>
-                        <div class="w-8 h-8 rounded-full bg-yellow-400 cursor-pointer ring-offset-2 hover:ring-2 ring-yellow-400" onclick="selectColor('#facd15')"></div>
-                        <div class="w-8 h-8 rounded-full bg-green-500 cursor-pointer ring-offset-2 hover:ring-2 ring-green-500" onclick="selectColor('#22c55e')"></div>
-                        <div class="w-8 h-8 rounded-full bg-blue-500 cursor-pointer ring-offset-2 hover:ring-2 ring-blue-500 border-2 border-white" onclick="selectColor('#3b82f6')"></div>
-                        <div class="w-8 h-8 rounded-full bg-indigo-600 cursor-pointer ring-offset-2 hover:ring-2 ring-indigo-600" onclick="selectColor('#4f46e5')"></div>
-                        <div class="w-8 h-8 rounded-full bg-purple-600 cursor-pointer ring-offset-2 hover:ring-2 ring-purple-600" onclick="selectColor('#9333ea')"></div>
+                    <div id="colorPicker" class="flex gap-3 px-2">
+                        <div class="color-dot w-8 h-8 rounded-full bg-[#ef4444] cursor-pointer ring-offset-2 transition" onclick="selectColor('#ef4444', this)"></div>
+                        <div class="color-dot w-8 h-8 rounded-full bg-[#f97316] cursor-pointer ring-offset-2 transition" onclick="selectColor('#f97316', this)"></div>
+                        <div class="color-dot w-8 h-8 rounded-full bg-[#facd15] cursor-pointer ring-offset-2 transition" onclick="selectColor('#facd15', this)"></div>
+                        <div class="color-dot w-8 h-8 rounded-full bg-[#22c55e] cursor-pointer ring-offset-2 transition" onclick="selectColor('#22c55e', this)"></div>
+                        <div class="color-dot w-8 h-8 rounded-full bg-[#3b82f6] cursor-pointer ring-offset-2 transition ring-2 ring-blue-500" onclick="selectColor('#3b82f6', this)"></div>
+                        <div class="color-dot w-8 h-8 rounded-full bg-[#4f46e5] cursor-pointer ring-offset-2 transition" onclick="selectColor('#4f46e5', this)"></div>
+                        <div class="color-dot w-8 h-8 rounded-full bg-[#9333ea] cursor-pointer ring-offset-2 transition" onclick="selectColor('#9333ea', this)"></div>
                     </div>
                 </div>
 
@@ -89,27 +88,23 @@
 </div>
 
 <style>
-    /* Custom Styling for FullCalendar */
+    /* FullCalendar Dark Mode Fixes */
     .fc { --fc-border-color: #f1f5f9; font-family: inherit; }
     .fc-theme-standard td, .fc-theme-standard th { border: 1px solid #f1f5f9; }
     .fc .fc-toolbar-title { font-size: 1.25rem !important; font-weight: 800; color: #1e293b; }
-    .fc .fc-button-primary { background-color: #3b82f6; border: none; border-radius: 12px; font-weight: bold; padding: 0.6rem 1rem; }
+    .fc .fc-button-primary { background-color: #3b82f6 !important; border: none !important; border-radius: 12px !important; font-weight: bold; }
     .fc-day-today { background: #eff6ff !important; }
     
-    /* Hijri Date Display Styling */
     .fc-daygrid-day-top { flex-direction: row-reverse !important; justify-content: space-between !important; padding: 8px !important; }
     .hijri-date { font-size: 0.7rem; color: #94a3b8; font-weight: 600; }
     
-    /* DARK MODE FIXES */
-    .dark .fc .fc-toolbar-title { color: white !important; }
-    .dark .fc-daygrid-day { background: transparent !important; }
-    .dark .fc-theme-standard td, .dark .fc-theme-standard th { border-color: #334155 !important; }
-    .dark .fc-day-today { background: #1e293b !important; }
+    /* CSS for Dark Mode visibility */
+    .dark .fc .fc-toolbar-title { color: #f1f5f9 !important; }
     .dark .fc-daygrid-day-number { color: #f1f5f9 !important; }
     .dark .fc-col-header-cell-cushion { color: #94a3b8 !important; }
-    
-    /* Gaya untuk butang navigasi kalendar dalam dark mode */
-    .dark .fc .fc-button-primary:disabled { background-color: #1e293b !important; opacity: 0.5; }
+    .dark .fc-theme-standard td, .dark .fc-theme-standard th { border-color: #334155 !important; }
+    .dark .fc-day-today { background: #1e293b !important; }
+    .dark .fc-daygrid-day { background: transparent !important; }
 
     @keyframes slide-up { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     .animate-slide-up { animation: slide-up 0.4s ease-out; }
@@ -117,8 +112,14 @@
 
 <script>
     var calendar;
+    let selectedColorCode = '#3b82f6';
 
     document.addEventListener('DOMContentLoaded', function() {
+        const userData = JSON.parse(localStorage.getItem('siswaklik_user'));
+        if (userData && userData.name) {
+            document.getElementById('welcomeGreeting').innerText = `Selamat Datang ke Kalendar Genius, ${userData.name}`;
+        }
+
         const calendarEl = document.getElementById('calendar');
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
@@ -142,13 +143,43 @@
             }
         });
         calendar.render();
+
+        // Handle form submission
+        document.getElementById('eventForm').onsubmit = function(e) {
+            e.preventDefault();
+            saveEvent();
+        };
     });
+
+    function selectColor(color, element) {
+        selectedColorCode = color;
+        // Buang ring dari semua dot
+        document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('ring-2', 'ring-blue-500'));
+        // Tambah ring pada dot yang dipilih
+        element.classList.add('ring-2', 'ring-blue-500');
+    }
+
+    function saveEvent() {
+        const title = document.getElementById('eventTitle').value;
+        const start = document.getElementById('startTime').value;
+        const end = document.getElementById('endTime').value;
+        const description = document.getElementById('eventDesc').value;
+
+        if(title && start) {
+            const newEvent = { title, start, end, color: selectedColorCode, extendedProps: { description } };
+            calendar.addEvent(newEvent);
+            
+            let events = JSON.parse(localStorage.getItem('userEvents')) || [];
+            events.push(newEvent);
+            localStorage.setItem('userEvents', JSON.stringify(events));
+            
+            closeEventModal();
+            document.getElementById('eventForm').reset();
+        }
+    }
 
     function openEventModal() { document.getElementById('eventModal').classList.remove('hidden'); }
     function closeEventModal() { document.getElementById('eventModal').classList.add('hidden'); }
-    
-    let selectedColor = '#3b82f6';
-    function selectColor(color) { selectedColor = color; }
 
     async function togglePrayerTimes() {
         const display = document.getElementById('prayerDisplay');
@@ -173,17 +204,10 @@
                     });
                 });
             }
-        } else {
-            display.classList.add('hidden');
-        }
+        } else { display.classList.add('hidden'); }
     }
 
     function syncGoogleCalendar() {
-        const token = localStorage.getItem('siswaklik_token');
-        if(!token) {
-            alert("Sila log masuk semula untuk sync.");
-            return;
-        }
-        alert("Menghubungkan dengan Google Calendar API... Memuat turun jadual akademik anda.");
+        alert("Menghubungkan dengan Google Calendar API...");
     }
 </script>
