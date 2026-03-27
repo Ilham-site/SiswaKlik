@@ -7,13 +7,24 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <script src="https://accounts.google.com/gsi/client" async defer></script>
-    <script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
         @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
         .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        .btn-google {
+            background: white;
+            color: #1f2937;
+            border: 1px solid #e5e7eb;
+            transition: all 0.3s ease;
+        }
+        .btn-google:hover {
+            background: #f9fafb;
+            transform: translateY(-2px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
     </style>
 </head>
 <body class="bg-gradient-to-br from-blue-50 via-white to-indigo-50 min-h-screen flex items-center justify-center p-6">
@@ -28,6 +39,78 @@
             <i class="fas fa-graduation-cap"></i>
         </div>
 
+        <h1 class="text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">SiswaKlik</h1>
+        <p class="text-gray-500 mb-10 font-medium">Satu klik untuk kejayaan akademik anda.</p>
+
+        <div class="space-y-4">
+            <button onclick="handleAuthClick()" class="btn-google w-full flex items-center justify-center gap-3 py-4 rounded-2xl font-bold text-lg">
+                <img src="https://www.gstatic.com/images/branding/product/1x/gdrive_48dp.png" class="w-6 h-6" alt="Drive">
+                Log Masuk dengan Google
+            </button>
+            
+            <p class="text-[10px] text-gray-400 px-4">
+                SiswaKlik memerlukan kebenaran untuk menyimpan fail KMJP dan dokumen anda secara selamat di dalam Google Drive peribadi anda.
+            </p>
+        </div>
+
+        <p class="mt-12 text-xs text-gray-400">
+            &copy; 2026 SiswaKlik Hub Akademik. <br> Dibina dengan ❤️ untuk mahasiswa.
+        </p>
+    </div>
+
+    <script>
+        // --- KONFIGURASI API ---
+        const CLIENT_ID = '755048052549-ldo2fp40r8bsk8n0f2gpsjuimdls5o1j.apps.googleusercontent.com';
+        // Scope yang diperlukan: Profile, Email, dan Drive Files (untuk create folder/file)
+        const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email';
+
+        let tokenClient;
+
+        // Inisialisasi Google Identity Services
+        window.onload = function () {
+            tokenClient = google.accounts.oauth2.initTokenClient({
+                client_id: CLIENT_ID,
+                scope: SCOPES,
+                callback: async (response) => {
+                    if (response.error !== undefined) {
+                        throw (response);
+                    }
+                    
+                    // Simpan Access Token untuk kegunaan API di index.html
+                    localStorage.setItem('siswaklik_access_token', response.access_token);
+                    localStorage.setItem('siswaklik_login_time', Date.now());
+
+                    // Ambil maklumat profil pengguna menggunakan token tersebut
+                    await fetchUserProfile(response.access_token);
+                },
+            });
+        };
+
+        function handleAuthClick() {
+            // Mula proses minta kebenaran (popup)
+            tokenClient.requestAccessToken({prompt: 'consent'});
+        }
+
+        async function fetchUserProfile(accessToken) {
+            try {
+                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+                const userData = await res.json();
+                
+                // Simpan data user
+                localStorage.setItem('siswaklik_user', JSON.stringify(userData));
+                
+                // Redirect ke index.html
+                window.location.href = 'index.html';
+            } catch (err) {
+                console.error('Gagal mengambil profil:', err);
+                alert('Log masuk berjaya, tetapi gagal mengambil profil pengguna.');
+            }
+        }
+    </script>
+</body>
+</html>
         <h1 class="text-4xl font-extrabold text-gray-900 mb-3 tracking-tight">SiswaKlik</h1>
         <p class="text-gray-500 mb-10 font-medium">Satu klik untuk kejayaan akademik anda.</p>
 
