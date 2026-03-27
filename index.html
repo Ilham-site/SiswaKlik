@@ -3,14 +3,16 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SiswaKlik | Hub Akademik</title>
+    <title>SiswaKlik | Hub Akademik Pintar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .drawer-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
-        .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); }
+        .glass-nav { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(12px); }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -21,7 +23,7 @@
                 <i class="fas fa-bars text-xl"></i>
             </button>
             <div class="flex items-center gap-2">
-                <div class="bg-blue-600 p-2 rounded-lg text-white text-xs">
+                <div class="bg-blue-600 p-2 rounded-lg text-white">
                     <i class="fas fa-graduation-cap"></i>
                 </div>
                 <h1 class="text-xl font-extrabold bg-gradient-to-r from-blue-600 to-indigo-600 bg-clip-text text-transparent">SiswaKlik</h1>
@@ -29,15 +31,19 @@
         </div>
         
         <div class="flex items-center gap-4">
-            <div id="systemDate" class="hidden md:block text-sm font-bold text-gray-400 uppercase tracking-wider"></div>
+            <div id="systemDate" class="hidden md:block text-xs font-bold text-gray-400 uppercase tracking-widest"></div>
             <div class="h-8 w-[1px] bg-gray-200 mx-2 hidden md:block"></div>
-            <img id="userAvatar" src="https://via.placeholder.com/40" class="w-10 h-10 rounded-2xl border-2 border-white shadow-md object-cover">
+            <div class="flex items-center gap-3">
+                <span class="text-sm font-bold text-gray-700 hidden sm:block" id="userName">Pelajar UKM</span>
+                <img id="userAvatar" src="https://ui-avatars.com/api/?name=User&background=2563eb&color=fff" class="w-10 h-10 rounded-2xl border-2 border-white shadow-md">
+            </div>
         </div>
     </nav>
 
     <div id="drawerOverlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-[60]"></div>
+
     <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white z-[70] transform -translate-x-full drawer-transition flex flex-col shadow-2xl border-r border-gray-100">
-        <div class="p-8 border-b flex justify-between items-center bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+        <div class="p-8 border-b flex justify-between items-center bg-blue-600 text-white">
             <div>
                 <span class="block text-xs opacity-75 font-bold uppercase tracking-widest mb-1">Menu Utama</span>
                 <span class="font-bold text-xl">Navigasi Fokus</span>
@@ -45,8 +51,8 @@
             <button id="closeBtn" class="hover:rotate-90 transition-transform"><i class="fas fa-times text-xl"></i></button>
         </div>
         
-        <nav class="p-4 space-y-2 flex-1 mt-4">
-            <button onclick="loadPage('dashboard.html')" class="w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 hover:text-blue-600 transition-all font-semibold group">
+        <nav class="p-4 space-y-2 flex-1 mt-4 text-sm">
+            <button onclick="loadPage('dashboard.html')" class="w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-blue-600 bg-blue-50 transition-all font-bold group">
                 <i class="fas fa-th-large group-hover:scale-110 transition-transform"></i> Dashboard
             </button>
             <button onclick="loadPage('kalendar.html')" class="w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 hover:text-blue-600 transition-all font-semibold group">
@@ -64,33 +70,11 @@
         </div>
     </aside>
 
-    <main id="app-root" class="p-6 max-w-7xl mx-auto min-h-[80vh]"></main>
+    <main id="app-root" class="min-h-[80vh]"></main>
 
     <script>
-        // --- KONFIGURASI TIMER AUTO-LOGOUT ---
-        const INACTIVITY_LIMIT = 10 * 60 * 1000; // 10 minit (dalam milisaat)
-        let inactivityTimer;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        function resetTimer() {
-            clearTimeout(inactivityTimer);
-            inactivityTimer = setTimeout(logoutDueToInactivity, INACTIVITY_LIMIT);
-        }
-
-        function logoutDueToInactivity() {
-            // Kita guna alert untuk maklumkan user kenapa dia terkeluar
-            alert("Sesi tamat: Anda telah tidak aktif selama 10 minit demi keselamatan data.");
-            logout();
-        }
-
-        // Pantau aktiviti pengguna
-        const setupActivityListeners = () => {
-            const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-            events.forEach(name => {
-                document.addEventListener(name, resetTimer, true);
-            });
-        };
-
-        // --- LOGIK NAVIGASI & SISTEM ---
         const updateDate = () => {
             const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
             document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
@@ -115,7 +99,7 @@
                 document.getElementById('app-root').innerHTML = html;
                 toggleSidebar(false);
                 
-                // Jalankan semula skrip yang ada dalam fail HTML yang dimuatkan
+                // Re-execute scripts in loaded HTML
                 const scripts = document.getElementById('app-root').querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -123,35 +107,25 @@
                     newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
-                
-                // Setiap kali tukar page, reset timer juga
-                resetTimer();
             } catch (err) {
                 console.error("Gagal memuatkan halaman:", err);
             }
         }
 
         function logout() {
-            localStorage.removeItem('siswaklik_token');
-            localStorage.removeItem('siswaklik_user');
-            localStorage.removeItem('siswaklik_login_time');
+            localStorage.clear();
             window.location.href = 'login.html';
         }
 
         window.onload = () => {
             updateDate();
-            const user = JSON.parse(localStorage.getItem('siswaklik_user'));
-            
-            if (!user) {
-                window.location.href = 'login.html';
-            } else {
-                document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
-                loadPage('dashboard.html');
-                
-                // Mulakan pemantauan aktiviti untuk Auto-Logout
-                setupActivityListeners();
-                resetTimer();
+            // Data dummy jika tiada dalam localStorage
+            if(!localStorage.getItem('siswaUser')){
+                localStorage.setItem('siswaUser', JSON.stringify({name: 'Muhammad Nur Ilham', matrix: 'A123456'}));
             }
+            const user = JSON.parse(localStorage.getItem('siswaUser'));
+            document.getElementById('userName').innerText = user.name;
+            loadPage('dashboard.html');
         };
     </script>
 </body>
