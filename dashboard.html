@@ -2,11 +2,11 @@
     
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div>
-            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Selamat Kembali, <span class="text-blue-600" id="dash-user">Siswa</span>! 👋</h1>
-            <p class="text-slate-500 mt-1 font-medium">Semua akses akademik anda di satu tempat.</p>
+            <h1 class="text-3xl font-extrabold text-slate-900 tracking-tight">Selamat Kembali, <span class="text-blue-600" id="dash-user">Pelajar</span>! 👋</h1>
+            <p class="text-slate-500 mt-1 font-medium italic">"Masa itu pedang, jika tidak memotongnya, ia memotongmu."</p>
         </div>
         <div class="flex items-center gap-2 bg-green-50 text-green-700 px-4 py-2 rounded-2xl border border-green-100 text-xs font-bold shadow-sm">
-            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> UKMFolio Terhubung
+            <span class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span> Sistem Aktif
         </div>
     </header>
 
@@ -14,127 +14,133 @@
         
         <div class="lg:col-span-2 space-y-8">
             
-            <div class="bg-gradient-to-br from-blue-600 to-indigo-800 rounded-[2rem] p-8 text-white shadow-xl relative overflow-hidden group">
+            <div class="bg-gradient-to-br from-blue-700 via-blue-600 to-indigo-800 rounded-[2.5rem] p-8 text-white shadow-xl relative overflow-hidden group">
                 <div class="relative z-10">
-                    <span class="bg-white/20 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Sistem Pintar</span>
-                    <h2 class="text-2xl font-bold mt-4">Auto-Sync Jadual Peperiksaan (KMJP)</h2>
-                    <p class="text-blue-100 mt-2 max-w-md text-sm leading-relaxed">Muat naik slip peperiksaan rasmi (PDF) untuk mengekstrak tarikh, kod, dan tempat secara automatik ke kalendar anda.</p>
+                    <span class="bg-white/20 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Modul Automasi KMJP</span>
+                    <h2 class="text-2xl font-bold mt-4">Ekstrak Jadual UKM</h2>
+                    <p class="text-blue-100 mt-2 max-w-md text-sm leading-relaxed opacity-90">Muat naik slip KMJP (PDF) anda. Sistem akan mengesan kod kursus, tarikh, masa dan tempat secara automatik.</p>
                     
-                    <div class="mt-8 flex flex-wrap gap-3">
-                        <input type="file" id="pdfUpload" class="hidden" accept="application/pdf" onchange="processKMJP(this)">
-                        <button onclick="document.getElementById('pdfUpload').click()" class="bg-white text-blue-700 px-6 py-3 rounded-xl font-bold text-sm hover:bg-blue-50 transition shadow-lg flex items-center gap-2">
-                            <i class="fas fa-file-pdf"></i> Upload Slip Rasmi
+                    <div class="mt-8">
+                        <input type="file" id="pdfInput" class="hidden" accept=".pdf" onchange="extractKMJP(this)">
+                        <button onclick="document.getElementById('pdfInput').click()" class="bg-white text-blue-700 px-8 py-4 rounded-2xl font-bold text-sm hover:scale-105 transition-all shadow-lg flex items-center gap-3">
+                            <i class="fas fa-file-pdf"></i> Pilih Fail KMJP.pdf
                         </button>
                     </div>
                 </div>
-                <i class="fas fa-calendar-check absolute right-[-20px] bottom-[-20px] text-[180px] opacity-10 rotate-12 group-hover:scale-110 transition-transform duration-700"></i>
+                <i class="fas fa-robot absolute right-[-20px] bottom-[-20px] text-[180px] opacity-10 rotate-12 transition-transform duration-700 group-hover:rotate-0"></i>
             </div>
 
             <section>
-                <div class="flex justify-between items-center mb-6">
-                    <h3 class="text-xl font-bold text-slate-800">Tugasan & Peperiksaan Akan Datang</h3>
-                    <button class="text-sm font-bold text-blue-600 hover:text-blue-800 transition">Lihat Semua <i class="fas fa-arrow-right ml-1"></i></button>
+                <div class="flex justify-between items-center mb-6 px-2">
+                    <h3 class="text-xl font-bold text-slate-800">Jadual Peperiksaan Dikesan</h3>
+                    <span class="text-xs font-bold text-blue-600 bg-blue-50 px-3 py-1 rounded-full" id="exam-count">0 Subjek</span>
                 </div>
-                <div id="exam-list" class="space-y-4">
-                    <div class="p-10 text-center border-2 border-dashed border-slate-200 rounded-[2rem] text-slate-400 bg-white/50">
-                        <i class="fas fa-cloud-upload-alt text-4xl mb-3 opacity-20"></i>
-                        <p class="text-sm font-medium">Sila muat naik slip KMJP untuk paparan jadual.</p>
+                
+                <div id="exam-list" class="grid grid-cols-1 gap-4">
+                    <div id="empty-state" class="p-12 text-center border-4 border-dashed border-slate-100 rounded-[2.5rem] bg-white/50">
+                        <img src="https://cdn-icons-png.flaticon.com/512/4076/4076432.png" class="w-20 mx-auto opacity-20 grayscale mb-4">
+                        <p class="text-slate-400 font-bold">Tiada data peperiksaan. Sila muat naik slip KMJP anda.</p>
                     </div>
                 </div>
             </section>
         </div>
 
         <div class="space-y-8">
-            
-            <div class="bg-white rounded-[2rem] p-7 shadow-sm border border-slate-100">
+            <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
                 <h3 class="font-bold text-slate-800 mb-6 flex items-center gap-3 text-lg">
-                    <span class="p-2 bg-blue-50 text-blue-600 rounded-lg"><i class="fas fa-bolt text-sm"></i></span> Pautan Pantas
+                    <span class="p-2 bg-amber-50 text-amber-600 rounded-xl"><i class="fas fa-link text-sm"></i></span> Pautan Pantas
                 </h3>
-                <div class="grid grid-cols-1 gap-3">
-                    <a href="https://ukmfolio.ukm.my" target="_blank" class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-blue-50 hover:border-blue-200 border border-transparent transition group">
+                <div class="space-y-3">
+                    <a href="https://ukmfolio.ukm.my" target="_blank" class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-blue-600 hover:text-white transition-all group">
                         <div class="flex items-center gap-3">
-                            <img src="https://www.ukm.my/portal/wp-content/uploads/2023/ukm-logo.png" class="w-6 h-6 grayscale group-hover:grayscale-0 transition-all" alt="UKM">
-                            <span class="text-sm font-bold text-slate-700">UKMFolio</span>
+                            <i class="fas fa-university opacity-50"></i>
+                            <span class="text-sm font-bold">UKMFolio</span>
                         </div>
-                        <i class="fas fa-chevron-right text-xs text-slate-300"></i>
+                        <i class="fas fa-external-link-alt text-xs opacity-0 group-hover:opacity-100"></i>
                     </a>
-                    <a href="https://smplucee.ukm.my/smpweb/" target="_blank" class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-blue-50 hover:border-blue-200 border border-transparent transition group">
+                    <a href="https://smplucee.ukm.my/smpweb/" target="_blank" class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-blue-600 hover:text-white transition-all group">
                         <div class="flex items-center gap-3">
-                            <span class="w-6 h-6 bg-indigo-100 text-indigo-600 rounded-lg flex items-center justify-center text-[10px] font-black italic">SMP</span>
-                            <span class="text-sm font-bold text-slate-700">SMPWEB UKM</span>
+                            <i class="fas fa-user-graduate opacity-50"></i>
+                            <span class="text-sm font-bold">SMPWEB</span>
                         </div>
-                        <i class="fas fa-chevron-right text-xs text-slate-300"></i>
-                    </a>
-                    <a href="https://library.ukm.my" target="_blank" class="flex items-center justify-between p-4 bg-slate-50 rounded-2xl hover:bg-blue-50 hover:border-blue-200 border border-transparent transition group">
-                        <div class="flex items-center gap-3">
-                            <span class="w-6 h-6 bg-orange-100 text-orange-600 rounded-lg flex items-center justify-center text-xs"><i class="fas fa-book-open"></i></span>
-                            <span class="text-sm font-bold text-slate-700">Perpustakaan PTSL</span>
-                        </div>
-                        <i class="fas fa-chevron-right text-xs text-slate-300"></i>
+                        <i class="fas fa-external-link-alt text-xs opacity-0 group-hover:opacity-100"></i>
                     </a>
                 </div>
             </div>
 
-            <div class="bg-white rounded-[2rem] p-7 shadow-sm border border-slate-100">
-                <h3 class="font-bold text-slate-800 mb-6 text-lg">Tarikh Penting</h3>
+            <div class="bg-white rounded-[2.5rem] p-8 shadow-sm border border-slate-100">
+                <h3 class="font-bold text-slate-800 mb-6 text-lg">Status Semester</h3>
                 <div class="space-y-6">
-                    <div class="flex gap-4 group cursor-help">
-                        <div class="bg-rose-50 text-rose-600 h-14 w-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border border-rose-100 group-hover:scale-105 transition-transform">
+                    <div class="flex gap-4">
+                        <div class="bg-rose-50 text-rose-600 h-14 w-14 rounded-2xl flex flex-col items-center justify-center shrink-0 border border-rose-100">
                             <span class="text-[10px] font-black uppercase">MAC</span>
-                            <span class="text-xl font-black leading-none">27</span>
+                            <span class="text-xl font-black">27</span>
                         </div>
                         <div class="flex flex-col justify-center">
-                            <p class="text-sm font-extrabold text-slate-800 group-hover:text-rose-600 transition-colors">Hantar Laporan Lab</p>
-                            <p class="text-[11px] text-slate-400 font-bold mt-1 uppercase"><i class="far fa-clock mr-1"></i> 11:59 PM • UKMFolio</p>
+                            <p class="text-sm font-extrabold text-slate-800">Cuti Pertengahan Sem</p>
+                            <p class="text-[11px] text-slate-400 font-bold uppercase">27 Mac - 03 April 2026</p>
                         </div>
                     </div>
                 </div>
             </div>
-
         </div>
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
 <script>
-    // --- Dashboard Initializations ---
-    const user = JSON.parse(localStorage.getItem('siswaUser'));
-    if(user) document.getElementById('dash-user').innerText = user.name.split(' ')[0];
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
     function renderExams() {
-        const exams = JSON.parse(localStorage.getItem('exams')) || [];
+        const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
         const container = document.getElementById('exam-list');
-        
-        if(exams.length === 0) return;
+        const emptyState = document.getElementById('empty-state');
+        const countDisplay = document.getElementById('exam-count');
 
+        if (exams.length === 0) {
+            emptyState.style.display = 'block';
+            countDisplay.innerText = "0 Subjek";
+            container.innerHTML = ''; 
+            container.appendChild(emptyState);
+            return;
+        }
+
+        emptyState.style.display = 'none';
+        countDisplay.innerText = `${exams.length} Subjek`;
+        
         container.innerHTML = exams.map(ex => `
-            <div class="flex items-center justify-between p-5 bg-white rounded-2xl border border-slate-100 hover:shadow-xl hover:shadow-blue-500/5 transition-all group">
-                <div class="flex items-center gap-5">
-                    <div class="bg-blue-50 text-blue-600 w-14 h-14 rounded-2xl flex flex-col items-center justify-center font-black border border-blue-100 group-hover:bg-blue-600 group-hover:text-white transition-all">
+            <div class="bg-white p-6 rounded-[2rem] border border-slate-100 hover:shadow-xl hover:shadow-blue-500/5 transition-all flex items-center justify-between group">
+                <div class="flex items-center gap-6">
+                    <div class="h-16 w-16 bg-blue-50 text-blue-600 rounded-2xl flex flex-col items-center justify-center border border-blue-100 font-black">
                         <span class="text-[10px] uppercase">${new Date(ex.date).toLocaleString('ms-MY', {month: 'short'})}</span>
-                        <span class="text-xl">${new Date(ex.date).getDate()}</span>
+                        <span class="text-2xl">${new Date(ex.date).getDate()}</span>
                     </div>
                     <div>
-                        <h4 class="font-bold text-slate-800">${ex.code}</h4>
-                        <div class="flex flex-wrap gap-y-1 gap-x-3 mt-1">
-                             <p class="text-[11px] text-slate-400 font-bold"><i class="fas fa-map-marker-alt mr-1"></i> ${ex.location}</p>
-                             <p class="text-[11px] text-slate-400 font-bold"><i class="far fa-clock mr-1"></i> ${ex.time || 'Sesi Pagi'}</p>
+                        <h4 class="font-black text-slate-800 text-lg uppercase">${ex.code}</h4>
+                        <div class="flex flex-wrap gap-4 mt-1">
+                            <span class="text-[11px] font-bold text-slate-400 uppercase"><i class="fas fa-clock mr-1 text-blue-500"></i> ${ex.time}</span>
+                            <span class="text-[11px] font-bold text-slate-400 uppercase"><i class="fas fa-map-marker-alt mr-1 text-rose-500"></i> ${ex.location}</span>
                         </div>
                     </div>
                 </div>
-                <button class="p-2 text-slate-300 hover:text-blue-600"><i class="fas fa-external-link-alt"></i></button>
+                <button onclick="deleteExam('${ex.id}')" class="p-3 text-slate-200 hover:text-red-500 transition-colors">
+                    <i class="fas fa-trash-alt"></i>
+                </button>
             </div>
         `).join('');
     }
 
-    async function processKMJP(input) {
+    async function extractKMJP(input) {
         const file = input.files[0];
         if (!file) return;
 
-        Swal.fire({ 
-            title: 'Mengekstrak Jadual...', 
-            html: 'Sistem sedang membaca slip PDF anda.',
-            allowOutsideClick: false, 
-            didOpen: () => Swal.showLoading() 
+        Swal.fire({
+            title: 'Menganalisis PDF...',
+            text: 'SiswaKlik sedang mengekstrak data jadual peperiksaan anda.',
+            allowOutsideClick: false,
+            didOpen: () => Swal.showLoading()
         });
 
         try {
@@ -144,39 +150,68 @@
                 const pdf = await pdfjsLib.getDocument(typedarray).promise;
                 let fullText = "";
                 
-                for(let i=1; i<=pdf.numPages; i++){
+                for(let i=1; i<=pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
                     const content = await page.getTextContent();
-                    fullText += content.items.map(item => item.str).join(" ");
+                    // Join dengan space untuk elakkan teks bercantum
+                    fullText += content.items.map(item => item.str).join("  ") + " ";
                 }
+
+                /** * REGEX EXPLANATION:
+                 * 1. ([A-Z]{4}\d{4}) -> Kod Kursus (cth: KKPK2323)
+                 * 2. (\d{2}\/\d{2}\/\d{4}) -> Tarikh (cth: 09/02/2026)
+                 * 3. (\d{2}:\d{2}) -> Masa (cth: 08:30)
+                 * 4. Teks selepas masa adalah tempoh, kita skip tempoh untuk ambil lokasi
+                 * 5. Lokasi biasanya DEWAN atau DGEMILANG atau DT
+                 */
+                const regex = /([A-Z]{4}\d{4})\s+.*?\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+[\d:j\s]+(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+)/gi;
                 
-                // Regex UKM KMJP Format
-                const examPattern = /([A-Z]{4}\d{4})\s+(\d{2}\/\d{2}\/\d{4})\s+([A-Z\s]+DEWAN[A-Z\s\d]+|DEWAN\s[A-Z\s]+)/gi;
                 let match;
-                const newExams = [];
-                
-                while ((match = examPattern.exec(fullText)) !== null) {
-                    newExams.push({
-                        id: 'exam-' + Math.random().toString(36).substr(2, 9),
+                const foundExams = [];
+
+                while ((match = regex.exec(fullText)) !== null) {
+                    foundExams.push({
+                        id: 'ex-' + Math.random().toString(36).substr(2, 9),
                         code: match[1],
-                        date: match[2].split('/').reverse().join('-'),
-                        location: match[3].trim(),
+                        date: match[2].split('/').reverse().join('-'), // Tukar ke YYYY-MM-DD
+                        time: match[3],
+                        location: match[4].trim()
                     });
                 }
 
-                if(newExams.length > 0) {
-                    localStorage.setItem('exams', JSON.stringify(newExams));
-                    Swal.fire('Berjaya!', `${newExams.length} subjek peperiksaan telah dikesan.`, 'success');
+                if(foundExams.length > 0) {
+                    // Simpan data (overwrite atau append)
+                    localStorage.setItem('siswa_exams', JSON.stringify(foundExams));
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berjaya!',
+                        text: `${foundExams.length} subjek peperiksaan telah dikesan.`,
+                        timer: 2000
+                    });
                     renderExams();
                 } else {
-                    Swal.fire('Info', 'Tiada data KMJP ditemui. Sila pastikan slip format UKM yang betul.', 'info');
+                    Swal.fire('Data Tidak Ditemui', 'Pastikan anda muat naik fail PDF KMJP yang sah.', 'warning');
                 }
             };
             reader.readAsArrayBuffer(file);
         } catch (err) {
-            Swal.fire('Ralat', 'Gagal memproses PDF.', 'error');
+            Swal.fire('Ralat', 'Gagal memproses fail PDF tersebut.', 'error');
+            console.error(err);
         }
     }
 
+    function deleteExam(id) {
+        const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
+        localStorage.setItem('siswa_exams', JSON.stringify(exams.filter(e => e.id !== id)));
+        renderExams();
+    }
+
+    // Papar data sedia ada bila buka dashboard
     renderExams();
+
+    // Set nama user daripada localStorage
+    const user = JSON.parse(localStorage.getItem('siswaklik_user'));
+    if(user) {
+        document.getElementById('dash-user').innerText = user.given_name || user.name.split(' ')[0];
+    }
 </script>
