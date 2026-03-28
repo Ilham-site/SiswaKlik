@@ -2,48 +2,71 @@
     <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-10">
         <div>
             <h2 class="text-3xl font-bold text-gray-900">Fail Peribadi</h2>
-            <div class="flex items-center gap-2">
-                <p id="current-path" class="text-gray-500 font-medium">Utama /</p>
-                <span id="sync-status" class="text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-bold uppercase tracking-tighter">Synced</span>
+            <div class="flex items-center gap-2 mt-1">
+                <span id="sync-status" class="flex h-2 w-2 rounded-full bg-green-500"></span>
+                <p id="current-path" class="text-gray-500 font-medium text-sm text-blue-600">Root /</p>
             </div>
         </div>
         <div class="flex gap-3 w-full md:w-auto">
-            <button id="backBtn" onclick="goBack()" class="hidden bg-gray-100 px-4 py-3 rounded-2xl font-bold hover:bg-gray-200 transition">
+            <button id="backBtn" onclick="goBack()" class="hidden bg-gray-100 px-5 py-3 rounded-2xl font-bold hover:bg-gray-200 transition">
                 <i class="fas fa-arrow-left"></i>
             </button>
             <button onclick="createNewFolder()" class="flex-1 bg-white border border-gray-200 px-6 py-3 rounded-2xl font-bold shadow-sm hover:bg-gray-50 transition">
-                <i class="fas fa-folder-plus mr-2 text-yellow-500"></i> Folder
+                <i class="fas fa-folder-plus text-yellow-500 mr-2"></i> Folder
             </button>
-            <button onclick="document.getElementById('driveUpload').click()" class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition">
+            <label class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition cursor-pointer text-center">
                 <i class="fas fa-cloud-upload-alt mr-2"></i> Upload
-            </button>
-            <input type="file" id="driveUpload" class="hidden" onchange="handleLocalUpload(this)">
+                <input type="file" id="driveUpload" class="hidden" onchange="handleFileUpload(this)" accept=".pdf">
+            </label>
         </div>
     </div>
 
     <div id="driveContent" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-        </div>
-</section>
-
-<div id="editorModal" class="fixed inset-0 bg-slate-900 z-[100] hidden flex flex-col">
-    <div class="p-4 bg-white border-b flex flex-wrap gap-4 items-center justify-between">
-        <div class="flex items-center gap-2">
-            <button onclick="setMode('pancil')" class="p-2 rounded-lg hover:bg-gray-100" title="Pen"><i class="fas fa-pen"></i></button>
-            <button onclick="setMode('text')" class="p-2 rounded-lg hover:bg-gray-100" title="Taip"><i class="fas fa-font"></i></button>
-            <button onclick="setMode('select')" class="p-2 rounded-lg hover:bg-gray-100" title="Lasso"><i class="fas fa-mouse-pointer"></i></button>
-            <button onclick="deleteSelected()" class="p-2 rounded-lg hover:bg-red-50 text-red-500"><i class="fas fa-eraser"></i></button>
-            <input type="color" id="penColor" onchange="updateBrush()" class="w-8 h-8 rounded-full border-none cursor-pointer ml-4">
-        </div>
-        <div class="flex items-center gap-3">
-            <span id="save-indicator" class="text-xs text-gray-400 italic">Semua perubahan disimpan secara lokal</span>
-            <button onclick="saveAndSync()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg">
-                <i class="fas fa-sync-alt mr-1"></i> Sync ke Drive
-            </button>
-            <button onclick="closeEditor()" class="text-gray-400 hover:text-gray-600 px-2 text-2xl">&times;</button>
+        <div class="col-span-full text-center py-20" id="drive-loader">
+            <i class="fas fa-circle-notch animate-spin text-4xl text-blue-600 mb-4"></i>
+            <p class="text-slate-400 font-bold">Menyusun fail peribadi...</p>
         </div>
     </div>
-    <div class="flex-1 overflow-auto bg-slate-700 p-8 flex justify-center items-start" id="canvas-wrapper">
-        <canvas id="pdf-canvas"></canvas>
+</section>
+
+<div id="editorModal" class="fixed inset-0 bg-slate-900 z-[100] hidden flex flex-col overflow-hidden">
+    <div class="p-3 bg-white border-b flex flex-wrap gap-2 items-center justify-between shadow-md">
+        <div class="flex items-center gap-1 bg-gray-50 p-1 rounded-xl">
+            <button onclick="setMode('select')" class="tool-btn p-2 rounded-lg hover:bg-blue-100" title="Lasso/Select"><i class="fas fa-mouse-pointer"></i></button>
+            <button onclick="setMode('pencil')" class="tool-btn p-2 rounded-lg hover:bg-blue-100" title="Pen"><i class="fas fa-pen"></i></button>
+            <button onclick="setMode('text')" class="tool-btn p-2 rounded-lg hover:bg-blue-100" title="Tambah Teks"><i class="fas fa-font"></i></button>
+            <button onclick="deleteSelected()" class="p-2 rounded-lg hover:bg-red-100 text-red-500" title="Padam"><i class="fas fa-trash"></i></button>
+        </div>
+
+        <div class="flex items-center gap-3">
+            <input type="color" id="penColor" onchange="updateBrush()" class="w-8 h-8 rounded-lg cursor-pointer border-none bg-transparent">
+            <select id="fontSize" onchange="updateBrush()" class="bg-gray-50 border rounded-lg px-2 py-1 text-sm">
+                <option value="16">16px</option>
+                <option value="24" selected>24px</option>
+                <option value="36">36px</option>
+                <option value="48">48px</option>
+            </select>
+            <div class="flex gap-1 border-l pl-3">
+                <button onclick="undo()" class="p-2 hover:bg-gray-100 rounded-lg"><i class="fas fa-undo"></i></button>
+                <button onclick="redo()" class="p-2 hover:bg-gray-100 rounded-lg"><i class="fas fa-redo"></i></button>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-2">
+            <button onclick="addNewPage()" class="bg-emerald-50 text-emerald-600 px-4 py-2 rounded-xl text-xs font-black">
+                + NEW PAGE
+            </button>
+            <button onclick="saveAndSync()" class="bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold shadow-lg">
+                SAVE & SYNC
+            </button>
+            <button onclick="closeEditor()" class="text-gray-400 hover:text-red-500 px-2 text-2xl font-bold">&times;</button>
+        </div>
+    </div>
+
+    <div class="flex-1 overflow-auto bg-slate-200 p-8 flex flex-col items-center gap-4" id="canvas-container">
+        <div class="bg-white shadow-2xl relative" id="canvas-wrapper">
+            <canvas id="pdf-canvas"></canvas>
+        </div>
     </div>
 </div>
 
@@ -52,127 +75,120 @@
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
 
 <script>
-    let canvas;
+    let canvas, currentFileId, currentFolderId = 'root';
+    let folderStack = ['root'];
+    let undoStack = [], redoStack = [];
     const ACCESS_TOKEN = localStorage.getItem('siswaklik_access_token');
-    let currentFolderId = 'root';
 
-    // 1. LOAD CACHE (Guna LocalStorage supaya buka terus nampak fail)
-    function loadCache() {
-        const cachedFiles = JSON.parse(localStorage.getItem('drive_cache_' + currentFolderId) || '[]');
-        renderFiles(cachedFiles);
-        // Lepas render cache, baru buat sync background dengan Google
-        syncWithGoogle();
+    // -- INIT CANVAS & SYNC --
+    function initCanvas() {
+        canvas = new fabric.Canvas('pdf-canvas', {
+            isDrawingMode: false,
+            width: 800,
+            height: 1100,
+            backgroundColor: '#ffffff'
+        });
+
+        canvas.on('object:added', saveState);
+        canvas.on('object:modified', saveState);
     }
 
-    // 2. BACKGROUND SYNC (Ambil data terbaru dari Google tanpa sekat UI)
-    async function syncWithGoogle() {
-        document.getElementById('sync-status').innerText = "Syncing...";
-        document.getElementById('sync-status').className = "text-[10px] bg-blue-100 text-blue-600 px-2 py-0.5 rounded-full font-bold uppercase";
+    // -- LOCAL CACHE LOGIC (Simpan PDF dalam Local) --
+    async function saveToLocal(id, blob) {
+        const reader = new FileReader();
+        reader.readAsDataURL(blob);
+        reader.onloadend = () => localStorage.setItem(`pdf_cache_${id}`, reader.result);
+    }
 
-        const query = `'${currentFolderId}' in parents and trashed = false`;
+    // -- DRIVE & FOLDER LOGIC --
+    async function loadFiles(id = 'root') {
+        currentFolderId = id;
+        document.getElementById('drive-loader').style.display = 'block';
+        
         try {
-            const resp = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(query)}&fields=files(id,name,mimeType,modifiedTime)&pageSize=50`, {
+            const q = `'${id}' in parents and trashed = false`;
+            const resp = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id,name,mimeType,modifiedTime)`, {
                 headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
             });
             const data = await resp.json();
-            
-            // Simpan dalam cache untuk penggunaan akan datang
-            localStorage.setItem('drive_cache_' + currentFolderId, JSON.stringify(data.files));
-            renderFiles(data.files);
-            
-            document.getElementById('sync-status').innerText = "Synced";
-            document.getElementById('sync-status').className = "text-[10px] bg-green-100 text-green-600 px-2 py-0.5 rounded-full font-bold uppercase";
-        } catch (e) {
-            document.getElementById('sync-status').innerText = "Offline Mode";
-        }
+            renderGrid(data.files);
+        } catch (e) { console.error(e); }
     }
 
-    function renderFiles(files) {
+    function renderGrid(files) {
         const container = document.getElementById('driveContent');
-        if (!files || files.length === 0) {
-            container.innerHTML = `<div class="col-span-full text-center py-20 italic text-gray-400">Tiada fail ditemui.</div>`;
-            return;
-        }
-
-        container.innerHTML = files.map(file => {
-            const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+        document.getElementById('drive-loader').style.display = 'none';
+        container.innerHTML = files.map(f => {
+            const isFolder = f.mimeType === 'application/vnd.google-apps.folder';
             return `
-                <div onclick="${isFolder ? `openFolder('${file.id}', '${file.name}')` : `initEditor('${file.id}')`}" 
+                <div onclick="${isFolder ? `openFolder('${f.id}', '${f.name}')` : `openEditor('${f.id}', '${f.name}')`}" 
                      class="bg-white p-6 rounded-[2.5rem] border border-gray-100 shadow-sm hover:shadow-xl transition-all cursor-pointer group">
-                    <div class="flex justify-between items-start mb-4">
-                        <i class="fas ${isFolder ? 'fa-folder text-yellow-400' : 'fa-file-pdf text-red-500'} text-4xl"></i>
-                        <span class="text-[9px] text-gray-300 font-bold">${new Date(file.modifiedTime).toLocaleDateString()}</span>
-                    </div>
-                    <h3 class="font-bold text-gray-800 truncate leading-tight">${file.name}</h3>
-                    <div class="mt-4 flex items-center text-blue-600 text-[10px] font-black tracking-widest opacity-0 group-hover:opacity-100 transition">
-                        ${isFolder ? 'BUKA FOLDER' : 'EDIT PDF'} <i class="fas fa-chevron-right ml-2"></i>
-                    </div>
+                    <i class="fas ${isFolder ? 'fa-folder text-yellow-400' : 'fa-file-pdf text-red-500'} text-4xl mb-4"></i>
+                    <h3 class="font-bold text-gray-800 truncate">${f.name}</h3>
+                    <p class="text-[10px] text-gray-400 font-bold uppercase mt-1 italic">Click to ${isFolder ? 'open' : 'edit'}</p>
                 </div>
             `;
         }).join('');
     }
 
-    // 3. LOCAL UPLOAD (User nampak fail naik terus, sync berlaku belakang tabir)
-    async function handleLocalUpload(input) {
-        const file = input.files[0];
-        if (!file) return;
-
-        // Tunjuk secara 'palsu' dalam UI dulu supaya nampak laju
-        const tempId = 'temp_' + Date.now();
-        const currentCache = JSON.parse(localStorage.getItem('drive_cache_' + currentFolderId) || '[]');
-        currentCache.unshift({ id: tempId, name: file.name, mimeType: file.type, modifiedTime: new Date() });
-        renderFiles(currentCache);
-
-        // Sync betul-betul ke Google Drive
-        const metadata = { name: file.name, parents: [currentFolderId] };
-        const form = new FormData();
-        form.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-        form.append('file', file);
-
-        fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` },
-            body: form
-        }).then(() => syncWithGoogle());
+    function openFolder(id, name) {
+        folderStack.push(id);
+        document.getElementById('current-path').innerText = `Root / ${name}`;
+        document.getElementById('backBtn').classList.remove('hidden');
+        loadFiles(id);
     }
 
-    // 4. PDF EDITOR (Sama macam sebelum ni tapi lebih responsif)
-    async function initEditor(fileId) {
-        document.getElementById('editorModal').classList.remove('hidden');
-        if (!canvas) {
-            canvas = new fabric.Canvas('pdf-canvas', { backgroundColor: 'white' });
-        }
-        
-        // Guna cache jika fail dah ada dalam IndexedDB (Sangat laju)
-        // Buat masa ni kita fetch, tapi Muhammad boleh tambah IndexedDB logic nanti.
-        const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
-            headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
-        });
-        const blob = await resp.blob();
-        const url = URL.createObjectURL(blob);
+    function goBack() {
+        folderStack.pop();
+        const prevId = folderStack[folderStack.length - 1];
+        document.getElementById('current-path').innerText = prevId === 'root' ? 'Root /' : 'Kembali...';
+        if (prevId === 'root') document.getElementById('backBtn').classList.add('hidden');
+        loadFiles(prevId);
+    }
 
+    // -- EDITOR LOGIC --
+    async function openEditor(fileId, fileName) {
+        document.getElementById('editorModal').classList.remove('hidden');
+        if (!canvas) initCanvas();
+        
+        currentFileId = fileId;
+        const cached = localStorage.getItem(`pdf_cache_${fileId}`);
+        
+        let blob;
+        if (cached) {
+            blob = await (await fetch(cached)).blob();
+            console.log("Loaded from local cache");
+        } else {
+            const resp = await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}?alt=media`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            blob = await resp.blob();
+            saveToLocal(fileId, blob);
+        }
+
+        const url = URL.createObjectURL(blob);
         const pdf = await pdfjsLib.getDocument(url).promise;
         const page = await pdf.getPage(1);
         const viewport = page.getViewport({ scale: 1.5 });
-        
+
         const tempCanvas = document.createElement('canvas');
-        const context = tempCanvas.getContext('2d');
         tempCanvas.height = viewport.height;
         tempCanvas.width = viewport.width;
-        
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
-        
+        await page.render({ canvasContext: tempCanvas.getContext('2d'), viewport }).promise;
+
         fabric.Image.fromURL(tempCanvas.toDataURL(), (img) => {
             canvas.setDimensions({ width: viewport.width, height: viewport.height });
             canvas.setBackgroundImage(img, canvas.renderAll.bind(canvas));
         });
-        window.currentFileId = fileId;
     }
 
     function setMode(mode) {
-        canvas.isDrawingMode = (mode === 'pancil');
+        canvas.isDrawingMode = (mode === 'pencil');
         if (mode === 'text') {
-            const text = new fabric.IText('Taip...', { left: 100, top: 100, fontFamily: 'Arial', fontSize: 24 });
+            const text = new fabric.IText('Double click untuk taip', {
+                left: 100, top: 100, fontSize: parseInt(document.getElementById('fontSize').value),
+                fontFamily: 'Arial', fill: document.getElementById('penColor').value
+            });
             canvas.add(text);
         }
         updateBrush();
@@ -181,31 +197,64 @@
     function updateBrush() {
         if (canvas.isDrawingMode) {
             canvas.freeDrawingBrush.color = document.getElementById('penColor').value;
-            canvas.freeDrawingBrush.width = 4;
+            canvas.freeDrawingBrush.width = 5;
         }
     }
 
+    async function addNewPage() {
+        // Logik tambah page: Besarkan canvas height
+        canvas.setHeight(canvas.getHeight() + 1100);
+        canvas.renderAll();
+        Swal.fire({ toast: true, position: 'top-end', title: 'Helaian baru ditambah di bawah', timer: 2000, showConfirmButton: false });
+    }
+
     async function saveAndSync() {
-        const btn = event.target;
-        btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Syncing...`;
-        
+        document.getElementById('sync-status').classList.replace('bg-green-500', 'bg-orange-500');
+        Swal.fire({ title: 'Menyimpan & Sync...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
         const dataUrl = canvas.toDataURL({ format: 'png' });
         const pdfDoc = await PDFLib.PDFDocument.create();
         const page = pdfDoc.addPage([canvas.width, canvas.height]);
         const img = await pdfDoc.embedPng(dataUrl);
         page.drawImage(img, { x: 0, y: 0, width: canvas.width, height: canvas.height });
-        
+
         const pdfBytes = await pdfDoc.save();
         const blob = new Blob([pdfBytes], { type: 'application/pdf' });
 
-        await fetch(`https://www.googleapis.com/upload/drive/v3/files/${window.currentFileId}?uploadType=media`, {
-            method: 'PATCH',
-            headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/pdf' },
-            body: blob
-        });
+        // Update Local Cache Dulu (Serta-merta)
+        saveToLocal(currentFileId, blob);
 
-        Swal.fire({ title: 'Berjaya Sync!', icon: 'success', toast: true, position: 'top-end', showConfirmButton: false, timer: 3000 });
-        btn.innerHTML = `<i class="fas fa-sync-alt mr-1"></i> Sync ke Drive`;
+        // Upload ke Drive di Background
+        try {
+            await fetch(`https://www.googleapis.com/upload/drive/v3/files/${currentFileId}?uploadType=media`, {
+                method: 'PATCH',
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/pdf' },
+                body: blob
+            });
+            document.getElementById('sync-status').classList.replace('bg-orange-500', 'bg-green-500');
+            Swal.fire('Berjaya!', 'Fail telah di-sync ke Google Drive.', 'success');
+            closeEditor();
+        } catch (e) {
+            Swal.fire('Ralat Sync', 'Gagal upload ke Drive, tapi fail ada dalam cache local.', 'warning');
+        }
+    }
+
+    // -- UNDO / REDO --
+    function saveState() {
+        undoStack.push(JSON.stringify(canvas));
+        redoStack = [];
+    }
+
+    function undo() {
+        if (undoStack.length > 1) {
+            redoStack.push(undoStack.pop());
+            canvas.loadFromJSON(undoStack[undoStack.length - 1], () => canvas.renderAll());
+        }
+    }
+
+    function deleteSelected() {
+        canvas.getActiveObjects().forEach(obj => canvas.remove(obj));
+        canvas.discardActiveObject().renderAll();
     }
 
     function closeEditor() {
@@ -213,20 +262,13 @@
         canvas.clear();
     }
 
-    function openFolder(id, name) {
-        currentFolderId = id;
-        document.getElementById('current-path').innerText = `Utama / ${name}`;
-        document.getElementById('backBtn').classList.remove('hidden');
-        loadCache();
-    }
-
-    function goBack() {
-        currentFolderId = 'root'; // Ringkasan: Kembali ke asal
-        document.getElementById('current-path').innerText = `Utama /`;
-        document.getElementById('backBtn').classList.add('hidden');
-        loadCache();
-    }
-
-    // Mula-mula load dari cache
-    loadCache();
+    // Auto load
+    loadFiles();
 </script>
+
+<style>
+    .tool-btn:hover { background-color: #f0f7ff; color: #2563eb; }
+    #canvas-container::-webkit-scrollbar { width: 6px; }
+    #canvas-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    canvas { cursor: crosshair; }
+</style>
