@@ -5,45 +5,149 @@
                 <i class="fas fa-arrow-left text-gray-400"></i>
             </button>
             <div>
-                <h3 class="font-black text-slate-800" id="editing-filename">Editor PDF</h3>
-                <p class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Mod Penyuntingan Pintar</p>
+                <h3 class="font-black text-slate-800" id="editing-filename">Memuatkan...</h3>
+                <p id="sync-status" class="text-[10px] text-blue-500 font-bold uppercase tracking-wider italic">Semua perubahan disimpan lokal</p>
             </div>
         </div>
         
+        <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl">
+            <button onclick="setMode('select')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Pilih"><i class="fas fa-mouse-pointer"></i></button>
+            <button onclick="setMode('text')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Tambah Teks"><i class="fas fa-font"></i></button>
+            <button onclick="setMode('draw')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Conteng"><i class="fas fa-pen"></i></button>
+            <button onclick="deleteObject()" class="p-3 hover:bg-white rounded-xl transition text-red-500" title="Padam"><i class="fas fa-trash"></i></button>
+        </div>
+
         <div class="flex gap-3">
-            <button onclick="saveChanges()" class="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">
-                SIMPAN & SYNC
+            <button onclick="manualSave()" class="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">
+                SIMPAN
             </button>
         </div>
     </div>
 
-    <div class="flex-1 bg-slate-100 p-8 overflow-auto flex justify-center">
-        <div class="bg-white shadow-2xl p-4 min-w-[300px] min-h-[400px] rounded-lg flex items-center justify-center">
-            <p class="text-slate-400 italic">Memuatkan kandungan fail...</p>
+    <div class="flex-1 bg-slate-100 p-8 overflow-auto flex flex-col items-center">
+        <div id="pdf-container" class="relative shadow-2xl bg-white mb-10">
+            <canvas id="pdf-canvas" class="absolute top-0 left-0"></canvas>
+            <canvas id="editor-canvas" class="absolute top-0 left-0"></canvas>
         </div>
     </div>
 </div>
 
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/fabric.js/5.3.1/fabric.min.js"></script>
+
 <script>
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+
+    let fbCanvas;
     const editingId = localStorage.getItem('editing_file_id');
     const editingName = localStorage.getItem('editing_file_name');
     document.getElementById('editing-filename').innerText = editingName;
 
-    function saveChanges() {
-        let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-        const fileIndex = localFiles.findIndex(f => f.id === editingId);
+    // 1. Inisialisasi Canvas
+    async function initEditor() {
+        const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+        const fileData = localFiles.find(f => f.id === editingId);
 
-        if (fileIndex !== -1) {
-            // Di sini anda akan ambil data dari canvas/editor anda
-            // Contoh: const updatedContent = canvas.toDataURL();
-            
-            localFiles[fileIndex].status = 'pending_sync'; // Set balik ke pending supaya di-upload semula
-            // localFiles[fileIndex].content = updatedContent; 
+        if (!fileData) {
+            alert("Fail tidak ditemui!");
+            return;
+        }
 
-            localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-            
-            alert("Perubahan disimpan secara lokal. Sync sedang berjalan di latar belakang.");
-            loadView('folder.html');
+        // Render PDF ke Background
+        const loadingTask = pdfjsLib.getDocument(fileData.content);
+        const pdf = await loadingTask.promise;
+        const page = await pdf.getPage(1); // Page 1 untuk demo
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        const canvas = document.getElementById('pdf-canvas');
+        const context = canvas.getContext('2d');
+        canvas.height = viewport.height;
+        canvas.width = viewport.width;
+
+        await page.render({ canvasContext: context, viewport: viewport }).promise;
+
+        // Setup Fabric.js Overlay
+        const container = document.getElementById('pdf-container');
+        container.style.width = viewport.width + 'px';
+        container.style.height = viewport.height + 'px';
+
+        fbCanvas = new fabric.Canvas('editor-canvas', {
+            width: viewport.width,
+            height: viewport.height
+        });
+
+        // Muat semula editan lama jika ada (Auto-restore)
+        if (fileData.annotations) {
+            fbCanvas.loadFromJSON(fileData.annotations, fbCanvas.renderAll.bind(fbCanvas));
+        }
+
+        // Auto-save setiap kali ada perubahan pada canvas
+        fbCanvas.on('object:modified', autoSaveToLocal);
+        fbCanvas.on('object:added', autoSaveToLocal);
+    }
+
+    // 2. Mod Penyuntingan
+    function setMode(mode) {
+        fbCanvas.isDrawingMode = false;
+        if (mode === 'draw') {
+            fbCanvas.isDrawingMode = true;
+            fbCanvas.freeDrawingBrush.width = 3;
+            fbCanvas.freeDrawingBrush.color = '#2563eb';
+        } else if (mode === 'text') {
+            const text = new fabric.IText('Tulis sesuatu...', {
+                left: 100,
+                top: 100,
+                fontFamily: 'Plus Jakarta Sans',
+                fontSize: 20,
+                fill: '#1e293b'
+            });
+            fbCanvas.add(text);
+            fbCanvas.setActiveObject(text);
         }
     }
+
+    function deleteObject() {
+        const activeObjects = fbCanvas.getActiveObjects();
+        fbCanvas.discardActiveObject();
+        activeObjects.forEach((obj) => fbCanvas.remove(obj));
+    }
+
+    // 3. Sistem Simpan (Hybrid: Local -> Cloud)
+    function autoSaveToLocal() {
+        let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+        const index = localFiles.findIndex(f => f.id === editingId);
+
+        if (index !== -1) {
+            // Simpan rupa bentuk editan (JSON) supaya boleh edit balik
+            localFiles[index].annotations = JSON.stringify(fbCanvas);
+            localFiles[index].status = 'pending_sync'; // Flag untuk background sync
+            localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
+            
+            document.getElementById('sync-status').innerText = "Menunggu penyegerakan...";
+            
+            // Trigger background sync yang ada di fail.html secara senyap
+            if(typeof backgroundSync === 'function') backgroundSync();
+        }
+    }
+
+    function manualSave() {
+        autoSaveToLocal();
+        Swal.fire({
+            icon: 'success',
+            title: 'Tersimpan',
+            text: 'Perubahan anda telah disimpan dengan selamat.',
+            timer: 1500,
+            showConfirmButton: false
+        });
+    }
+
+    // Jalankan editor
+    initEditor();
 </script>
+
+<style>
+    /* Sembunyikan scrollbar pada container canvas untuk kekemasan */
+    #pdf-container::-webkit-scrollbar { display: none; }
+    .canvas-container { position: absolute !important; top: 0; left: 0; z-index: 10; }
+    #pdf-canvas { z-index: 5; }
+</style>
