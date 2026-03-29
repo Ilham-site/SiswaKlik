@@ -8,7 +8,7 @@
 </section>
 
 <script>
-    // Fungsi universal untuk tukar view
+    // 1. PENGURUSAN VIEW
     async function loadView(fileName, callback) {
         try {
             const response = await fetch(fileName);
@@ -16,7 +16,6 @@
             const container = document.getElementById('file-system-content');
             container.innerHTML = html;
 
-            // Execute scripts dalam fail yang di-fetch
             const scripts = container.querySelectorAll("script");
             scripts.forEach(oldScript => {
                 const newScript = document.createElement("script");
@@ -31,6 +30,59 @@
         }
     }
 
-    // Default: Paparkan folder semasa mula
+    // 2. LOGIK AUTO-SYNC BACKGROUND
+    async function backgroundSync() {
+        const accessToken = localStorage.getItem('siswaklik_access_token');
+        if (!accessToken) return;
+
+        // Ambil fail yang ditanda 'pending_sync' dari LocalStorage
+        let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+        const pendingFiles = localFiles.filter(f => f.status === 'pending_sync');
+
+        for (const file of pendingFiles) {
+            try {
+                // Logik Upload ke Google Drive
+                const metadata = {
+                    name: file.name,
+                    mimeType: 'application/pdf',
+                    parents: [localStorage.getItem('siswaklik_drive_folder_id') || 'root']
+                };
+
+                const formData = new FormData();
+                formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                formData.append('file', dataURLtoBlob(file.content));
+
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const driveFile = await response.json();
+                    // Kemaskini status local
+                    file.status = 'synced';
+                    file.driveId = driveFile.id;
+                    localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
+                    console.log(`Synced: ${file.name}`);
+                }
+            } catch (err) {
+                console.error("Sync gagal untuk:", file.name, err);
+            }
+        }
+    }
+
+    // Helper: Tukar Base64 ke Blob
+    function dataURLtoBlob(dataurl) {
+        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--) u8arr[n] = bstr.charCodeAt(n);
+        return new Blob([u8arr], {type:mime});
+    }
+
+    // Jalankan sync setiap 30 saat
+    setInterval(backgroundSync, 30000);
+
+    // Mula dengan Folder View
     loadView('folder.html');
 </script>
