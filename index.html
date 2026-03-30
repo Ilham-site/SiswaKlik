@@ -11,7 +11,6 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .drawer-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); }
-        /* Style untuk menu aktif */
         .nav-active { background-color: #eff6ff; color: #2563eb; font-weight: 700; border-right: 4px solid #2563eb; }
     </style>
 </head>
@@ -49,13 +48,16 @@
         </div>
         
         <nav class="p-4 space-y-2 flex-1 mt-4">
-            <button onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button id="btn-dashboard" onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-th-large"></i> Dashboard
             </button>
-            <button onclick="loadPage('kalendar.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button id="btn-semester" onclick="loadPage('semester.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+                <i class="fas fa-university"></i> Status Akademik
+            </button>
+            <button id="btn-kalendar" onclick="loadPage('kalendar.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-calendar-alt"></i> Kalendar Pintar
             </button>
-            <button onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button id="btn-fail" onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-folder-open"></i> Fail Peribadi
             </button>
         </nav>
@@ -70,9 +72,8 @@
     <main id="app-root" class="p-6 md:p-10 max-w-7xl mx-auto"></main>
 
     <script>
-        // Logik sedia ada awak (Timer, Sidebar, LoadPage)
         let logoutTimer;
-        const TIMEOUT_DURATION = 30 * 60 * 1000; // 30 minit
+        const TIMEOUT_DURATION = 30 * 60 * 1000; 
 
         function resetTimer() {
             clearTimeout(logoutTimer);
@@ -102,18 +103,27 @@
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
+        // Fungsi Global untuk dipanggil dari sub-page
+        window.globalLoadPage = function(page, btnId) {
+            const btn = document.getElementById(btnId);
+            loadPage(page, btn);
+        };
+
         async function loadPage(page, element) {
             try {
                 const response = await fetch(page);
                 const html = await response.text();
+                
+                // Masukkan kandungan ke dalam app-root
                 document.getElementById('app-root').innerHTML = html;
                 
-                // --- FIX SHADOW/ACTIVE STATE ---
+                // Kemaskini state butang aktif
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) element.classList.add('nav-active');
                 
                 toggleSidebar(false);
                 
+                // Jalankan script yang ada dalam fail yang di-fetch
                 const scripts = document.getElementById('app-root').querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -122,6 +132,7 @@
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
                 
+                window.scrollTo(0,0);
                 resetTimer();
             } catch (err) {
                 console.error("Gagal memuatkan halaman:", err);
@@ -143,10 +154,7 @@
                 window.location.href = 'login.html';
             } else {
                 document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
-                // Load Dashboard sebagai page pertama & set active state
-                const dashBtn = document.querySelector('button[onclick*="dashboard.html"]');
-                loadPage('dashboard.html', dashBtn);
-                
+                loadPage('dashboard.html', document.getElementById('btn-dashboard'));
                 setupActivityListeners();
                 resetTimer();
             }
