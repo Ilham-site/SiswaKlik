@@ -12,164 +12,137 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .card-gradient { background: linear-gradient(135deg, #6366f1 0%, #a855f7 100%); }
+        .animate-fade-up { animation: fadeUp 0.5s ease-out; }
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(20px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
     </style>
 </head>
 <body class="bg-slate-50 p-4 md:p-8 lg:p-10">
 
-<div class="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-bottom-4 duration-500">
-    <div class="flex items-center justify-between">
-        <div class="flex items-center gap-4">
-            <button onclick="window.location.href='index.html'" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 hover:bg-slate-50">
-                <i class="fas fa-chevron-left text-slate-400"></i>
-            </button>
-            <h2 class="text-2xl font-black text-slate-800">Status Semester</h2>
+<div class="max-w-4xl mx-auto space-y-8 animate-fade-up">
+    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
+        <div>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight">Kalendar Akademik</h1>
+            <p class="text-slate-500 font-medium">Imbas PDF kalendar untuk kemaskini jadual anda.</p>
         </div>
-        <label class="cursor-pointer bg-blue-600 hover:bg-blue-700 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg shadow-blue-200 transition flex items-center gap-2">
+        <label class="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-6 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 transition cursor-pointer w-fit">
             <i class="fas fa-file-import"></i>
-            <span class="hidden md:inline">Extract Kalendar</span>
-            <input type="file" id="pdfInput" class="hidden" accept="application/pdf" onchange="extractAcademicCalendar(this)">
+            <span>Muat Naik PDF</span>
+            <input type="file" id="pdfInput" class="hidden" accept="application/pdf" onchange="handlePDF(this)">
         </label>
     </div>
 
-    <div class="card-gradient rounded-[2.5rem] p-8 text-white shadow-2xl shadow-indigo-200 relative overflow-hidden">
+    <div class="card-gradient rounded-[2.5rem] p-8 text-white shadow-2xl shadow-purple-200 relative overflow-hidden">
         <div class="relative z-10">
-            <p class="opacity-80 font-bold uppercase tracking-widest text-sm mb-2">Sesi 2025/2026</p>
-            <h1 id="currentWeekDisplay" class="text-5xl font-black mb-4">Memuatkan...</h1>
-            <div class="flex flex-wrap gap-4">
-                <div class="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30">
-                    <p class="text-xs opacity-80">Semester</p>
-                    <p class="font-bold">Semester 2</p>
-                </div>
-                <div class="bg-white/20 backdrop-blur-md px-4 py-2 rounded-xl border border-white/30">
-                    <p class="text-xs opacity-80">Tarikh Hari Ini</p>
-                    <p id="todayDate" class="font-bold">-</p>
-                </div>
+            <div class="flex items-center gap-3 mb-4">
+                <span class="bg-white/20 backdrop-blur-md px-4 py-1 rounded-full text-xs font-bold uppercase tracking-widest">Sesi 2025/2026</span>
             </div>
+            <h2 class="text-4xl font-black mb-2">Semester Semasa</h2>
+            <p class="text-white/80 font-medium" id="currentStatus">Sila muat naik kalendar akademik untuk melihat status.</p>
         </div>
-        <i class="fas fa-graduation-cap absolute -right-10 -bottom-10 text-[15rem] opacity-10 rotate-12"></i>
+        <i class="fas fa-calendar-alt absolute -right-10 -bottom-10 text-[15rem] text-white/10 rotate-12"></i>
     </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-3 gap-8">
-        <div class="md:col-span-2 space-y-6">
-            <h3 class="text-xl font-black text-slate-800 flex items-center gap-3">
-                <i class="fas fa-calendar-day text-blue-600"></i>
-                Tarikh Penting Semester
-            </h3>
-            
-            <div id="containerTarikh" class="space-y-4">
-                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 text-center py-10">
-                    <p class="text-slate-400 font-medium">Sila extract PDF kalendar akademik untuk melihat tarikh penting.</p>
-                </div>
-            </div>
+    <div class="space-y-4">
+        <div class="flex items-center justify-between px-2">
+            <h3 class="font-bold text-slate-800 text-lg uppercase tracking-wider">Acara Mendatang</h3>
+            <button onclick="clearData()" class="text-red-500 text-sm font-bold hover:underline">Padam Data</button>
         </div>
-
-        <div class="space-y-6">
-            <h3 class="text-xl font-black text-slate-800">Ringkasan</h3>
-            <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm space-y-6">
-                <div>
-                    <div class="flex justify-between text-sm font-bold mb-2">
-                        <span class="text-slate-500">Progress Semester</span>
-                        <span id="progressPercent" class="text-blue-600">0%</span>
-                    </div>
-                    <div class="w-full bg-slate-100 h-3 rounded-full overflow-hidden">
-                        <div id="progressBar" class="bg-blue-600 h-full transition-all duration-1000" style="width: 0%"></div>
-                    </div>
-                </div>
-
-                <div class="pt-4 border-t border-slate-50 space-y-4">
-                    <div class="flex items-center gap-4">
-                        <div class="h-10 w-10 rounded-xl bg-amber-50 text-amber-600 flex items-center justify-center">
-                            <i class="fas fa-hourglass-half"></i>
-                        </div>
-                        <div>
-                            <p class="text-xs text-slate-400 font-bold uppercase">Baki Minggu Kuliah</p>
-                            <p id="weeksLeft" class="font-black text-slate-800">-</p>
-                        </div>
-                    </div>
-                </div>
+        
+        <div id="containerTarikh" class="grid gap-4">
+            <div class="bg-white p-10 rounded-[2rem] border border-dashed border-slate-300 text-center">
+                <i class="fas fa-calendar-day text-slate-200 text-5xl mb-4"></i>
+                <p class="text-slate-400 font-medium">Tiada data dikesan. Sila muat naik PDF Kalendar Akademik UKM.</p>
             </div>
         </div>
     </div>
 </div>
 
 <script>
-    // Konfigurasi Tarikh Mula Semester (Contoh: Semester 2 bermula 2 Mac 2026)
-    const SEMESTER_START_DATE = new Date('2026-03-02'); 
-    
-    function updateLiveStatus() {
-        const now = new Date();
-        document.getElementById('todayDate').innerText = now.toLocaleDateString('ms-MY', { day: 'numeric', month: 'long', year: 'numeric' });
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // Kira Minggu
-        const diffInMs = now - SEMESTER_START_DATE;
-        const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
-        const weekNum = Math.floor(diffInDays / 7) + 1;
-
-        let statusText = "";
-        let progress = 0;
-
-        if (weekNum < 1) {
-            statusText = "Cuti Semester";
-            progress = 0;
-        } else if (weekNum <= 14) {
-            statusText = `Minggu ${weekNum}`;
-            progress = (weekNum / 14) * 100;
-            document.getElementById('weeksLeft').innerText = `${14 - weekNum} Minggu`;
-        } else {
-            statusText = "Musim Peperiksaan / Cuti";
-            progress = 100;
-            document.getElementById('weeksLeft').innerText = "Tamat Kuliah";
-        }
-
-        document.getElementById('currentWeekDisplay').innerText = statusText;
-        document.getElementById('progressBar').style.width = `${progress}%`;
-        document.getElementById('progressPercent').innerText = `${Math.round(progress)}%`;
-    }
-
-    async function extractAcademicCalendar(input) {
+    async function handlePDF(input) {
         const file = input.files[0];
         if (!file) return;
 
-        Swal.fire({ title: 'Memproses PDF...', allowOutsideClick: false, didOpen: () => { Swal.showLoading(); } });
+        Swal.fire({
+            title: 'Memproses PDF...',
+            text: 'Sila tunggu sebentar sementara kami mengekstrak jadual.',
+            allowOutsideClick: false,
+            didOpen: () => { Swal.showLoading(); }
+        });
 
         try {
-            const reader = new FileReader();
-            reader.onload = async function() {
-                const typedarray = new Uint8Array(this.result);
-                const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                let fullText = "";
+            const arrayBuffer = await file.arrayBuffer();
+            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
+            let fullText = "";
 
-                for (let i = 1; i <= pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    fullText += content.items.map(s => s.str).join(" ");
-                }
+            for (let i = 1; i <= pdf.numPages; i++) {
+                const page = await pdf.getPage(i);
+                const content = await page.getTextContent();
+                fullText += content.items.map(item => item.str).join(" ") + "\n";
+            }
 
-                // Logik Regex untuk cari tarikh (Contoh: 15 JAN - Mula Peperiksaan)
-                // Ini perlu dilaraskan mengikut format PDF UKM yang spesifik
-                const patterns = [
-                    { key: "Cuti", color: "amber" },
-                    { key: "Peperiksaan", color: "rose" },
-                    { key: "Kuliah", color: "blue" },
-                    { key: "Pendaftaran", color: "emerald" }
-                ];
-
-                // Data Dummy untuk simulasi jika regex tidak jumpa (User boleh edit kemudian)
-                const extractedData = [
-                    { bulan: "MAC", hari: "02", tajuk: "Awal Kuliah", sub: "Bermula Semester 2", warna: "blue" },
-                    { bulan: "APR", hari: "12", tajuk: "Cuti Pertengahan", sub: "Satu Minggu", warna: "amber" },
-                    { bulan: "JUN", hari: "15", tajuk: "Minggu Ulangkaji", sub: "Persediaan Final", warna: "indigo" },
-                    { bulan: "JUN", hari: "22", tajuk: "Peperiksaan Akhir", sub: "Sesi 2025/2026", warna: "rose" }
-                ];
-
-                localStorage.setItem('siswa_academic_dates', JSON.stringify(extractedData));
-                displayData(extractedData);
-                Swal.fire('Berjaya!', 'Jadual akademik telah dikemaskini.', 'success');
-            };
-            reader.readAsArrayBuffer(file);
+            const extractedEvents = parseAcademicCalendar(fullText);
+            
+            if (extractedEvents.length > 0) {
+                localStorage.setItem('siswa_academic_calendar', JSON.stringify(extractedEvents));
+                displayData(extractedEvents);
+                document.getElementById('currentStatus').innerText = "Jadual berjaya dikemaskini daripada PDF.";
+                Swal.fire('Berjaya!', `Dikesan ${extractedEvents.length} acara akademik.`, 'success');
+            } else {
+                throw new Error("Tiada format tarikh akademik yang sah ditemui.");
+            }
         } catch (e) {
-            Swal.fire('Ralat', 'Gagal membaca fail PDF.', 'error');
+            console.error(e);
+            Swal.fire('Ralat', 'Gagal membaca maklumat dari PDF. Pastikan ini adalah fail Kalendar Akademik UKM.', 'error');
         }
+        input.value = "";
+    }
+
+    function parseAcademicCalendar(text) {
+        const events = [];
+        const months = ["Jan", "Feb", "Mac", "Apr", "Mei", "Jun", "Jul", "Ogos", "Sept", "Okt", "Nov", "Dis"];
+        
+        // Keywords penting dalam kalendar UKM
+        const keywords = [
+            { key: "Pendaftaran", warna: "blue", tajuk: "Pendaftaran Pelajar" },
+            { key: "Kuliah", warna: "indigo", tajuk: "Sesi Perkuliahan" },
+            { key: "Cuti Pertengahan", warna: "orange", tajuk: "Cuti Pertengahan Semester" },
+            { key: "Peperiksaan Akhir", warna: "red", tajuk: "Peperiksaan Akhir" },
+            { key: "Cuti Semester", warna: "green", tajuk: "Cuti Semester" },
+            { key: "Minggu Ulangkaji", warna: "amber", tajuk: "Minggu Ulangkaji" }
+        ];
+
+        // Regex untuk mencari tarikh (Contoh: 23 Feb. - 8 Mac 2026 atau 19 Sept. 2025)
+        const datePattern = /(\d{1,2})\s+(Jan|Feb|Mac|Apr|Mei|Jun|Jul|Ogos|Sept|Okt|Nov|Dis)[.]?\s*(?:-|–)?\s*(?:\d{1,2}\s+(?:Jan|Feb|Mac|Apr|Mei|Jun|Jul|Ogos|Sept|Okt|Nov|Dis)[.]?\s*)?(\d{4})/gi;
+
+        keywords.forEach(item => {
+            const regex = new RegExp(`${item.key}[^]*?(\\d{1,2}\\s+(?:Jan|Feb|Mac|Apr|Mei|Jun|Jul|Ogos|Sept|Okt|Nov|Dis)[.]?\\s*\\d{4}|\\d{1,2}\\s+(?:Jan|Feb|Mac|Apr|Mei|Jun|Jul|Ogos|Sept|Okt|Nov|Dis)[.]?\\s*-\\s*\\d{1,2}\\s+(?:Jan|Feb|Mac|Apr|Mei|Jun|Jul|Ogos|Sept|Okt|Nov|Dis)[.]?\\s*\\d{4})`, 'gi');
+            
+            let match;
+            while ((match = regex.exec(text)) !== null) {
+                const rawDate = match[1].replace(/\s+/g, ' ').trim();
+                const dayMatch = rawDate.match(/^\d{1,2}/);
+                const monthMatch = rawDate.match(/(Jan|Feb|Mac|Apr|Mei|Jun|Jul|Ogos|Sept|Okt|Nov|Dis)/i);
+
+                if (dayMatch && monthMatch) {
+                    events.push({
+                        hari: dayMatch[0].padStart(2, '0'),
+                        bulan: monthMatch[0].toUpperCase(),
+                        tajuk: item.tajuk,
+                        sub: rawDate,
+                        warna: item.warna,
+                        timestamp: new Date(`${dayMatch[0]} ${monthMatch[0]} ${rawDate.slice(-4)}`).getTime()
+                    });
+                }
+            }
+        });
+
+        // Susun ikut tarikh terdekat
+        return events.sort((a, b) => a.timestamp - b.timestamp);
     }
 
     function displayData(data) {
@@ -177,24 +150,32 @@
         if (!data || data.length === 0) return;
 
         container.innerHTML = data.map(item => `
-            <div class="flex gap-5 bg-white p-5 rounded-[2rem] border border-slate-100 hover:shadow-md transition">
-                <div class="bg-${item.warna}-50 text-${item.warna}-600 h-14 w-14 rounded-2xl flex flex-col items-center justify-center shrink-0 font-black border border-${item.warna}-100">
-                    <span class="text-[10px] uppercase">${item.bulan}</span>
-                    <span class="text-xl">${item.hari}</span>
+            <div class="flex gap-5 bg-white p-5 rounded-[2rem] border border-slate-100 hover:shadow-xl hover:scale-[1.02] transition-all duration-300 group">
+                <div class="bg-${item.warna}-50 text-${item.warna}-600 h-16 w-16 rounded-2xl flex flex-col items-center justify-center shrink-0 font-black border border-${item.warna}-100 group-hover:bg-${item.warna}-600 group-hover:text-white transition-colors">
+                    <span class="text-[10px] uppercase tracking-tighter">${item.bulan}</span>
+                    <span class="text-2xl">${item.hari}</span>
                 </div>
                 <div class="flex flex-col justify-center">
-                    <p class="font-bold text-slate-800 leading-tight">${item.tajuk}</p>
-                    <p class="text-xs text-slate-500 font-medium">${item.sub}</p>
+                    <p class="font-bold text-slate-800 leading-tight text-lg">${item.tajuk}</p>
+                    <p class="text-xs text-slate-500 font-medium flex items-center gap-1">
+                        <i class="far fa-clock"></i> ${item.sub}
+                    </p>
                 </div>
             </div>
         `).join('');
     }
 
-    // Load data asal jika ada
+    function clearData() {
+        localStorage.removeItem('siswa_academic_calendar');
+        location.reload();
+    }
+
     window.onload = () => {
-        updateLiveStatus();
-        const savedData = JSON.parse(localStorage.getItem('siswa_academic_dates'));
-        if (savedData) displayData(savedData);
+        const savedData = JSON.parse(localStorage.getItem('siswa_academic_calendar'));
+        if (savedData) {
+            displayData(savedData);
+            document.getElementById('currentStatus').innerText = "Jadual dimuatkan daripada memori peranti.";
+        }
     };
 </script>
 
