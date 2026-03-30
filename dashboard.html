@@ -18,10 +18,10 @@
                 <div class="relative z-10">
                     <span class="bg-white/20 text-white text-[10px] font-black px-3 py-1 rounded-full uppercase tracking-widest">Modul Automasi KMJP</span>
                     <h2 class="text-2xl font-bold mt-4">Ekstrak Jadual UKM</h2>
-                    <p class="text-blue-100 mt-2 max-w-md text-sm leading-relaxed opacity-90">Muat naik slip KMJP (PDF) anda. Sistem akan mengesan kod kursus, tarikh, masa dan tempat secara automatik.</p>
+                    <p class="text-blue-100 mt-2 max-w-md text-sm leading-relaxed opacity-90">Muat naik slip KMJP (PDF) anda. Sistem akan mengesan data secara automatik dan menyimpannya ke Google Drive.</p>
                     
                     <div class="mt-8">
-                        <input type="file" id="pdfInput" class="hidden" accept=".pdf" onchange="extractKMJP(this)">
+                        <input type="file" id="pdfInput" class="hidden" accept=".pdf" onchange="handleKMJPUpload(this)">
                         <button onclick="document.getElementById('pdfInput').click()" class="bg-white text-blue-700 px-8 py-4 rounded-2xl font-bold text-sm hover:scale-105 transition-all shadow-lg flex items-center gap-3">
                             <i class="fas fa-file-pdf"></i> Pilih Fail KMJP.pdf
                         </button>
@@ -93,6 +93,57 @@
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
+    const ACCESS_TOKEN = localStorage.getItem('siswaklik_access_token');
+    const PARENT_FOLDER_ID = localStorage.getItem('siswaklik_drive_folder_id');
+
+    // Initialization: Setup Folder KMJP
+    async function initDashboard() {
+        if (!ACCESS_TOKEN) {
+            window.location.href = 'login.html';
+            return;
+        }
+
+        // Set User Name
+        const user = JSON.parse(localStorage.getItem('siswaklik_user'));
+        if(user) {
+            document.getElementById('dash-user').innerText = user.given_name || user.name.split(' ')[0];
+        }
+
+        renderExams();
+        await ensureKMJPFolder();
+    }
+
+    async function ensureKMJPFolder() {
+        try {
+            const query = encodeURIComponent(`name = 'KMJP' and '${PARENT_FOLDER_ID}' in parents and mimeType = 'application/vnd.google-apps.folder' and trashed = false`);
+            const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${query}`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            const data = await res.json();
+
+            if (data.files && data.files.length > 0) {
+                localStorage.setItem('siswaklik_kmjp_folder_id', data.files[0].id);
+            } else {
+                const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${ACCESS_TOKEN}`,
+                        'Content-Type': 'application/json'
+                    },
+                    body: JSON.stringify({
+                        name: 'KMJP',
+                        mimeType: 'application/vnd.google-apps.folder',
+                        parents: [PARENT_FOLDER_ID]
+                    })
+                });
+                const newFolder = await createRes.json();
+                localStorage.setItem('siswaklik_kmjp_folder_id', newFolder.id);
+            }
+        } catch (err) {
+            console.error("Ralat setup folder KMJP:", err);
+        }
+    }
+
     function renderExams() {
         const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
         const container = document.getElementById('exam-list');
@@ -132,72 +183,102 @@
         `).join('');
     }
 
-    async function extractKMJP(input) {
+    async function handleKMJPUpload(input) {
         const file = input.files[0];
         if (!file) return;
 
         Swal.fire({
-            title: 'Menganalisis PDF...',
-            text: 'SiswaKlik sedang mengekstrak data jadual peperiksaan anda.',
+            title: 'Memproses KMJP...',
+            text: 'Menyusun fail dan mengekstrak jadual.',
             allowOutsideClick: false,
             didOpen: () => Swal.showLoading()
         });
 
         try {
+            // 1. Ekstrak data guna PDF.js (Logik asal anda)
+            const exams = await extractDataFromPDF(file);
+            
+            if(exams.length === 0) {
+                Swal.fire('Gagal', 'Tiada data jadual ditemui dalam PDF tersebut.', 'warning');
+                return;
+            }
+
+            // 2. Drive Logic: Delete old KMJP files
+            const kmjpFolderId = localStorage.getItem('siswaklik_kmjp_folder_id');
+            const listOldRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${kmjpFolderId}' in parents and trashed = false`)}`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            const oldFiles = await listOldRes.json();
+            for (const f of oldFiles.files) {
+                await fetch(`https://www.googleapis.com/drive/v3/files/${f.id}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+                });
+            }
+
+            // 3. Drive Logic: Upload new file
+            const metadata = {
+                name: file.name,
+                parents: [kmjpFolderId]
+            };
+            const formData = new FormData();
+            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            formData.append('file', file);
+
+            await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                method: 'POST',
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` },
+                body: formData
+            });
+
+            // 4. Update UI & LocalStorage
+            localStorage.setItem('siswa_exams', JSON.stringify(exams));
+            renderExams();
+
+            Swal.fire({
+                icon: 'success',
+                title: 'Berjaya!',
+                text: 'Jadual dikemaskini dan fail disimpan ke Google Drive.',
+                timer: 2000
+            });
+
+        } catch (err) {
+            console.error(err);
+            Swal.fire('Ralat', 'Proses gagal. Sila cuba lagi.', 'error');
+        }
+    }
+
+    async function extractDataFromPDF(file) {
+        return new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = async function() {
-                const typedarray = new Uint8Array(this.result);
-                const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                let fullText = "";
-                
-                for(let i=1; i<=pdf.numPages; i++) {
-                    const page = await pdf.getPage(i);
-                    const content = await page.getTextContent();
-                    // Join dengan space untuk elakkan teks bercantum
-                    fullText += content.items.map(item => item.str).join("  ") + " ";
-                }
-
-                /** * REGEX EXPLANATION:
-                 * 1. ([A-Z]{4}\d{4}) -> Kod Kursus (cth: KKPK2323)
-                 * 2. (\d{2}\/\d{2}\/\d{4}) -> Tarikh (cth: 09/02/2026)
-                 * 3. (\d{2}:\d{2}) -> Masa (cth: 08:30)
-                 * 4. Teks selepas masa adalah tempoh, kita skip tempoh untuk ambil lokasi
-                 * 5. Lokasi biasanya DEWAN atau DGEMILANG atau DT
-                 */
-                const regex = /([A-Z]{4}\d{4})\s+.*?\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+[\d:j\s]+(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+)/gi;
-                
-                let match;
-                const foundExams = [];
-
-                while ((match = regex.exec(fullText)) !== null) {
-                    foundExams.push({
-                        id: 'ex-' + Math.random().toString(36).substr(2, 9),
-                        code: match[1],
-                        date: match[2].split('/').reverse().join('-'), // Tukar ke YYYY-MM-DD
-                        time: match[3],
-                        location: match[4].trim()
-                    });
-                }
-
-                if(foundExams.length > 0) {
-                    // Simpan data (overwrite atau append)
-                    localStorage.setItem('siswa_exams', JSON.stringify(foundExams));
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berjaya!',
-                        text: `${foundExams.length} subjek peperiksaan telah dikesan.`,
-                        timer: 2000
-                    });
-                    renderExams();
-                } else {
-                    Swal.fire('Data Tidak Ditemui', 'Pastikan anda muat naik fail PDF KMJP yang sah.', 'warning');
-                }
+                try {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let fullText = "";
+                    for(let i=1; i<=pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        fullText += content.items.map(item => item.str).join("  ") + " ";
+                    }
+                    
+                    const regex = /([A-Z]{4}\d{4})\s+.*?\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+[\d:j\s]+(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+)/gi;
+                    let match;
+                    const foundExams = [];
+                    while ((match = regex.exec(fullText)) !== null) {
+                        foundExams.push({
+                            id: 'ex-' + Math.random().toString(36).substr(2, 9),
+                            code: match[1],
+                            date: match[2].split('/').reverse().join('-'),
+                            time: match[3],
+                            location: match[4].trim()
+                        });
+                    }
+                    resolve(foundExams);
+                } catch (e) { reject(e); }
             };
             reader.readAsArrayBuffer(file);
-        } catch (err) {
-            Swal.fire('Ralat', 'Gagal memproses fail PDF tersebut.', 'error');
-            console.error(err);
-        }
+        });
     }
 
     function deleteExam(id) {
@@ -206,12 +287,6 @@
         renderExams();
     }
 
-    // Papar data sedia ada bila buka dashboard
-    renderExams();
-
-    // Set nama user daripada localStorage
-    const user = JSON.parse(localStorage.getItem('siswaklik_user'));
-    if(user) {
-        document.getElementById('dash-user').innerText = user.given_name || user.name.split(' ')[0];
-    }
+    // Run when page loads
+    initDashboard();
 </script>
