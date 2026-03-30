@@ -1,3 +1,14 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiswaKlik - Dashboard</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 font-sans">
+
 <div class="p-6 lg:p-10 max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500">
     
     <header class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
@@ -96,14 +107,12 @@
     const ACCESS_TOKEN = localStorage.getItem('siswaklik_access_token');
     const PARENT_FOLDER_ID = localStorage.getItem('siswaklik_drive_folder_id');
 
-    // Initialization: Setup Folder KMJP
     async function initDashboard() {
         if (!ACCESS_TOKEN) {
             window.location.href = 'login.html';
             return;
         }
 
-        // Set User Name
         const user = JSON.parse(localStorage.getItem('siswaklik_user'));
         if(user) {
             document.getElementById('dash-user').innerText = user.given_name || user.name.split(' ')[0];
@@ -195,15 +204,13 @@
         });
 
         try {
-            // 1. Ekstrak data guna PDF.js (Logik asal anda)
             const exams = await extractDataFromPDF(file);
             
             if(exams.length === 0) {
-                Swal.fire('Gagal', 'Tiada data jadual ditemui dalam PDF tersebut.', 'warning');
+                Swal.fire('Gagal', 'Tiada data jadual peperiksaan ditemui. (Penilaian berterusan tidak dikira)', 'warning');
                 return;
             }
 
-            // 2. Drive Logic: Delete old KMJP files
             const kmjpFolderId = localStorage.getItem('siswaklik_kmjp_folder_id');
             const listOldRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(`'${kmjpFolderId}' in parents and trashed = false`)}`, {
                 headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
@@ -216,7 +223,6 @@
                 });
             }
 
-            // 3. Drive Logic: Upload new file
             const metadata = {
                 name: file.name,
                 parents: [kmjpFolderId]
@@ -231,7 +237,6 @@
                 body: formData
             });
 
-            // 4. Update UI & LocalStorage
             localStorage.setItem('siswa_exams', JSON.stringify(exams));
             renderExams();
 
@@ -255,26 +260,43 @@
                 try {
                     const typedarray = new Uint8Array(this.result);
                     const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let fullText = "";
+                    let rows = [];
+                    
                     for(let i=1; i<=pdf.numPages; i++) {
                         const page = await pdf.getPage(i);
                         const content = await page.getTextContent();
-                        fullText += content.items.map(item => item.str).join("  ") + " ";
-                    }
-                    
-                    const regex = /([A-Z]{4}\d{4})\s+.*?\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+[\d:j\s]+(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+)/gi;
-                    let match;
-                    const foundExams = [];
-                    while ((match = regex.exec(fullText)) !== null) {
-                        foundExams.push({
-                            id: 'ex-' + Math.random().toString(36).substr(2, 9),
-                            code: match[1],
-                            date: match[2].split('/').reverse().join('-'),
-                            time: match[3],
-                            location: match[4].trim()
+                        
+                        // Kumpul teks berdasarkan baris (Y coordinate)
+                        const textItems = content.items.map(item => ({
+                            str: item.str.trim(),
+                            y: Math.round(item.transform[5])
+                        })).filter(item => item.str !== "");
+
+                        const lines = {};
+                        textItems.forEach(item => {
+                            if (!lines[item.y]) lines[item.y] = [];
+                            lines[item.y].push(item.str);
+                        });
+
+                        // Proses setiap baris yang mengandungi kod kursus (contoh: KKKQ2123)
+                        Object.values(lines).forEach(lineArr => {
+                            const fullLine = lineArr.join(" ");
+                            
+                            // Regex untuk pattern: [Kod] [Set] [Tajuk...] [Tarikh] [Masa] [Tempoh] [Tempat]
+                            const examMatch = fullLine.match(/([A-Z]{4}\d{4})\s+\d+\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+[\d:j\s]+(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s\.]+|DEWAN\s[A-Z]+)/i);
+                            
+                            if (examMatch) {
+                                rows.push({
+                                    id: 'ex-' + Math.random().toString(36).substr(2, 9),
+                                    code: examMatch[1],
+                                    date: examMatch[3].split('/').reverse().join('-'), // YYYY-MM-DD
+                                    time: examMatch[4],
+                                    location: examMatch[5].trim()
+                                });
+                            }
                         });
                     }
-                    resolve(foundExams);
+                    resolve(rows);
                 } catch (e) { reject(e); }
             };
             reader.readAsArrayBuffer(file);
@@ -287,6 +309,7 @@
         renderExams();
     }
 
-    // Run when page loads
     initDashboard();
 </script>
+</body>
+</html>
