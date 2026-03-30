@@ -13,45 +13,60 @@
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
         @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
         .animate-float { animation: float 3s ease-in-out infinite; }
+        
+        .btn-google {
+            background: white;
+            color: #1f2937;
+            border: 1px solid #e5e7eb;
+            transition: all 0.2s;
+        }
+        .btn-google:hover {
+            background: #f9fafb;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            transform: translateY(-1px);
+        }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen flex items-center justify-center p-6 bg-[url('https://www.transparenttextures.com/patterns/cubes.png')]">
+<body class="bg-slate-50 min-h-screen flex items-center justify-center p-6 bg-[radial-gradient(circle_at_top_right,_var(--tw-gradient-stops))] from-blue-100 via-slate-50 to-indigo-100">
 
     <div class="max-w-md w-full space-y-8 relative">
-        <div class="absolute -top-20 -left-20 w-64 h-64 bg-blue-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float"></div>
-        <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-indigo-100 rounded-full mix-blend-multiply filter blur-3xl opacity-70 animate-float" style="animation-delay: 1.5s;"></div>
+        <div class="absolute -top-20 -left-20 w-64 h-64 bg-blue-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float"></div>
+        <div class="absolute -bottom-20 -right-20 w-64 h-64 bg-indigo-200 rounded-full mix-blend-multiply filter blur-3xl opacity-30 animate-float" style="animation-delay: 1.5s"></div>
 
-        <div class="glass-card p-10 rounded-[3rem] shadow-2xl border border-white/50 relative z-10 text-center">
+        <div class="glass-card p-10 rounded-[3rem] shadow-2xl border border-white relative z-10 text-center">
             <div class="mb-8">
-                <div class="w-20 h-20 bg-blue-600 rounded-3xl mx-auto flex items-center justify-center shadow-lg shadow-blue-200 mb-6 rotate-3">
-                    <i class="fas fa-graduation-cap text-3xl text-white"></i>
+                <div class="inline-flex items-center justify-center w-20 h-20 bg-blue-600 rounded-3xl shadow-lg shadow-blue-200 mb-6 rotate-3 hover:rotate-0 transition-transform duration-300">
+                    <i class="fas fa-graduation-cap text-white text-4xl"></i>
                 </div>
                 <h1 class="text-4xl font-extrabold text-slate-900 tracking-tight">Siswa<span class="text-blue-600">Klik</span></h1>
-                <p class="text-slate-500 mt-3 font-medium">Hub Akademik & Pengurusan Fail Digital</p>
+                <p class="text-slate-500 mt-3 font-medium">Hab Akademik & Pengurusan Fail Pintar</p>
             </div>
 
-            <div id="login-status" class="hidden mb-6 p-4 rounded-2xl bg-blue-50 text-blue-700 text-sm font-bold animate-pulse">
-                Sila tunggu, sedang menyediakan ruang kerja...
+            <div class="space-y-6">
+                <div class="bg-blue-50 p-6 rounded-3xl border border-blue-100 text-left">
+                    <h2 class="text-sm font-bold text-blue-800 uppercase tracking-widest mb-2">Automasi Drive</h2>
+                    <p class="text-xs text-blue-600 leading-relaxed font-medium">
+                        Log masuk akan mencipta folder <b>"SiswaKlik"</b> secara automatik dalam Google Drive anda untuk penyelarasan fail yang lancar.
+                    </p>
+                </div>
+
+                <button onclick="handleAuthClick()" class="btn-google w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-bold text-lg shadow-sm">
+                    <img src="https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" class="w-6 h-6" alt="Google">
+                    Teruskan dengan Google
+                </button>
             </div>
 
-            <button onclick="handleAuthClick()" class="w-full group bg-white hover:bg-slate-50 text-slate-700 font-bold py-4 px-6 rounded-2xl border-2 border-slate-100 shadow-sm transition-all duration-300 flex items-center justify-center gap-3 active:scale-95">
-                <img src="https://www.gstatic.com/images/branding/product/1x/gsa_512dp.png" class="w-6 h-6" alt="Google">
-                Log Masuk dengan Google
-            </button>
-
-            <p class="mt-8 text-xs text-slate-400 font-medium leading-relaxed">
-                Dengan log masuk, folder <b>"SiswaKlik"</b> akan dicipta secara automatik dalam Google Drive anda untuk penyelarasan fail.
-            </p>
+            <div class="mt-10 pt-8 border-t border-slate-100">
+                <p class="text-slate-400 text-xs font-bold uppercase tracking-widest">Dibangunkan Untuk Mahasiswa</p>
+            </div>
         </div>
     </div>
 
     <script>
         let tokenClient;
-        let accessToken = null;
-
-        // KEKALKAN CLIENT ID ASAL ANDA DI SINI
-        const CLIENT_ID = 'YOUR_CLIENT_ID_HERE.apps.googleusercontent.com'; 
-        const SCOPES = 'https://www.googleapis.com/auth/drive.file https://www.googleapis.com/auth/userinfo.profile';
+        const CLIENT_ID = '755048052549-ldo2fp40r8bsk8n0f2gpsjuimdls5o1j.apps.googleusercontent.com';
+        // Tambah skop Drive untuk mencipta folder dan mengurus fail
+        const SCOPES = 'https://www.googleapis.com/auth/userinfo.profile https://www.googleapis.com/auth/userinfo.email https://www.googleapis.com/auth/drive.file';
 
         window.onload = function () {
             tokenClient = google.accounts.oauth2.initTokenClient({
@@ -62,17 +77,12 @@
                         throw (response);
                     }
                     
-                    document.getElementById('login-status').classList.remove('hidden');
-                    accessToken = response.access_token;
-                    
-                    localStorage.setItem('siswaklik_access_token', accessToken);
+                    // Simpan Access Token
+                    localStorage.setItem('siswaklik_access_token', response.access_token);
                     localStorage.setItem('siswaklik_login_time', Date.now());
 
-                    // 1. Ambil Profil & 2. Pastikan Folder SiswaKlik wujud
-                    await fetchUserProfile(accessToken);
-                    await initializeSiswaKlikFolder(accessToken);
-                    
-                    window.location.href = 'index.html';
+                    // Jalankan proses penyediaan folder SiswaKlik
+                    await setupSiswaKlikEnvironment(response.access_token);
                 },
             });
         };
@@ -81,50 +91,58 @@
             tokenClient.requestAccessToken({prompt: 'consent'});
         }
 
-        async function fetchUserProfile(token) {
+        async function setupSiswaKlikEnvironment(accessToken) {
             try {
-                const res = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // 1. Ambil profil user
+                const profileRes = await fetch('https://www.googleapis.com/oauth2/v3/userinfo', {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
-                const userData = await res.json();
+                const userData = await profileRes.json();
                 localStorage.setItem('siswaklik_user', JSON.stringify(userData));
+
+                // 2. Semak/Cipta Folder "SiswaKlik" di Drive
+                await checkAndCreateSiswaKlikFolder(accessToken);
+
+                // 3. Redirect ke dashboard
+                window.location.href = 'index.html';
             } catch (err) {
-                console.error('Gagal mengambil profil:', err);
+                console.error('Ralat semasa setup:', err);
+                alert('Log masuk berjaya, tetapi ralat berlaku semasa menyediakan folder Drive.');
             }
         }
 
-        async function initializeSiswaKlikFolder(token) {
+        async function checkAndCreateSiswaKlikFolder(accessToken) {
             try {
-                // Cari jika folder "SiswaKlik" sudah ada
-                const searchRes = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='SiswaKlik' and mimeType='application/vnd.google-apps.folder' and trashed=false`, {
-                    headers: { 'Authorization': `Bearer ${token}` }
+                // Cari folder "SiswaKlik" yang sedia ada
+                const searchQuery = encodeURIComponent("name = 'SiswaKlik' and mimeType = 'application/vnd.google-apps.folder' and trashed = false");
+                const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${searchQuery}`, {
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
-                const searchData = await searchRes.json();
+                const data = await response.json();
 
-                if (searchData.files && searchData.files.length > 0) {
-                    // Folder wujud, simpan ID
-                    localStorage.setItem('siswaklik_folder_id', searchData.files[0].id);
-                    console.log("Folder SiswaKlik ditemui:", searchData.files[0].id);
+                if (data.files && data.files.length > 0) {
+                    // Folder wujud
+                    console.log("Folder SiswaKlik sudah ada:", data.files[0].id);
+                    localStorage.setItem('siswaklik_drive_folder_id', data.files[0].id);
                 } else {
-                    // Folder tidak wujud, cipta baru
+                    // Folder belum ada, cipta folder baru
                     const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
                         method: 'POST',
                         headers: {
-                            'Authorization': `Bearer ${token}`,
+                            'Authorization': `Bearer ${accessToken}`,
                             'Content-Type': 'application/json'
                         },
                         body: JSON.stringify({
                             name: 'SiswaKlik',
-                            mimeType: 'application/vnd.google-apps.folder',
-                            description: 'Folder utama untuk semua aktiviti dan fail SiswaKlik'
+                            mimeType: 'application/vnd.google-apps.folder'
                         })
                     });
-                    const folderData = await createRes.json();
-                    localStorage.setItem('siswaklik_folder_id', folderData.id);
-                    console.log("Folder SiswaKlik baru dicipta:", folderData.id);
+                    const newFolder = await createRes.json();
+                    console.log("Folder SiswaKlik baru dicipta:", newFolder.id);
+                    localStorage.setItem('siswaklik_drive_folder_id', newFolder.id);
                 }
             } catch (err) {
-                console.error('Ralat penyediaan folder Google Drive:', err);
+                console.error("Gagal menguruskan folder Drive:", err);
             }
         }
     </script>
