@@ -6,20 +6,20 @@
             </button>
             <div>
                 <h3 class="font-black text-slate-800" id="editing-filename">Memuatkan...</h3>
-                <p id="sync-status" class="text-[10px] text-blue-500 font-bold uppercase tracking-wider italic">Semua perubahan disimpan lokal</p>
+                <p id="sync-status" class="text-[10px] text-blue-500 font-bold uppercase tracking-wider italic">Sedia untuk diedit</p>
             </div>
         </div>
         
         <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl">
             <button onclick="setMode('select')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Pilih"><i class="fas fa-mouse-pointer"></i></button>
-            <button onclick="setMode('text')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Tambah Teks"><i class="fas fa-font"></i></button>
+            <button onclick="setMode('text')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Teks"><i class="fas fa-font"></i></button>
             <button onclick="setMode('draw')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Conteng"><i class="fas fa-pen"></i></button>
             <button onclick="deleteObject()" class="p-3 hover:bg-white rounded-xl transition text-red-500" title="Padam"><i class="fas fa-trash"></i></button>
         </div>
 
         <div class="flex gap-3">
-            <button onclick="manualSave()" class="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">
-                SIMPAN
+            <button onclick="processAndSave()" class="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">
+                SIMPAN KE DRIVE
             </button>
         </div>
     </div>
@@ -43,30 +43,22 @@
     const editingName = localStorage.getItem('editing_file_name');
     document.getElementById('editing-filename').innerText = editingName;
 
-    // 1. Inisialisasi Canvas
     async function initEditor() {
         const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
         const fileData = localFiles.find(f => f.id === editingId);
 
-        if (!fileData) {
-            alert("Fail tidak ditemui!");
-            return;
-        }
+        if (!fileData) return alert("Fail tidak ditemui!");
 
-        // Render PDF ke Background
         const loadingTask = pdfjsLib.getDocument(fileData.content);
         const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1); // Page 1 untuk demo
+        const page = await pdf.getPage(1);
         const viewport = page.getViewport({ scale: 1.5 });
 
         const canvas = document.getElementById('pdf-canvas');
-        const context = canvas.getContext('2d');
         canvas.height = viewport.height;
         canvas.width = viewport.width;
+        await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
 
-        await page.render({ canvasContext: context, viewport: viewport }).promise;
-
-        // Setup Fabric.js Overlay
         const container = document.getElementById('pdf-container');
         container.style.width = viewport.width + 'px';
         container.style.height = viewport.height + 'px';
@@ -76,78 +68,97 @@
             height: viewport.height
         });
 
-        // Muat semula editan lama jika ada (Auto-restore)
         if (fileData.annotations) {
             fbCanvas.loadFromJSON(fileData.annotations, fbCanvas.renderAll.bind(fbCanvas));
         }
-
-        // Auto-save setiap kali ada perubahan pada canvas
-        fbCanvas.on('object:modified', autoSaveToLocal);
-        fbCanvas.on('object:added', autoSaveToLocal);
     }
 
-    // 2. Mod Penyuntingan
     function setMode(mode) {
-        fbCanvas.isDrawingMode = false;
+        fbCanvas.isDrawingMode = (mode === 'draw');
         if (mode === 'draw') {
-            fbCanvas.isDrawingMode = true;
             fbCanvas.freeDrawingBrush.width = 3;
             fbCanvas.freeDrawingBrush.color = '#2563eb';
         } else if (mode === 'text') {
-            const text = new fabric.IText('Tulis sesuatu...', {
-                left: 100,
-                top: 100,
-                fontFamily: 'Plus Jakarta Sans',
-                fontSize: 20,
-                fill: '#1e293b'
-            });
-            fbCanvas.add(text);
-            fbCanvas.setActiveObject(text);
+            fbCanvas.add(new fabric.IText('Tulis sini...', { left: 50, top: 50, fontSize: 20 }));
         }
     }
 
     function deleteObject() {
-        const activeObjects = fbCanvas.getActiveObjects();
-        fbCanvas.discardActiveObject();
-        activeObjects.forEach((obj) => fbCanvas.remove(obj));
+        fbCanvas.getActiveObjects().forEach(obj => fbCanvas.remove(obj));
+        fbCanvas.discardActiveObject().renderAll();
     }
 
-    // 3. Sistem Simpan (Hybrid: Local -> Cloud)
-    function autoSaveToLocal() {
-        let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-        const index = localFiles.findIndex(f => f.id === editingId);
+    // FUNGSI UTAMA: Gabungkan Contengan & PDF kemudian hantar ke Drive
+    async function processAndSave() {
+        document.getElementById('sync-status').innerText = "Sedang memproses fail...";
+        
+        // 1. Gabungkan PDF Canvas + Fabric Canvas jadi satu imej (DataURL)
+        const finalCanvas = document.createElement('canvas');
+        finalCanvas.width = fbCanvas.width;
+        finalCanvas.height = fbCanvas.height;
+        const ctx = finalCanvas.getContext('2d');
+        
+        ctx.drawImage(document.getElementById('pdf-canvas'), 0, 0);
+        ctx.drawImage(fbCanvas.getElement(), 0, 0);
+        const mergedDataUrl = finalCanvas.toDataURL('image/png');
 
-        if (index !== -1) {
-            // Simpan rupa bentuk editan (JSON) supaya boleh edit balik
-            localFiles[index].annotations = JSON.stringify(fbCanvas);
-            localFiles[index].status = 'pending_sync'; // Flag untuk background sync
+        // 2. Kemaskini LocalStorage
+        let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+        const idx = localFiles.findIndex(f => f.id === editingId);
+        
+        if (idx !== -1) {
+            localFiles[idx].content = mergedDataUrl; // Data baru yang sudah ada contengan
+            localFiles[idx].annotations = JSON.stringify(fbCanvas); // Simpan untuk edit balik nanti
+            localFiles[idx].status = 'pending_sync';
             localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
             
-            document.getElementById('sync-status').innerText = "Menunggu penyegerakan...";
-            
-            // Trigger background sync yang ada di fail.html secara senyap
-            if(typeof backgroundSync === 'function') backgroundSync();
+            // 3. Panggil fungsi update khusus untuk mengelakkan duplicate
+            await updateExistingFileInDrive(localFiles[idx]);
         }
     }
 
-    function manualSave() {
-        autoSaveToLocal();
-        Swal.fire({
-            icon: 'success',
-            title: 'Tersimpan',
-            text: 'Perubahan anda telah disimpan dengan selamat.',
-            timer: 1500,
-            showConfirmButton: false
-        });
+    async function updateExistingFileInDrive(file) {
+        const token = localStorage.getItem('siswaklik_access_token');
+        if (!token || !file.driveId) {
+            // Jika belum ada driveId, backgroundSync biasa akan buat fail baru
+            if(typeof backgroundSync === 'function') backgroundSync();
+            return;
+        }
+
+        try {
+            document.getElementById('sync-status').innerText = "Mengemaskini Drive...";
+            
+            // Gunakan PATCH dan uploadType=media untuk overwrite kandungan fail sedia ada
+            const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${file.driveId}?uploadType=media`, {
+                method: 'PATCH',
+                headers: { 
+                    'Authorization': `Bearer ${token}`,
+                    'Content-Type': 'image/png'
+                },
+                body: dataURLtoBlob(file.content)
+            });
+
+            if (response.ok) {
+                document.getElementById('sync-status').innerText = "Tersimpan di Drive & Lokal";
+                Swal.fire({ icon: 'success', title: 'Berjaya!', text: 'Fail di Google Drive telah dikemaskini.', timer: 2000 });
+            }
+        } catch (err) {
+            console.error("Gagal update:", err);
+            document.getElementById('sync-status').innerText = "Ralat Sync";
+        }
     }
 
-    // Jalankan editor
+    function dataURLtoBlob(dataurl) {
+        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+        while(n--) u8arr[n] = bstr.charCodeAt(n);
+        return new Blob([u8arr], {type:mime});
+    }
+
     initEditor();
 </script>
 
 <style>
-    /* Sembunyikan scrollbar pada container canvas untuk kekemasan */
-    #pdf-container::-webkit-scrollbar { display: none; }
     .canvas-container { position: absolute !important; top: 0; left: 0; z-index: 10; }
     #pdf-canvas { z-index: 5; }
 </style>
