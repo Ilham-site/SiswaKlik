@@ -8,193 +8,204 @@
             <button onclick="openEventModal()" class="bg-white/20 backdrop-blur-md border border-white/30 text-white px-6 py-3 rounded-2xl font-bold hover:bg-white/30 transition flex items-center">
                 <i class="fas fa-plus-circle mr-2"></i> Tambah Aktiviti
             </button>
-            <button id="auth_button" onclick="handleAuthClick()" class="bg-white text-blue-600 px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-50 transition flex items-center">
+            <button onclick="syncGoogleCalendar()" class="bg-white text-blue-600 px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-50 transition flex items-center">
                 <i class="fab fa-google mr-2"></i> Sync Google
             </button>
         </div>
     </div>
 
-    <div class="bg-white p-6 rounded-[2rem] border border-gray-100 shadow-sm">
-        <h3 class="font-bold text-gray-800 mb-3"><i class="fas fa-file-import mr-2 text-blue-500"></i>Upload Jadual Peperiksaan (KMJP)</h3>
-        <input type="file" id="kmjp-upload" accept="application/pdf" class="block w-full text-sm text-gray-500 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-blue-50 file:text-blue-700 hover:file:bg-blue-100"/>
-    </div>
-
-    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
-        <div id='calendar' class="min-h-[600px]"></div>
-    </div>
-
-    <div class="bg-blue-50 p-6 rounded-[2rem] border border-blue-100">
-        <div class="flex justify-between items-center">
-            <div class="flex items-center gap-3">
-                <div class="bg-blue-600 p-3 rounded-xl text-white">
-                    <i class="fas fa-mosque"></i>
-                </div>
-                <div>
-                    <h4 class="font-bold text-gray-800">Waktu Solat & GPS</h4>
-                    <p class="text-sm text-gray-500">Kesan lokasi automatik untuk waktu solat tepat.</p>
-                </div>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-                <input type="checkbox" id="prayerToggle" class="sr-only peer" onchange="togglePrayerTimes()">
-                <div class="w-14 h-7 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-6 after:w-6 after:transition-all peer-checked:bg-blue-600"></div>
-            </label>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <div class="lg:col-span-2 bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
+            <div id="calendar" class="min-h-[600px]"></div>
         </div>
-        <div id="prayerDisplay" class="hidden mt-6 grid grid-cols-2 md:grid-cols-6 gap-4 animate-slide-up"></div>
-    </div>
-</div>
 
-<div id="eventModal" class="fixed inset-0 bg-black/60 backdrop-blur-sm hidden z-[100] flex items-center justify-center p-4">
-    <div class="bg-white w-full max-w-lg rounded-[2.5rem] shadow-2xl overflow-hidden animate-zoom-in">
-        <div class="p-8">
-            <div class="flex justify-between items-center mb-6">
-                <h3 class="text-2xl font-bold text-gray-800">Tambah Aktiviti Baru</h3>
-                <button onclick="closeEventModal()" class="text-gray-400 hover:text-red-500"><i class="fas fa-times-circle text-2xl"></i></button>
+        <div class="space-y-6">
+            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
+                <div class="flex items-center justify-between mb-4">
+                    <h3 class="font-bold text-gray-800">Waktu Solat</h3>
+                    <select id="zonSolat" onchange="fetchWaktuSolat()" class="text-xs border-none bg-slate-100 rounded-lg p-1 font-bold text-blue-600">
+                        <option value="SGR01">Gombak/Hulu Langat</option>
+                        <option value="SGR02">Kajang/Sepang</option>
+                        <option value="SWK01">Kuching</option>
+                    </select>
+                </div>
+                <div id="solatDisplay" class="grid grid-cols-2 gap-3">
+                    <div class="col-span-2 text-center py-4 text-slate-400 animate-pulse">Memuatkan waktu...</div>
+                </div>
             </div>
-            
-            <form id="eventForm" class="space-y-4 text-left">
-                <input type="text" id="eventTitle" placeholder="Tajuk Aktiviti (cth: Lab Test)" class="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 text-gray-800" required>
-                
-                <div class="grid grid-cols-2 gap-4">
-                    <div>
-                        <label class="text-xs font-bold text-gray-400 ml-2 uppercase">Mula</label>
-                        <input type="datetime-local" id="startTime" class="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 text-gray-800" required>
-                    </div>
-                    <div>
-                        <label class="text-xs font-bold text-gray-400 ml-2 uppercase">Tamat</label>
-                        <input type="datetime-local" id="endTime" class="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 text-gray-800">
-                    </div>
-                </div>
 
-                <textarea id="eventDesc" placeholder="Keterangan aktiviti..." class="w-full px-5 py-4 bg-gray-50 border border-gray-100 rounded-2xl focus:ring-2 focus:ring-blue-500 h-24 text-gray-800"></textarea>
-
-                <div>
-                    <label class="text-xs font-bold text-gray-400 ml-2 uppercase mb-3 block">Warna Tema</label>
-                    <div id="colorPicker" class="flex gap-3 px-2">
-                        <div class="color-dot w-9 h-9 rounded-full bg-[#ef4444] cursor-pointer ring-offset-2 transition hover:scale-110" onclick="selectColor('#ef4444', this)"></div>
-                        <div class="color-dot w-9 h-9 rounded-full bg-[#3b82f6] cursor-pointer ring-offset-2 transition hover:scale-110 ring-2 ring-blue-500" onclick="selectColor('#3b82f6', this)"></div>
-                        <div class="color-dot w-9 h-9 rounded-full bg-[#16a34a] cursor-pointer ring-offset-2 transition hover:scale-110" onclick="selectColor('#16a34a', this)"></div>
-                        <div class="color-dot w-9 h-9 rounded-full bg-[#9333ea] cursor-pointer ring-offset-2 transition hover:scale-110" onclick="selectColor('#9333ea', this)"></div>
-                    </div>
-                </div>
-
-                <button type="submit" class="w-full bg-blue-600 text-white p-4 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">Simpan Aktiviti</button>
-            </form>
+            <div class="bg-indigo-50 p-6 rounded-[2.5rem] border border-indigo-100">
+                <h3 class="font-bold text-indigo-900 mb-2">Tips Produktiviti</h3>
+                <p class="text-sm text-indigo-700 leading-relaxed">
+                    Gunakan teknik Pomodoro: 25 minit fokus, 5 minit rehat. Pastikan setiap tugasan ada deadline!
+                </p>
+            </div>
         </div>
     </div>
 </div>
 
-<style>
-    /* FullCalendar Custom Styles */
-    .fc { background: white; border: none !important; }
-    .fc .fc-toolbar-title { font-size: 1.25rem !important; font-weight: 800; color: #1e293b; }
-    .fc .fc-button-primary { background-color: #3b82f6 !important; border: none !important; border-radius: 12px !important; }
-    .fc-day-today { background: #eff6ff !important; }
-    .hijri-date { font-size: 0.7rem; color: #94a3b8; font-weight: 600; padding: 4px; }
-    .fc-daygrid-day-top { flex-direction: row-reverse !important; }
-</style>
+<div id="eventModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
+    <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl">
+        <h3 class="text-2xl font-black text-slate-800 mb-6">Aktiviti Baru</h3>
+        <div class="space-y-4">
+            <div>
+                <label class="block text-sm font-bold text-slate-500 mb-2">Nama Aktiviti</label>
+                <input type="text" id="eventTitle" class="w-full bg-slate-100 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Lab Report">
+            </div>
+            <div>
+                <label class="block text-sm font-bold text-slate-500 mb-2">Tarikh</label>
+                <input type="date" id="eventDate" class="w-full bg-slate-100 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500">
+            </div>
+            <div class="flex gap-3 mt-8">
+                <button onclick="closeEventModal()" class="flex-1 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition">Batal</button>
+                <button onclick="saveEvent()" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">Simpan</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
 
 <script>
-    // Konfigurasi Google API
-    const CLIENT_ID = '755048052549-ldo2fp40r8bsk8n0f2gpsjuimdls5o1j.apps.googleusercontent.com';
-    const SCOPES = 'https://www.googleapis.com/auth/calendar.events.readonly';
-
     let calendar;
-    let selectedColorCode = '#3b82f6';
+    const GOOGLE_CLIENT_ID = '755048052549-ldo2fp40r8bsk8n0f2gpsjuimdls5o1j.apps.googleusercontent.com';
 
-    document.addEventListener('DOMContentLoaded', function() {
-        initCalendar();
-        
-        // Simuasi KMJP Upload daripada 9.html
-        document.getElementById('kmjp-upload').addEventListener('change', function() {
-            alert("KMJP Dikesan: Jadual Peperiksaan KKKP2143 (2 April) telah dimasukkan!");
-            calendar.addEvent({
-                title: 'EXAM: KKKP2143',
-                start: '2026-04-02',
-                color: '#ef4444',
-                allDay: true
-            });
-        });
-    });
-
+    // 1. Inisialisasi Kalendar
     function initCalendar() {
         const calendarEl = document.getElementById('calendar');
+        if (!calendarEl) return;
+
         calendar = new FullCalendar.Calendar(calendarEl, {
             initialView: 'dayGridMonth',
-            locale: 'ms',
             headerToolbar: {
                 left: 'prev,next today',
                 center: 'title',
-                right: 'dayGridMonth,timeGridWeek'
+                right: 'dayGridMonth,timeGridWeek,listWeek'
             },
-            events: JSON.parse(localStorage.getItem('userEvents')) || [],
-            dayCellDidMount: function(arg) {
-                // Tambah Tarikh Hijri
-                let hijri = new Intl.DateTimeFormat('ms-MY-u-ca-islamic-uma', {day:'numeric', month:'short'}).format(arg.date);
-                let container = arg.el.querySelector('.fc-daygrid-day-top');
-                if (container) {
-                    let span = document.createElement('span');
-                    span.className = 'hijri-date';
-                    span.innerText = hijri;
-                    container.prepend(span);
-                }
+            themeSystem: 'standard',
+            height: 'auto',
+            locale: 'ms',
+            events: JSON.parse(localStorage.getItem('siswaklik_events')) || [],
+            eventClick: function(info) {
+                Swal.fire({
+                    title: info.event.title,
+                    text: "Tarikh: " + info.event.startStr,
+                    icon: 'info',
+                    showCancelButton: true,
+                    confirmButtonText: 'Padam Aktiviti',
+                    cancelButtonText: 'Tutup'
+                }).then((result) => {
+                    if (result.isConfirmed) {
+                        info.event.remove();
+                        saveToLocal();
+                    }
+                });
             }
         });
         calendar.render();
     }
 
-    function openEventModal() { document.getElementById('eventModal').classList.remove('hidden'); }
-    function closeEventModal() { document.getElementById('eventModal').classList.add('hidden'); }
-
-    function selectColor(color, element) {
-        selectedColorCode = color;
-        document.querySelectorAll('.color-dot').forEach(dot => dot.classList.remove('ring-2', 'ring-blue-500', 'scale-110'));
-        element.classList.add('ring-2', 'ring-blue-500', 'scale-110');
+    // 2. Fungsi Modal & Simpan Event
+    function openEventModal() {
+        document.getElementById('eventModal').classList.remove('hidden');
     }
 
-    document.getElementById('eventForm').onsubmit = function(e) {
-        e.preventDefault();
-        const title = document.getElementById('eventTitle').value;
-        const start = document.getElementById('startTime').value;
-        const end = document.getElementById('endTime').value;
-        
-        const newEvent = { title, start, end, color: selectedColorCode };
-        calendar.addEvent(newEvent);
-        
-        let events = JSON.parse(localStorage.getItem('userEvents')) || [];
-        events.push(newEvent);
-        localStorage.setItem('userEvents', JSON.stringify(events));
-        
-        closeEventModal();
-        this.reset();
-    };
+    function closeEventModal() {
+        document.getElementById('eventModal').classList.add('hidden');
+    }
 
-    async function togglePrayerTimes() {
-        const display = document.getElementById('prayerDisplay');
-        if(document.getElementById('prayerToggle').checked) {
-            display.classList.remove('hidden');
-            navigator.geolocation.getCurrentPosition(async (pos) => {
-                const res = await fetch(`https://api.aladhan.com/v1/timings?latitude=${pos.coords.latitude}&longitude=${pos.coords.longitude}&method=11`);
-                const data = await res.json();
-                const times = data.data.timings;
-                const solat = [
-                    {label: 'Subuh', key: 'Fajr'}, {label: 'Zohor', key: 'Dhuhr'}, 
-                    {label: 'Asar', key: 'Asr'}, {label: 'Maghrib', key: 'Maghrib'}, {label: 'Isyak', key: 'Isha'}
-                ];
-                display.innerHTML = solat.map(s => `
-                    <div class="bg-white p-4 rounded-2xl text-center shadow-sm border border-blue-50">
-                        <p class="text-[10px] font-bold text-gray-400 uppercase">${s.label}</p>
-                        <p class="text-md font-bold text-blue-600">${times[s.key]}</p>
-                    </div>
-                `).join('');
+    function saveEvent() {
+        const title = document.getElementById('eventTitle').value;
+        const date = document.getElementById('eventDate').value;
+
+        if (title && date) {
+            calendar.addEvent({
+                title: title,
+                start: date,
+                allDay: true,
+                backgroundColor: '#2563eb',
+                borderColor: '#2563eb'
             });
+            saveToLocal();
+            closeEventModal();
+            document.getElementById('eventTitle').value = '';
+            Swal.fire('Berjaya!', 'Aktiviti telah ditambah.', 'success');
         } else {
-            display.classList.add('hidden');
+            Swal.fire('Ralat', 'Sila isi semua maklumat.', 'warning');
         }
     }
 
-    // Google Calendar Sync (Conceptual)
-    function handleAuthClick() {
-        alert("Menyambung ke Google Calendar dengan ID: " + CLIENT_ID.substring(0,10) + "...");
-        // Logik gapi.auth2 akan diletakkan di index.html untuk global session
+    function saveToLocal() {
+        const events = calendar.getEvents().map(e => ({
+            title: e.title,
+            start: e.startStr,
+            allDay: e.allDay
+        }));
+        localStorage.setItem('siswaklik_events', JSON.stringify(events));
     }
+
+    // 3. Waktu Solat API
+    async function fetchWaktuSolat() {
+        const zon = document.getElementById('zonSolat').value;
+        const display = document.getElementById('solatDisplay');
+        
+        try {
+            const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=Kajang&country=Malaysia&method=11`);
+            // Nota: Untuk ketepatan zon JAKIM, anda boleh guna API mpt.i906.my jika perlu.
+            const data = await res.json();
+            const times = data.data.timings;
+            
+            const solatList = [
+                {label: 'Subuh', key: 'Fajr'},
+                {label: 'Zohor', key: 'Dhuhr'},
+                {label: 'Asar', key: 'Asr'},
+                {label: 'Maghrib', key: 'Maghrib'},
+                {label: 'Isyak', key: 'Isha'}
+            ];
+
+            display.innerHTML = solatList.map(s => `
+                <div class="bg-slate-50 p-3 rounded-2xl text-center border border-slate-100">
+                    <p class="text-[10px] font-bold text-slate-400 uppercase">${s.label}</p>
+                    <p class="text-sm font-black text-blue-600">${times[s.key]}</p>
+                </div>
+            `).join('');
+        } catch (err) {
+            display.innerHTML = '<p class="col-span-2 text-red-500 text-xs">Gagal memuatkan data.</p>';
+        }
+    }
+
+    // 4. Google Calendar Sync (Placeholder Integrasi)
+    function syncGoogleCalendar() {
+        Swal.fire({
+            title: 'Google Sync',
+            text: 'Adakah anda ingin menyelaraskan kalendar dengan akaun Google?',
+            icon: 'question',
+            showCancelButton: true,
+            confirmButtonText: 'Ya, Sambungkan'
+        }).then((result) => {
+            if (result.isConfirmed) {
+                Swal.fire('Info', 'Integrasi API Google sedang disambungkan menggunakan Client ID anda.', 'info');
+                // Logik gapi.client.calendar di sini
+            }
+        });
+    }
+
+    // Jalankan bila page dimuatkan
+    setTimeout(() => {
+        initCalendar();
+        fetchWaktuSolat();
+    }, 100);
+
 </script>
+
+<style>
+    /* Custom Styling untuk FullCalendar supaya ikut tema SiswaKlik */
+    .fc { --fc-border-color: #f1f5f9; font-family: inherit; }
+    .fc .fc-toolbar-title { font-size: 1.25rem; font-weight: 800; color: #1e293b; }
+    .fc .fc-button-primary { background-color: #ffffff; border-color: #e2e8f0; color: #64748b; font-weight: bold; border-radius: 12px; text-transform: capitalize; }
+    .fc .fc-button-primary:hover { background-color: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
+    .fc .fc-button-active { background-color: #2563eb !important; border-color: #2563eb !important; color: white !important; }
+    .fc th { padding: 12px 0 !important; font-weight: 700; color: #94a3b8; text-transform: uppercase; font-size: 0.75rem; }
+    .fc-daygrid-day:hover { background-color: #f8fafc; cursor: pointer; }
+    .fc-event { border-radius: 8px; padding: 2px 6px; font-weight: 600; border: none; }
+</style>
