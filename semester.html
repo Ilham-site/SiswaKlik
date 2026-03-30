@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiswaKlik - Status Akademik</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+</head>
+<body class="bg-slate-50 p-6 lg:p-10">
+
+<div class="max-w-4xl mx-auto space-y-8 animate-in slide-in-from-right-4 duration-500">
+    <div class="flex items-center gap-4">
+        <button onclick="history.back()" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200">
+            <i class="fas fa-chevron-left text-slate-400"></i>
+        </button>
+        <h2 class="text-2xl font-black text-slate-800">Status Semester</h2>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+            <p class="text-xs font-black text-blue-600 uppercase tracking-widest mb-2">Sesi 2025/2026</p>
+            <h3 class="text-xl font-bold text-slate-800">Semester 1</h3>
+            <div class="mt-6 space-y-4">
+                <div class="flex justify-between items-center text-sm">
+                    <span class="text-slate-400 font-medium">Minggu Kuliah</span>
+                    <span class="font-bold text-slate-800">14 / 14</span>
+                </div>
+                <div class="w-full bg-slate-100 h-2 rounded-full overflow-hidden">
+                    <div class="bg-blue-600 h-full w-[100%]"></div>
+                </div>
+            </div>
+        </div>
+
+        <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+            <h3 class="font-bold text-slate-800 mb-4">Pautan Universiti</h3>
+            <div class="grid grid-cols-2 gap-3">
+                <a href="https://ukmfolio.ukm.my" target="_blank" class="p-4 bg-slate-50 rounded-2xl hover:bg-blue-50 text-center transition-all">
+                    <i class="fas fa-university text-blue-600 mb-2"></i>
+                    <p class="text-[10px] font-bold uppercase">UKMFolio</p>
+                </a>
+                <a href="https://smplucee.ukm.my/smpweb/" target="_blank" class="p-4 bg-slate-50 rounded-2xl hover:bg-blue-50 text-center transition-all">
+                    <i class="fas fa-user-graduate text-blue-600 mb-2"></i>
+                    <p class="text-[10px] font-bold uppercase">SMPWEB</p>
+                </a>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white p-8 rounded-[2.5rem] shadow-sm border border-slate-100">
+        <h3 class="font-bold text-slate-800 mb-6">Tarikh Penting</h3>
+        <div class="space-y-6">
+            <div class="flex gap-4">
+                <div class="bg-rose-50 text-rose-600 h-12 w-12 rounded-xl flex flex-col items-center justify-center shrink-0 font-black">
+                    <span class="text-[8px]">JAN</span>
+                    <span class="text-lg">15</span>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-slate-800">Mula Peperiksaan Akhir</p>
+                    <p class="text-xs text-slate-400">Semester 1 Sesi 2025/2026</p>
+                </div>
+            </div>
+            <div class="flex gap-4">
+                <div class="bg-amber-50 text-amber-600 h-12 w-12 rounded-xl flex flex-col items-center justify-center shrink-0 font-black">
+                    <span class="text-[8px]">FEB</span>
+                    <span class="text-lg">02</span>
+                </div>
+                <div>
+                    <p class="text-sm font-bold text-slate-800">Cuti Akhir Semester</p>
+                    <p class="text-xs text-slate-400">Bermula 2 Feb - 1 Mac 2026</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+</body>
+</html>
