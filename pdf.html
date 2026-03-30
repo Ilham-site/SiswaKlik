@@ -6,28 +6,31 @@
             </button>
             <div>
                 <h3 class="font-black text-slate-800" id="editing-filename">Memuatkan...</h3>
-                <p id="sync-status" class="text-[10px] text-blue-500 font-bold uppercase tracking-wider italic">Sedia untuk diedit</p>
+                <div class="flex items-center gap-2">
+                    <span id="sync-dot" class="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <p id="sync-status" class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Mod Penyuntingan Aktif</p>
+                </div>
             </div>
         </div>
         
         <div class="flex items-center gap-2 bg-slate-100 p-1 rounded-2xl">
-            <button onclick="setMode('select')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Pilih"><i class="fas fa-mouse-pointer"></i></button>
-            <button onclick="setMode('text')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Teks"><i class="fas fa-font"></i></button>
-            <button onclick="setMode('draw')" class="p-3 hover:bg-white rounded-xl transition shadow-sm" title="Conteng"><i class="fas fa-pen"></i></button>
-            <button onclick="deleteObject()" class="p-3 hover:bg-white rounded-xl transition text-red-500" title="Padam"><i class="fas fa-trash"></i></button>
+            <button onclick="setMode('select')" class="p-3 hover:bg-white rounded-xl transition" title="Pilih"><i class="fas fa-mouse-pointer"></i></button>
+            <button onclick="setMode('text')" class="p-3 hover:bg-white rounded-xl transition" title="Teks"><i class="fas fa-font"></i></button>
+            <button onclick="setMode('draw')" class="p-3 hover:bg-white rounded-xl transition" title="Pen"><i class="fas fa-pen"></i></button>
+            <button onclick="deleteObject()" class="p-3 hover:bg-white rounded-xl transition text-red-500"><i class="fas fa-trash"></i></button>
         </div>
 
         <div class="flex gap-3">
-            <button onclick="processAndSave()" class="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">
-                SIMPAN KE DRIVE
+            <button onclick="manualSave()" class="bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2">
+                <i class="fas fa-cloud-upload-alt"></i> SIMPAN
             </button>
         </div>
     </div>
 
     <div class="flex-1 bg-slate-100 p-8 overflow-auto flex flex-col items-center">
-        <div id="pdf-container" class="relative shadow-2xl bg-white mb-10">
-            <canvas id="pdf-canvas" class="absolute top-0 left-0"></canvas>
-            <canvas id="editor-canvas" class="absolute top-0 left-0"></canvas>
+        <div id="pdf-wrapper" class="relative shadow-2xl bg-white mb-10">
+            <canvas id="pdf-background" class="absolute top-0 left-0"></canvas>
+            <canvas id="editor-layer"></canvas>
         </div>
     </div>
 </div>
@@ -49,25 +52,28 @@
 
         if (!fileData) return alert("Fail tidak ditemui!");
 
+        // 1. Render PDF original sebagai background
         const loadingTask = pdfjsLib.getDocument(fileData.content);
         const pdf = await loadingTask.promise;
         const page = await pdf.getPage(1);
         const viewport = page.getViewport({ scale: 1.5 });
 
-        const canvas = document.getElementById('pdf-canvas');
-        canvas.height = viewport.height;
-        canvas.width = viewport.width;
-        await page.render({ canvasContext: canvas.getContext('2d'), viewport: viewport }).promise;
+        const bgCanvas = document.getElementById('pdf-background');
+        bgCanvas.height = viewport.height;
+        bgCanvas.width = viewport.width;
+        await page.render({ canvasContext: bgCanvas.getContext('2d'), viewport: viewport }).promise;
 
-        const container = document.getElementById('pdf-container');
-        container.style.width = viewport.width + 'px';
-        container.style.height = viewport.height + 'px';
+        // 2. Setup Fabric Layer
+        const wrapper = document.getElementById('pdf-wrapper');
+        wrapper.style.width = viewport.width + 'px';
+        wrapper.style.height = viewport.height + 'px';
 
-        fbCanvas = new fabric.Canvas('editor-canvas', {
+        fbCanvas = new fabric.Canvas('editor-layer', {
             width: viewport.width,
             height: viewport.height
         });
 
+        // 3. Load editan lama (koordinat JSON) supaya boleh edit balik
         if (fileData.annotations) {
             fbCanvas.loadFromJSON(fileData.annotations, fbCanvas.renderAll.bind(fbCanvas));
         }
@@ -79,7 +85,8 @@
             fbCanvas.freeDrawingBrush.width = 3;
             fbCanvas.freeDrawingBrush.color = '#2563eb';
         } else if (mode === 'text') {
-            fbCanvas.add(new fabric.IText('Tulis sini...', { left: 50, top: 50, fontSize: 20 }));
+            const text = new fabric.IText('Tulis nota...', { left: 50, top: 50, fontSize: 20, fill: '#1e293b' });
+            fbCanvas.add(text);
         }
     }
 
@@ -88,63 +95,70 @@
         fbCanvas.discardActiveObject().renderAll();
     }
 
-    // FUNGSI UTAMA: Gabungkan Contengan & PDF kemudian hantar ke Drive
-    async function processAndSave() {
-        document.getElementById('sync-status').innerText = "Sedang memproses fail...";
-        
-        // 1. Gabungkan PDF Canvas + Fabric Canvas jadi satu imej (DataURL)
-        const finalCanvas = document.createElement('canvas');
-        finalCanvas.width = fbCanvas.width;
-        finalCanvas.height = fbCanvas.height;
-        const ctx = finalCanvas.getContext('2d');
-        
-        ctx.drawImage(document.getElementById('pdf-canvas'), 0, 0);
-        ctx.drawImage(fbCanvas.getElement(), 0, 0);
-        const mergedDataUrl = finalCanvas.toDataURL('image/png');
+    // FUNGSI UTAMA: Simpan & Sync Tanpa Duplicate
+    async function manualSave() {
+        document.getElementById('sync-status').innerText = "Sedang Menghantar ke Drive...";
+        document.getElementById('sync-dot').classList.add('animate-pulse', 'bg-yellow-500');
 
-        // 2. Kemaskini LocalStorage
+        // A. Gabungkan PDF Background + Contengan untuk nampak di Google Drive
+        const tempCanvas = document.createElement('canvas');
+        tempCanvas.width = fbCanvas.width;
+        tempCanvas.height = fbCanvas.height;
+        const ctx = tempCanvas.getContext('2d');
+        ctx.drawImage(document.getElementById('pdf-background'), 0, 0);
+        ctx.drawImage(fbCanvas.getElement(), 0, 0);
+        
+        const combinedDataURL = tempCanvas.toDataURL('image/jpeg', 0.8);
+
+        // B. Update LocalStorage
         let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
         const idx = localFiles.findIndex(f => f.id === editingId);
-        
+
         if (idx !== -1) {
-            localFiles[idx].content = mergedDataUrl; // Data baru yang sudah ada contengan
-            localFiles[idx].annotations = JSON.stringify(fbCanvas); // Simpan untuk edit balik nanti
+            localFiles[idx].annotations = JSON.stringify(fbCanvas); // Simpan JSON supaya boleh edit balik
+            localFiles[idx].content = combinedDataURL; // Simpan rupa baru
             localFiles[idx].status = 'pending_sync';
             localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
             
-            // 3. Panggil fungsi update khusus untuk mengelakkan duplicate
-            await updateExistingFileInDrive(localFiles[idx]);
+            // C. Panggil Overwrite Sync (Khas untuk PDF)
+            await performOverwriteSync(localFiles[idx]);
         }
     }
 
-    async function updateExistingFileInDrive(file) {
-        const token = localStorage.getItem('siswaklik_access_token');
-        if (!token || !file.driveId) {
-            // Jika belum ada driveId, backgroundSync biasa akan buat fail baru
-            if(typeof backgroundSync === 'function') backgroundSync();
-            return;
-        }
+    async function performOverwriteSync(file) {
+        const accessToken = localStorage.getItem('siswaklik_access_token');
+        if (!accessToken) return;
 
         try {
-            document.getElementById('sync-status').innerText = "Mengemaskini Drive...";
-            
-            // Gunakan PATCH dan uploadType=media untuk overwrite kandungan fail sedia ada
-            const response = await fetch(`https://www.googleapis.com/upload/drive/v3/files/${file.driveId}?uploadType=media`, {
-                method: 'PATCH',
-                headers: { 
-                    'Authorization': `Bearer ${token}`,
-                    'Content-Type': 'image/png'
-                },
-                body: dataURLtoBlob(file.content)
-            });
+            let url = 'https://www.googleapis.com/upload/drive/v3/files';
+            let method = 'POST';
 
-            if (response.ok) {
-                document.getElementById('sync-status').innerText = "Tersimpan di Drive & Lokal";
-                Swal.fire({ icon: 'success', title: 'Berjaya!', text: 'Fail di Google Drive telah dikemaskini.', timer: 2000 });
+            // Jika file dah ada driveId, kita guna method PATCH untuk overwrite
+            if (file.driveId) {
+                url = `https://www.googleapis.com/upload/drive/v3/files/${file.driveId}?uploadType=media`;
+                method = 'PATCH';
+                
+                // Upload content sahaja untuk PATCH
+                const blob = dataURLtoBlob(file.content);
+                await fetch(url, {
+                    method: method,
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: blob
+                });
+            } else {
+                // First time upload (create)
+                if (typeof backgroundSync === 'function') backgroundSync();
             }
+
+            document.getElementById('sync-status').innerText = "Tersimpan di Drive";
+            document.getElementById('sync-dot').classList.remove('animate-pulse', 'bg-yellow-500');
+            document.getElementById('sync-dot').classList.add('bg-green-500');
+            
+            Swal.fire({ icon: 'success', title: 'Berjaya', text: 'Fail telah dikemaskini di Google Drive!', timer: 1500, showConfirmButton: false });
+
         } catch (err) {
-            console.error("Gagal update:", err);
-            document.getElementById('sync-status').innerText = "Ralat Sync";
+            console.error("Sync Error:", err);
+            document.getElementById('sync-status').innerText = "Gagal Sync";
         }
     }
 
@@ -160,5 +174,5 @@
 
 <style>
     .canvas-container { position: absolute !important; top: 0; left: 0; z-index: 10; }
-    #pdf-canvas { z-index: 5; }
+    #pdf-background { z-index: 5; }
 </style>
