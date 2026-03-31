@@ -47,7 +47,7 @@
 </style>
 
 <script>
-    // 1. Inisialisasi State Folder (Ambil dari cache atau guna root asal)
+    // 1. Inisialisasi State Folder
     let rootFolderId = localStorage.getItem('siswaklik_drive_folder_id') || 'root';
     let currentFolderId = localStorage.getItem('siswaklik_current_folder_id') || rootFolderId;
 
@@ -60,14 +60,15 @@
         const currentName = localStorage.getItem('siswaklik_current_folder_name') || '';
         pathLabel.innerHTML = currentName ? `<i class="fas fa-chevron-right text-[10px] mx-1"></i> <span class="text-blue-600">${currentName}</span>` : '';
 
-        container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 animate-pulse"><i class="fas fa-sync fa-spin mr-2"></i>Menyemak fail...</div>`;
+        container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 animate-pulse"><i class="fas fa-sync fa-spin mr-2"></i>Menyemak kandungan...</div>`;
 
         let driveItems = [];
         let localFiles = [];
 
-        // 2. Ambil data dari Google Drive jika ada token
+        // 2. Ambil data dari Google Drive (Hanya fail dalam folder semasa)
         if (accessToken) {
             try {
+                // Penapisan kritikal: '${currentFolderId}' in parents
                 const q = `'${currentFolderId}' in parents and trashed = false`;
                 const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, mimeType)`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
@@ -79,45 +80,58 @@
             }
         }
 
-        // 3. Ambil data dari LocalStorage dan TAPIS mengikut parentId semasa
+        // 3. Ambil data dari LocalStorage dan TAPIS mengikut parentId
         const allLocal = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-        localFiles = allLocal.filter(f => f.parentId === currentFolderId && f.status === 'pending_sync');
+        // Pastikan fail tempatan hanya muncul jika parentId sepadan dengan folder yang sedang dibuka
+        localFiles = allLocal.filter(f => f.parentId === currentFolderId);
 
         if (driveItems.length === 0 && localFiles.length === 0) {
-            container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400">Folder ini kosong.</div>`;
+            container.innerHTML = `<div class="col-span-full text-center py-20 text-slate-400">
+                <i class="fas fa-folder-open text-4xl mb-4 block"></i>
+                Folder ini kosong.
+            </div>`;
             return;
         }
 
         container.innerHTML = '';
 
-        // 4. Render Folder Dahulu
+        // 4. Render Folder
         driveItems.filter(i => i.mimeType === 'application/vnd.google-apps.folder').forEach(folder => {
             container.innerHTML += `
                 <div onclick="enterFolder('${folder.id}', '${folder.name}')" class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
                     <div class="text-amber-400 text-3xl mb-4 group-hover:scale-110 transition-transform"><i class="fas fa-folder"></i></div>
                     <h4 class="font-bold text-slate-800 truncate">${folder.name}</h4>
-                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-2">Google Drive Folder</p>
+                    <p class="text-[10px] text-slate-400 font-bold uppercase mt-2">Folder</p>
                 </div>`;
         });
 
-        // 5. Render Fail PDF (Gabungan Drive + Local yang belum sync)
-        const drivePdfs = driveItems.filter(i => i.mimeType === 'application/pdf').map(f => ({...f, status: 'synced'}));
-        const allPdfsToDisplay = [...drivePdfs, ...localFiles];
-
-        allPdfsToDisplay.forEach(file => {
-            const isSynced = file.status === 'synced';
-            container.innerHTML += `
-                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all">
-                    <div class="text-blue-600 text-3xl mb-4"><i class="fas fa-file-pdf"></i></div>
-                    <h4 class="font-bold text-slate-800 truncate" title="${file.name}">${file.name}</h4>
-                    <div class="flex items-center justify-between mt-4">
-                        <span class="text-[10px] font-black uppercase ${isSynced ? 'text-green-500' : 'text-amber-500 animate-pulse'}">
-                            ${isSynced ? '<i class="fas fa-check-circle"></i> Cloud' : '<i class="fas fa-clock"></i> Memproses'}
-                        </span>
-                        <button onclick="openEditor('${file.id || file.driveId}', '${file.name}')" class="text-blue-600 font-bold text-sm hover:underline">Buka</button>
-                    </div>
-                </div>`;
+        // 5. Render Fail PDF (Gabungan Drive + Local)
+        // Elakkan duplikasi jika fail local sudah di-sync ke Drive
+        const drivePdfs = driveItems.filter(i => i.mimeType === 'application/pdf');
+        
+        // Gabungkan paparan
+        drivePdfs.forEach(file => {
+            container.innerHTML += renderFileCard(file.id, file.name, true);
         });
+
+        localFiles.filter(lf => lf.status === 'pending_sync').forEach(file => {
+            container.innerHTML += renderFileCard(file.id, file.name, false);
+        });
+    }
+
+    // Helper untuk UI Card Fail
+    function renderFileCard(id, name, isSynced) {
+        return `
+            <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                <div class="text-blue-600 text-3xl mb-4"><i class="fas fa-file-pdf"></i></div>
+                <h4 class="font-bold text-slate-800 truncate" title="${name}">${name}</h4>
+                <div class="flex items-center justify-between mt-4">
+                    <span class="text-[10px] font-black uppercase ${isSynced ? 'text-green-500' : 'text-amber-500 animate-pulse'}">
+                        ${isSynced ? '<i class="fas fa-check-circle"></i> Cloud' : '<i class="fas fa-clock"></i> Memproses'}
+                    </span>
+                    <button onclick="openEditor('${id}', '${name.replace(/'/g, "\\'")}')" class="text-blue-600 font-bold text-sm hover:underline">Buka</button>
+                </div>
+            </div>`;
     }
 
     // --- FUNGSI NAVIGASI ---
@@ -160,7 +174,7 @@
                 body: JSON.stringify({
                     name: name,
                     mimeType: 'application/vnd.google-apps.folder',
-                    parents: [currentFolderId] // Folder baru masuk dalam folder semasa
+                    parents: [currentFolderId]
                 })
             });
 
@@ -170,7 +184,7 @@
                 renderFiles();
             }
         } catch (err) {
-            alert("Gagal mencipta folder. Periksa sambungan internet.");
+            alert("Gagal mencipta folder.");
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Cipta';
@@ -190,19 +204,16 @@
                 name: file.name,
                 content: e.target.result,
                 status: 'pending_sync',
-                parentId: currentFolderId, // FAIL DISIMPAN MENGIKUT FOLDER SEMASA
+                parentId: currentFolderId, // Fail masuk dalam folder aktif sekarang
                 date: new Date().toISOString()
             };
             
             localFiles.push(newFile);
             localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-            
-            // Reset input file
             input.value = "";
-            
             renderFiles();
             
-            // Panggil background sync jika fungsi wujud dalam fail.html
+            // Panggil background sync jika ada
             if(typeof backgroundSync === 'function') backgroundSync();
         };
         reader.readAsDataURL(file);
@@ -211,7 +222,6 @@
     function openEditor(fileId, fileName) {
         localStorage.setItem('editing_file_id', fileId);
         localStorage.setItem('editing_file_name', fileName);
-        // Tukar view ke editor PDF
         if (typeof loadView === 'function') {
             loadView('pdf.html');
         }
