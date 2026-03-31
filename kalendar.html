@@ -1,211 +1,149 @@
-<div class="animate-fade-in space-y-6">
-    <div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 bg-gradient-to-r from-blue-600 to-indigo-700 p-8 rounded-[2.5rem] text-white shadow-xl">
-        <div>
-            <h2 id="welcomeGreeting" class="text-3xl font-bold mb-1">Rancang Hari Anda, Genius! 🌟</h2>
-            <p class="opacity-90 font-medium">Urus masa dengan bijak untuk keberkatan ilmu.</p>
-        </div>
-        <div class="flex flex-wrap gap-3">
-            <button onclick="openEventModal()" class="bg-white/20 backdrop-blur-md border border-white/30 text-white px-6 py-3 rounded-2xl font-bold hover:bg-white/30 transition flex items-center">
-                <i class="fas fa-plus-circle mr-2"></i> Tambah Aktiviti
-            </button>
-            <button onclick="syncGoogleCalendar()" class="bg-white text-blue-600 px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-50 transition flex items-center">
-                <i class="fab fa-google mr-2"></i> Sync Google
-            </button>
-        </div>
-    </div>
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiswaKlik | Kalendar & Waktu Solat</title>
+    <script src="https://accounts.google.com/gsi/client" async defer></script>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&family=Amiri:wght@400;700&display=swap');
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        <div class="lg:col-span-2 bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
-            <div id="calendar" class="min-h-[600px]"></div>
-        </div>
-
-        <div class="space-y-6">
-            <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-gray-100">
-                <div class="flex items-center justify-between mb-4">
-                    <h3 class="font-bold text-gray-800">Waktu Solat</h3>
-                    <select id="zonSolat" onchange="fetchWaktuSolat()" class="text-xs border-none bg-slate-100 rounded-lg p-1 font-bold text-blue-600">
-                        <option value="SGR01">Gombak/Hulu Langat</option>
-                        <option value="SGR02">Kajang/Sepang</option>
-                        <option value="SWK01">Kuching</option>
-                    </select>
-                </div>
-                <div id="solatDisplay" class="grid grid-cols-2 gap-3">
-                    <div class="col-span-2 text-center py-4 text-slate-400 animate-pulse">Memuatkan waktu...</div>
-                </div>
-            </div>
-
-            <div class="bg-indigo-50 p-6 rounded-[2.5rem] border border-indigo-100">
-                <h3 class="font-bold text-indigo-900 mb-2">Tips Produktiviti</h3>
-                <p class="text-sm text-indigo-700 leading-relaxed">
-                    Gunakan teknik Pomodoro: 25 minit fokus, 5 minit rehat. Pastikan setiap tugasan ada deadline!
-                </p>
-            </div>
-        </div>
-    </div>
-</div>
-
-<div id="eventModal" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-[100] hidden flex items-center justify-center p-4">
-    <div class="bg-white rounded-[2.5rem] w-full max-w-md p-8 shadow-2xl">
-        <h3 class="text-2xl font-black text-slate-800 mb-6">Aktiviti Baru</h3>
-        <div class="space-y-4">
-            <div>
-                <label class="block text-sm font-bold text-slate-500 mb-2">Nama Aktiviti</label>
-                <input type="text" id="eventTitle" class="w-full bg-slate-100 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500" placeholder="Contoh: Lab Report">
-            </div>
-            <div>
-                <label class="block text-sm font-bold text-slate-500 mb-2">Tarikh</label>
-                <input type="date" id="eventDate" class="w-full bg-slate-100 border-none rounded-2xl p-4 focus:ring-2 focus:ring-blue-500">
-            </div>
-            <div class="flex gap-3 mt-8">
-                <button onclick="closeEventModal()" class="flex-1 py-4 rounded-2xl font-bold text-slate-500 hover:bg-slate-100 transition">Batal</button>
-                <button onclick="saveEvent()" class="flex-1 py-4 bg-blue-600 text-white rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 transition">Simpan</button>
-            </div>
-        </div>
-    </div>
-</div>
-
-<script src="https://cdn.jsdelivr.net/npm/fullcalendar@6.1.8/index.global.min.js"></script>
-
-<script>
-    let calendar;
-    const GOOGLE_CLIENT_ID = '755048052549-ldo2fp40r8bsk8n0f2gpsjuimdls5o1j.apps.googleusercontent.com';
-
-    // 1. Inisialisasi Kalendar
-    function initCalendar() {
-        const calendarEl = document.getElementById('calendar');
-        if (!calendarEl) return;
-
-        calendar = new FullCalendar.Calendar(calendarEl, {
-            initialView: 'dayGridMonth',
-            headerToolbar: {
-                left: 'prev,next today',
-                center: 'title',
-                right: 'dayGridMonth,timeGridWeek,listWeek'
-            },
-            themeSystem: 'standard',
-            height: 'auto',
-            locale: 'ms',
-            events: JSON.parse(localStorage.getItem('siswaklik_events')) || [],
-            eventClick: function(info) {
-                Swal.fire({
-                    title: info.event.title,
-                    text: "Tarikh: " + info.event.startStr,
-                    icon: 'info',
-                    showCancelButton: true,
-                    confirmButtonText: 'Padam Aktiviti',
-                    cancelButtonText: 'Tutup'
-                }).then((result) => {
-                    if (result.isConfirmed) {
-                        info.event.remove();
-                        saveToLocal();
-                    }
-                });
-            }
-        });
-        calendar.render();
-    }
-
-    // 2. Fungsi Modal & Simpan Event
-    function openEventModal() {
-        document.getElementById('eventModal').classList.remove('hidden');
-    }
-
-    function closeEventModal() {
-        document.getElementById('eventModal').classList.add('hidden');
-    }
-
-    function saveEvent() {
-        const title = document.getElementById('eventTitle').value;
-        const date = document.getElementById('eventDate').value;
-
-        if (title && date) {
-            calendar.addEvent({
-                title: title,
-                start: date,
-                allDay: true,
-                backgroundColor: '#2563eb',
-                borderColor: '#2563eb'
-            });
-            saveToLocal();
-            closeEventModal();
-            document.getElementById('eventTitle').value = '';
-            Swal.fire('Berjaya!', 'Aktiviti telah ditambah.', 'success');
-        } else {
-            Swal.fire('Ralat', 'Sila isi semua maklumat.', 'warning');
+        body {
+            font-family: 'Plus Jakarta Sans', sans-serif;
+            background-color: #f0f4f8;
+            background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='100' height='100' viewBox='0 0 100 100'%3E%3Cg fill='%232563eb' fill-opacity='0.04'%3E%3Cpath d='M50 5L53.5 35L85 35L60 55L70 85L50 65L30 85L40 55L15 35L46.5 35z'/%3E%3C/g%3E%3C/svg%3E");
+            min-height: 100vh;
         }
-    }
 
-    function saveToLocal() {
-        const events = calendar.getEvents().map(e => ({
-            title: e.title,
-            start: e.startStr,
-            allDay: e.allDay
-        }));
-        localStorage.setItem('siswaklik_events', JSON.stringify(events));
-    }
+        .content-embed {
+            width: 100%;
+            border: none;
+            border-radius: 2rem;
+            background: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.05);
+        }
 
-    // 3. Waktu Solat API
-    async function fetchWaktuSolat() {
-        const zon = document.getElementById('zonSolat').value;
-        const display = document.getElementById('solatDisplay');
+        .user-profile-glow {
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
+        }
+    </style>
+</head>
+<body class="p-4 md:p-10">
+
+    <div class="max-w-5xl mx-auto space-y-10">
         
-        try {
-            const res = await fetch(`https://api.aladhan.com/v1/timingsByCity?city=Kajang&country=Malaysia&method=11`);
-            // Nota: Untuk ketepatan zon JAKIM, anda boleh guna API mpt.i906.my jika perlu.
-            const data = await res.json();
-            const times = data.data.timings;
-            
-            const solatList = [
-                {label: 'Subuh', key: 'Fajr'},
-                {label: 'Zohor', key: 'Dhuhr'},
-                {label: 'Asar', key: 'Asr'},
-                {label: 'Maghrib', key: 'Maghrib'},
-                {label: 'Isyak', key: 'Isha'}
-            ];
-
-            display.innerHTML = solatList.map(s => `
-                <div class="bg-slate-50 p-3 rounded-2xl text-center border border-slate-100">
-                    <p class="text-[10px] font-bold text-slate-400 uppercase">${s.label}</p>
-                    <p class="text-sm font-black text-blue-600">${times[s.key]}</p>
+        <header class="flex flex-col md:flex-row justify-between items-center bg-white/80 p-6 rounded-[2.5rem] border border-white backdrop-blur-md shadow-sm">
+            <div class="flex items-center gap-4">
+                <div id="userImageContainer" class="relative">
+                    <div class="bg-blue-600 p-4 rounded-3xl shadow-lg shadow-blue-200" id="defaultIcon">
+                        <i class="fas fa-calendar-day text-white text-2xl"></i>
+                    </div>
+                    <img id="userAvatar" class="hidden w-14 h-14 rounded-2xl object-cover border-2 border-blue-500 p-0.5 user-profile-glow" src="" alt="Profile">
                 </div>
-            `).join('');
-        } catch (err) {
-            display.innerHTML = '<p class="col-span-2 text-red-500 text-xs">Gagal memuatkan data.</p>';
+                <div>
+                    <h1 class="text-2xl font-black text-slate-800 tracking-tight" id="welcomeText">Selamat Datang!</h1>
+                    <p class="text-xs font-bold text-blue-600 uppercase tracking-widest" id="userSubtext">Pusat Kawalan SiswaKlik</p>
+                </div>
+            </div>
+
+            <div class="mt-4 md:mt-0 flex items-center gap-3">
+                <div id="g_id_onload"
+                     data-client_id="755048052549-ldo2fp40r8bsk8n0f2gpsjuimdls5o1j.apps.googleusercontent.com"
+                     data-callback="handleCredentialResponse"
+                     data-auto_prompt="false">
+                </div>
+                <div class="g_id_signin" data-type="standard"></div>
+                
+                <button id="syncBtn" onclick="syncGoogleCalendar()" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                    <i class="fas fa-sync-alt"></i> Sync Google
+                </button>
+            </div>
+        </header>
+
+        <div class="section-card space-y-4">
+            <div class="flex items-center gap-2 px-4">
+                <div class="h-6 w-1 bg-blue-600 rounded-full"></div>
+                <h2 class="font-extrabold text-slate-700 uppercase tracking-tighter">Perancangan Aktiviti & Akademik</h2>
+            </div>
+            
+            <div class="content-embed overflow-hidden">
+                <iframe src="event.html" id="eventFrame" scrolling="no" onload="adjustHeight(this)" class="w-full border-0 min-h-[850px]"></iframe>
+            </div>
+        </div>
+
+        <div class="section-card space-y-4">
+            <div class="flex items-center gap-2 px-4">
+                <div class="h-6 w-1 bg-emerald-500 rounded-full"></div>
+                <h2 class="font-extrabold text-slate-700 uppercase tracking-tighter">Waktu Solat & Ibadah</h2>
+            </div>
+
+            <div class="content-embed overflow-hidden">
+                <iframe src="solat.html" id="solatFrame" scrolling="no" onload="adjustHeight(this)" class="w-full border-0 min-h-[480px]"></iframe>
+            </div>
+        </div>
+
+        <footer class="text-center pt-10 pb-20">
+            <p class="text-[10px] font-black text-slate-400 uppercase tracking-[0.3em]">
+                SiswaKlik Management System &copy; 2026
+            </p>
+        </footer>
+    </div>
+
+    <script>
+        // 1. Kendalikan Respons Google Login
+        function handleCredentialResponse(response) {
+            const responsePayload = decodeJwtResponse(response.credential);
+
+            // Kemaskini UI dengan Nama & Gambar User
+            document.getElementById('welcomeText').innerText = `Hai, ${responsePayload.given_name}!`;
+            document.getElementById('userSubtext').innerText = responsePayload.email;
+            
+            const avatar = document.getElementById('userAvatar');
+            avatar.src = responsePayload.picture;
+            avatar.classList.remove('hidden');
+            document.getElementById('defaultIcon').classList.add('hidden');
+            document.getElementById('syncBtn').classList.remove('hidden');
+
+            // Hantar token ke iframe kalendar untuk proses sync
+            const eventFrame = document.getElementById('eventFrame').contentWindow;
+            eventFrame.postMessage({ type: 'GOOGLE_AUTH', token: response.credential }, '*');
         }
-    }
 
-    // 4. Google Calendar Sync (Placeholder Integrasi)
-    function syncGoogleCalendar() {
-        Swal.fire({
-            title: 'Google Sync',
-            text: 'Adakah anda ingin menyelaraskan kalendar dengan akaun Google?',
-            icon: 'question',
-            showCancelButton: true,
-            confirmButtonText: 'Ya, Sambungkan'
-        }).then((result) => {
-            if (result.isConfirmed) {
-                Swal.fire('Info', 'Integrasi API Google sedang disambungkan menggunakan Client ID anda.', 'info');
-                // Logik gapi.client.calendar di sini
+        function decodeJwtResponse(token) {
+            let base64Url = token.split('.')[1];
+            let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
+            return JSON.parse(window.atob(base64));
+        }
+
+        function syncGoogleCalendar() {
+            // Memberitahu iframe untuk mula fetch data Google Calendar
+            document.getElementById('eventFrame').contentWindow.postMessage({ action: 'SYNC_CALENDAR' }, '*');
+        }
+
+        // 2. Pelarasan Ketinggian Iframe
+        function adjustHeight(iframe) {
+            try {
+                if (iframe.contentWindow && iframe.contentWindow.document.body) {
+                    const newHeight = iframe.contentWindow.document.documentElement.scrollHeight;
+                    iframe.style.height = (newHeight + 30) + 'px';
+                }
+            } catch (err) {
+                console.warn("Cross-origin access restricted. Run on a server to fix.");
             }
+        }
+
+        window.addEventListener('resize', () => {
+            adjustHeight(document.getElementById('eventFrame'));
+            adjustHeight(document.getElementById('solatFrame'));
         });
-    }
 
-    // Jalankan bila page dimuatkan
-    setTimeout(() => {
-        initCalendar();
-        fetchWaktuSolat();
-    }, 100);
-
-</script>
-
-<style>
-    /* Custom Styling untuk FullCalendar supaya ikut tema SiswaKlik */
-    .fc { --fc-border-color: #f1f5f9; font-family: inherit; }
-    .fc .fc-toolbar-title { font-size: 1.25rem; font-weight: 800; color: #1e293b; }
-    .fc .fc-button-primary { background-color: #ffffff; border-color: #e2e8f0; color: #64748b; font-weight: bold; border-radius: 12px; text-transform: capitalize; }
-    .fc .fc-button-primary:hover { background-color: #f8fafc; border-color: #cbd5e1; color: #1e293b; }
-    .fc .fc-button-active { background-color: #2563eb !important; border-color: #2563eb !important; color: white !important; }
-    .fc th { padding: 12px 0 !important; font-weight: 700; color: #94a3b8; text-transform: uppercase; font-size: 0.75rem; }
-    .fc-daygrid-day:hover { background-color: #f8fafc; cursor: pointer; }
-    .fc-event { border-radius: 8px; padding: 2px 6px; font-weight: 600; border: none; }
-</style>
+        setInterval(() => {
+            adjustHeight(document.getElementById('eventFrame'));
+            adjustHeight(document.getElementById('solatFrame'));
+        }, 2000);
+    </script>
+</body>
+</html>
