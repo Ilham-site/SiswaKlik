@@ -58,16 +58,17 @@
             let pdfData = null;
             let annotations = null;
 
-            // 1. Cari dalam Local Storage dahulu
+            // 1. Semak Local Storage dahulu (untuk versi terbaru yang ada contengan)
             const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-            const fileData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
+            const localFileData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
 
-            if (fileData && fileData.content) {
-                // Jika ada dalam local (biasanya fail baru upload belum sync atau fail tengah edit)
-                pdfData = fileData.content;
-                annotations = fileData.annotations;
-            } else if (accessToken && editingId && !editingId.startsWith('local-')) {
-                // 2. Jika tiada di local, tarik dari Google Drive API
+            if (localFileData && localFileData.content) {
+                pdfData = localFileData.content;
+                annotations = localFileData.annotations;
+                console.log("Memuatkan dari storan tempatan...");
+            } 
+            // 2. Jika tiada di local, baru tarik dari Google Drive
+            else if (accessToken && editingId && !editingId.startsWith('local-')) {
                 document.getElementById('sync-status').innerText = "Memuat turun dari Drive...";
                 const response = await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}?alt=media`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
@@ -77,6 +78,7 @@
                 
                 const blob = await response.blob();
                 pdfData = await blobToBase64(blob);
+                console.log("Memuatkan dari Google Drive...");
             }
 
             if (!pdfData) throw new Error("Kandungan fail kosong!");
@@ -90,35 +92,63 @@
     }
 
     async function renderPdfEditor(pdfData, annotations) {
-        const loadingTask = pdfjsLib.getDocument(pdfData);
-        const pdf = await loadingTask.promise;
-        const page = await pdf.getPage(1);
-        const viewport = page.getViewport({ scale: 1.5 });
+        try {
+            const loadingTask = pdfjsLib.getDocument(pdfData);
+            const pdf = await loadingTask.promise;
+            const page = await pdf.getPage(1);
+            const viewport = page.getViewport({ scale: 1.5 });
 
-        // Setup Background Canvas
-        const bgCanvas = document.getElementById('pdf-background');
-        bgCanvas.height = viewport.height;
-        bgCanvas.width = viewport.width;
-        await page.render({ canvasContext: bgCanvas.getContext('2d'), viewport: viewport }).promise;
+            const bgCanvas = document.getElementById('pdf-background');
+            bgCanvas.height = viewport.height;
+            bgCanvas.width = viewport.width;
+            await page.render({ canvasContext: bgCanvas.getContext('2d'), viewport: viewport }).promise;
 
-        // Setup UI
-        document.getElementById('loading-overlay').classList.add('hidden');
-        const wrapper = document.getElementById('pdf-wrapper');
-        wrapper.classList.remove('hidden');
-        wrapper.style.width = viewport.width + 'px';
-        wrapper.style.height = viewport.height + 'px';
+            document.getElementById('loading-overlay').classList.add('hidden');
+            const wrapper = document.getElementById('pdf-wrapper');
+            wrapper.classList.remove('hidden');
+            wrapper.style.width = viewport.width + 'px';
+            wrapper.style.height = viewport.height + 'px';
 
-        // Setup Fabric Editor Layer
-        fbCanvas = new fabric.Canvas('editor-layer', {
-            width: viewport.width,
-            height: viewport.height
-        });
+            fbCanvas = new fabric.Canvas('editor-layer', {
+                width: viewport.width,
+                height: viewport.height
+            });
 
-        if (annotations) {
-            fbCanvas.loadFromJSON(annotations, fbCanvas.renderAll.bind(fbCanvas));
+            if (annotations) {
+                fbCanvas.loadFromJSON(annotations, () => {
+                    fbCanvas.renderAll();
+                });
+            }
+
+            document.getElementById('sync-status').innerText = "Mod Penyuntingan Aktif";
+        } catch (e) {
+            // Jika fail bukan PDF (mungkin DataURL imej), gunakan imej sebagai background
+            renderAsImage(pdfData, annotations);
         }
+    }
 
-        document.getElementById('sync-status').innerText = "Mod Penyuntingan Aktif";
+    // Fungsi tambahan jika fail sudah ditukar ke imej semasa simpan sebelum ini
+    function renderAsImage(imgData, annotations) {
+        fabric.Image.fromURL(imgData, (img) => {
+            document.getElementById('loading-overlay').classList.add('hidden');
+            const wrapper = document.getElementById('pdf-wrapper');
+            wrapper.classList.remove('hidden');
+            wrapper.style.width = img.width + 'px';
+            wrapper.style.height = img.height + 'px';
+
+            fbCanvas = new fabric.Canvas('editor-layer', {
+                width: img.width,
+                height: img.height
+            });
+
+            // Set imej sebagai background fabric terus
+            fbCanvas.setBackgroundImage(img, fbCanvas.renderAll.bind(fbCanvas));
+
+            if (annotations) {
+                fbCanvas.loadFromJSON(annotations, fbCanvas.renderAll.bind(fbCanvas));
+            }
+            document.getElementById('sync-status').innerText = "Mod Penyuntingan (Imej)";
+        });
     }
 
     function setMode(mode) {
@@ -129,11 +159,7 @@
             fbCanvas.freeDrawingBrush.color = '#2563eb';
         } else if (mode === 'text') {
             const text = new fabric.IText('Tulis nota...', { 
-                left: 100, 
-                top: 100, 
-                fontSize: 20, 
-                fill: '#1e293b',
-                fontFamily: 'sans-serif'
+                left: 100, top: 100, fontSize: 20, fill: '#1e293b', fontFamily: 'sans-serif'
             });
             fbCanvas.add(text);
             fbCanvas.setActiveObject(text);
@@ -151,14 +177,18 @@
         btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> MENYIMPAN...`;
         
         document.getElementById('sync-status').innerText = "Sedang Mengemaskini Drive...";
-        document.getElementById('sync-dot').classList.add('animate-pulse', 'bg-yellow-500');
+        document.getElementById('sync-dot').classList.replace('bg-green-500', 'bg-yellow-500');
+        document.getElementById('sync-dot').classList.add('animate-pulse');
 
-        // Gabungkan PDF + Contengan
+        // Gabungkan Background + Fabric Layer
         const tempCanvas = document.createElement('canvas');
         tempCanvas.width = fbCanvas.width;
         tempCanvas.height = fbCanvas.height;
         const ctx = tempCanvas.getContext('2d');
+        
+        // Lukis background (PDF asal)
         ctx.drawImage(document.getElementById('pdf-background'), 0, 0);
+        // Lukis contengan
         ctx.drawImage(fbCanvas.getElement(), 0, 0);
         
         const combinedDataURL = tempCanvas.toDataURL('image/jpeg', 0.9);
@@ -167,25 +197,27 @@
         let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
         let fileIndex = localFiles.findIndex(f => f.id === editingId || f.driveId === editingId);
 
+        const updatedData = {
+            id: editingId.startsWith('local-') ? editingId : 'local-' + Date.now(),
+            driveId: editingId.startsWith('local-') ? null : editingId,
+            name: editingName,
+            annotations: JSON.stringify(fbCanvas),
+            content: combinedDataURL,
+            status: 'synced', // Tandakan sebagai synced supaya folder.html nampak
+            parentId: localStorage.getItem('siswaklik_current_folder_id') || 'root'
+        };
+
         if (fileIndex !== -1) {
-            localFiles[fileIndex].annotations = JSON.stringify(fbCanvas);
-            localFiles[fileIndex].content = combinedDataURL;
-            localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-            
-            // Overwrite ke Drive
-            await performOverwriteSync(localFiles[fileIndex]);
+            localFiles[fileIndex] = {...localFiles[fileIndex], ...updatedData};
         } else {
-            // Jika fail dari Drive yang belum ada rekod local, cipta rekod baru
-            const newRecord = {
-                id: 'local-' + Date.now(),
-                driveId: editingId,
-                name: editingName,
-                annotations: JSON.stringify(fbCanvas),
-                content: combinedDataURL
-            };
-            localFiles.push(newRecord);
-            localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-            await performOverwriteSync(newRecord);
+            localFiles.push(updatedData);
+        }
+        
+        localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
+
+        // Overwrite ke Drive
+        if (accessToken && updatedData.driveId) {
+            await performOverwriteSync(updatedData);
         }
 
         btn.disabled = false;
@@ -193,10 +225,7 @@
     }
 
     async function performOverwriteSync(file) {
-        if (!accessToken || !file.driveId) return;
-
         try {
-            // Gunakan uploadType=media untuk overwrite kandungan fail sedia ada
             const url = `https://www.googleapis.com/upload/drive/v3/files/${file.driveId}?uploadType=media`;
             const blob = dataURLtoBlob(file.content);
 
@@ -218,9 +247,8 @@
         }
     }
 
-    // UTILITY FUNCTIONS
     function blobToBase64(blob) {
-        return new Promise((resolve, _) => {
+        return new Promise((resolve) => {
             const reader = new FileReader();
             reader.onloadend = () => resolve(reader.result);
             reader.readAsDataURL(blob);
@@ -234,13 +262,11 @@
         return new Blob([u8arr], {type:mime});
     }
 
-    // Mula Editor
     initEditor();
 </script>
 
 <style>
-    /* Pastikan layer fabric berada betul-betul di atas background */
     .canvas-container { position: absolute !important; top: 0; left: 0; z-index: 10; }
     #pdf-background { z-index: 5; }
-    #pdf-wrapper { transition: all 0.3s ease; }
+    #pdf-wrapper { transition: all 0.3s ease; border-radius: 8px; overflow: hidden; }
 </style>
