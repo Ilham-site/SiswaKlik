@@ -8,29 +8,46 @@
 </section>
 
 <script>
-    // 1. PENGURUSAN VIEW
+    /**
+     * 1. PENGURUSAN VIEW (NAVIGASI DINAMIK)
+     * Fungsi ini memuatkan fail HTML ke dalam div #file-system-content 
+     * dan memastikan script di dalam fail tersebut dijalankan semula.
+     */
     async function loadView(fileName, callback) {
         try {
-            const response = await fetch(fileName);
-            const html = await response.text();
+            // Tunjukkan loading state semasa pertukaran view
             const container = document.getElementById('file-system-content');
+            
+            const response = await fetch(fileName);
+            if (!response.ok) throw new Error(`Gagal memuatkan ${fileName}`);
+            
+            const html = await response.text();
             container.innerHTML = html;
 
+            // Cari dan jalankan semula semua tag <script> dalam fail yang dimuatkan
             const scripts = container.querySelectorAll("script");
             scripts.forEach(oldScript => {
                 const newScript = document.createElement("script");
+                // Salin semua atribut (src, dsb)
                 Array.from(oldScript.attributes).forEach(attr => newScript.setAttribute(attr.name, attr.value));
+                // Salin kandungan inline script
                 newScript.appendChild(document.createTextNode(oldScript.innerHTML));
+                // Gantikan script lama dengan yang baru untuk trigger execution
                 oldScript.parentNode.replaceChild(newScript, oldScript);
             });
 
             if (callback) callback();
         } catch (error) {
             console.error("Ralat memuatkan pandangan:", error);
+            document.getElementById('file-system-content').innerHTML = 
+                `<div class="p-10 text-center text-red-500 font-bold">Ralat: Gagal memuatkan komponen ${fileName}</div>`;
         }
     }
 
-    // 2. LOGIK AUTO-SYNC BACKGROUND
+    /**
+     * 2. LOGIK AUTO-SYNC BACKGROUND (HYBRID STORAGE)
+     * Berjalan setiap 30 saat untuk menghantar fail 'pending_sync' ke Google Drive.
+     */
     async function backgroundSync() {
         const accessToken = localStorage.getItem('siswaklik_access_token');
         if (!accessToken) return;
@@ -39,13 +56,19 @@
         let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
         const pendingFiles = localFiles.filter(f => f.status === 'pending_sync');
 
+        if (pendingFiles.length === 0) return;
+
         for (const file of pendingFiles) {
             try {
-                // Logik Upload ke Google Drive
+                console.log(`Memulakan sync untuk: ${file.name}`);
+                
+                // Tentukan folder destinasi (Default atau folder semasa)
+                const targetFolderId = file.parentId || localStorage.getItem('siswaklik_drive_folder_id') || 'root';
+
                 const metadata = {
                     name: file.name,
                     mimeType: 'application/pdf',
-                    parents: [localStorage.getItem('siswaklik_drive_folder_id') || 'root']
+                    parents: [targetFolderId]
                 };
 
                 const formData = new FormData();
@@ -60,11 +83,24 @@
 
                 if (response.ok) {
                     const driveFile = await response.json();
-                    // Kemaskini status local
-                    file.status = 'synced';
-                    file.driveId = driveFile.id;
-                    localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-                    console.log(`Synced: ${file.name}`);
+                    
+                    // Kemaskini status dalam senarai local
+                    const updatedLocalFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                    const targetIdx = updatedLocalFiles.findIndex(f => f.id === file.id);
+                    
+                    if (targetIdx !== -1) {
+                        updatedLocalFiles[targetIdx].status = 'synced';
+                        updatedLocalFiles[targetIdx].driveId = driveFile.id;
+                        localStorage.setItem('siswa_local_files', JSON.stringify(updatedLocalFiles));
+                    }
+                    
+                    console.log(`Berjaya diselaraskan: ${file.name}`);
+                    
+                    // Refresh view jika pengguna berada di folder.html untuk kemaskini ikon status
+                    if (document.getElementById('sync-indicator')) {
+                        // Debounce renderFiles jika wujud
+                        if (typeof renderFiles === 'function') renderFiles();
+                    }
                 }
             } catch (err) {
                 console.error("Sync gagal untuk:", file.name, err);
@@ -72,17 +108,44 @@
         }
     }
 
-    // Helper: Tukar Base64 ke Blob
+    /**
+     * HELPER: Menukar Base64/DataURL ke format Blob untuk upload
+     */
     function dataURLtoBlob(dataurl) {
-        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-        while(n--) u8arr[n] = bstr.charCodeAt(n);
-        return new Blob([u8arr], {type:mime});
+        try {
+            var arr = dataurl.split(','), 
+                mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]), 
+                n = bstr.length, 
+                u8arr = new Uint8Array(n);
+            while(n--) u8arr[n] = bstr.charCodeAt(n);
+            return new Blob([u8arr], {type:mime});
+        } catch (e) {
+            console.error("Ralat penukaran Blob:", e);
+            return null;
+        }
     }
 
-    // Jalankan sync setiap 30 saat
+    // --- INISIALISASI ---
+
+    // Jalankan sync secara berkala (Setiap 30 saat)
     setInterval(backgroundSync, 30000);
 
-    // Mula dengan Folder View
-    loadView('folder.html');
+    // Mula dengan Folder View (Halaman Utama Fail)
+    // Nota: Pengguna boleh tukar ke 'folder2.html' melalui butang dalam komponen tersebut
+    document.addEventListener('DOMContentLoaded', () => {
+        loadView('folder.html');
+    });
+
 </script>
+
+<style>
+    /* Animasi asas untuk transisi antara halaman */
+    .animate-in {
+        animation: fadeIn 0.4s ease-out;
+    }
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(5px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+</style>
