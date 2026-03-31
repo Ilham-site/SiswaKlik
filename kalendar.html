@@ -4,7 +4,6 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SiswaKlik | Kalendar & Waktu Solat</title>
-    <script src="https://accounts.google.com/gsi/client" async defer></script>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     
@@ -39,25 +38,18 @@
             <div class="flex items-center gap-4">
                 <div id="userImageContainer" class="relative">
                     <div class="bg-blue-600 p-4 rounded-3xl shadow-lg shadow-blue-200" id="defaultIcon">
-                        <i class="fas fa-calendar-day text-white text-2xl"></i>
+                        <i class="fas fa-user text-white text-2xl"></i>
                     </div>
                     <img id="userAvatar" class="hidden w-14 h-14 rounded-2xl object-cover border-2 border-blue-500 p-0.5 user-profile-glow" src="" alt="Profile">
                 </div>
                 <div>
                     <h1 class="text-2xl font-black text-slate-800 tracking-tight" id="welcomeText">Selamat Datang!</h1>
-                    <p class="text-xs font-bold text-blue-600 uppercase tracking-widest" id="userSubtext">Pusat Kawalan SiswaKlik</p>
+                    <p class="text-xs font-bold text-blue-600 uppercase tracking-widest" id="userSubtext">Memuatkan profil...</p>
                 </div>
             </div>
 
             <div class="mt-4 md:mt-0 flex items-center gap-3">
-                <div id="g_id_onload"
-                     data-client_id="755048052549-ldo2fp40r8bsk8n0f2gpsjuimdls5o1j.apps.googleusercontent.com"
-                     data-callback="handleCredentialResponse"
-                     data-auto_prompt="false">
-                </div>
-                <div class="g_id_signin" data-type="standard"></div>
-                
-                <button id="syncBtn" onclick="syncGoogleCalendar()" class="hidden bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
+                <button id="syncBtn" onclick="syncGoogleCalendar()" class="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-2">
                     <i class="fas fa-sync-alt"></i> Sync Google
                 </button>
             </div>
@@ -70,7 +62,7 @@
             </div>
             
             <div class="content-embed overflow-hidden">
-                <iframe src="event.html" id="eventFrame" scrolling="no" onload="adjustHeight(this)" class="w-full border-0 min-h-[850px]"></iframe>
+                <iframe src="event.html" id="eventFrame" scrolling="no" onload="adjustHeight(this)" class="w-full border-0 min-h-[600px]"></iframe>
             </div>
         </div>
 
@@ -81,7 +73,7 @@
             </div>
 
             <div class="content-embed overflow-hidden">
-                <iframe src="solat.html" id="solatFrame" scrolling="no" onload="adjustHeight(this)" class="w-full border-0 min-h-[480px]"></iframe>
+                <iframe src="solat.html" id="solatFrame" scrolling="no" onload="adjustHeight(this)" class="w-full border-0 min-h-[400px]"></iframe>
             </div>
         </div>
 
@@ -93,57 +85,66 @@
     </div>
 
     <script>
-        // 1. Kendalikan Respons Google Login
-        function handleCredentialResponse(response) {
-            const responsePayload = decodeJwtResponse(response.credential);
-
-            // Kemaskini UI dengan Nama & Gambar User
-            document.getElementById('welcomeText').innerText = `Hai, ${responsePayload.given_name}!`;
-            document.getElementById('userSubtext').innerText = responsePayload.email;
+        // 1. Ambil data profil dari LocalStorage (Data dari login.html)
+        document.addEventListener('DOMContentLoaded', function() {
+            const userData = JSON.parse(localStorage.getItem('siswaklik_user'));
             
-            const avatar = document.getElementById('userAvatar');
-            avatar.src = responsePayload.picture;
-            avatar.classList.remove('hidden');
-            document.getElementById('defaultIcon').classList.add('hidden');
-            document.getElementById('syncBtn').classList.remove('hidden');
-
-            // Hantar token ke iframe kalendar untuk proses sync
-            const eventFrame = document.getElementById('eventFrame').contentWindow;
-            eventFrame.postMessage({ type: 'GOOGLE_AUTH', token: response.credential }, '*');
-        }
-
-        function decodeJwtResponse(token) {
-            let base64Url = token.split('.')[1];
-            let base64 = base64Url.replace(/-/g, '+').replace(/_/g, '/');
-            return JSON.parse(window.atob(base64));
-        }
+            if (userData) {
+                document.getElementById('welcomeText').innerText = `Hai, ${userData.given_name || userData.name}!`;
+                document.getElementById('userSubtext').innerText = userData.email;
+                
+                if (userData.picture) {
+                    const avatar = document.getElementById('userAvatar');
+                    avatar.src = userData.picture;
+                    avatar.classList.remove('hidden');
+                    document.getElementById('defaultIcon').classList.add('hidden');
+                }
+            } else {
+                // Jika tiada data, redirect balik ke login
+                window.location.href = 'login.html';
+            }
+        });
 
         function syncGoogleCalendar() {
-            // Memberitahu iframe untuk mula fetch data Google Calendar
-            document.getElementById('eventFrame').contentWindow.postMessage({ action: 'SYNC_CALENDAR' }, '*');
-        }
-
-        // 2. Pelarasan Ketinggian Iframe
-        function adjustHeight(iframe) {
-            try {
-                if (iframe.contentWindow && iframe.contentWindow.document.body) {
-                    const newHeight = iframe.contentWindow.document.documentElement.scrollHeight;
-                    iframe.style.height = (newHeight + 30) + 'px';
-                }
-            } catch (err) {
-                console.warn("Cross-origin access restricted. Run on a server to fix.");
+            const token = localStorage.getItem('siswaklik_access_token');
+            if (token) {
+                document.getElementById('eventFrame').contentWindow.postMessage({ 
+                    type: 'GOOGLE_AUTH_TOKEN', 
+                    token: token 
+                }, '*');
+                document.getElementById('eventFrame').contentWindow.postMessage({ action: 'SYNC_CALENDAR' }, '*');
+            } else {
+                alert("Sila log masuk semula untuk penyelarasan Google Calendar.");
+                window.location.href = 'login.html';
             }
         }
 
+        // 2. Pelarasan Ketinggian Iframe (Dipbaiki: Tidak lagi memanjang tanpa henti)
+        function adjustHeight(iframe) {
+            try {
+                if (iframe.contentWindow && iframe.contentWindow.document.body) {
+                    // Gunakan offsetHeight untuk mendapatkan ketinggian tepat tanpa tambahan berulang
+                    const newHeight = iframe.contentWindow.document.documentElement.scrollHeight;
+                    if (newHeight > 0) {
+                        iframe.style.height = newHeight + 'px';
+                    }
+                }
+            } catch (err) {
+                // Abaikan ralat cross-origin jika dijalankan secara lokal
+            }
+        }
+
+        // Jalankan pelarasan apabila saiz window berubah
         window.addEventListener('resize', () => {
             adjustHeight(document.getElementById('eventFrame'));
             adjustHeight(document.getElementById('solatFrame'));
         });
 
+        // Gunakan pemerhatian yang lebih cekap berbanding setInterval yang agresif
         setInterval(() => {
             adjustHeight(document.getElementById('eventFrame'));
             adjustHeight(document.getElementById('solatFrame'));
-        }, 2000);
+        }, 3000); 
     </script>
 </body>
 </html>
