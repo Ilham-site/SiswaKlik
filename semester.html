@@ -10,7 +10,10 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            padding-bottom: 80px; /* Ruang untuk Bottom Nav */
+        }
         .card-gradient { background: linear-gradient(135deg, #1e40af 0%, #7c3aed 100%); }
         .glass-effect { background: rgba(255, 255, 255, 0.2); backdrop-filter: blur(10px); }
         .progress-glow { box-shadow: 0 0 15px rgba(255, 255, 255, 0.3); }
@@ -19,9 +22,18 @@
             from { opacity: 0; transform: translateY(20px); }
             to { opacity: 1; transform: translateY(0); }
         }
+        .nav-active { color: #2563eb; }
+        .nav-active i { transform: translateY(-5px); color: #2563eb; }
     </style>
 </head>
 <body class="bg-slate-50 p-4 md:p-8 lg:p-10">
+
+<div class="max-w-4xl mx-auto mb-6">
+    <a href="index.html" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-2xl text-slate-700 font-bold text-sm hover:bg-slate-100 transition-all shadow-sm">
+        <i class="fas fa-arrow-left text-blue-600"></i>
+        Dashboard Utama
+    </a>
+</div>
 
 <div class="max-w-4xl mx-auto space-y-6 animate-fade-up">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -95,6 +107,25 @@
     </div>
 </div>
 
+<nav class="fixed bottom-6 left-1/2 -translate-x-1/2 bg-white/80 backdrop-blur-xl border border-slate-200 px-6 py-3 rounded-3xl shadow-2xl flex items-center gap-8 z-50">
+    <a href="index.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600 transition-all group">
+        <i class="fas fa-home text-xl transition-transform group-hover:-translate-y-1"></i>
+        <span class="text-[10px] font-bold uppercase tracking-tighter">Utama</span>
+    </a>
+    <a href="semester.html" class="flex flex-col items-center gap-1 nav-active transition-all group">
+        <i class="fas fa-calendar-check text-xl transition-transform group-hover:-translate-y-1"></i>
+        <span class="text-[10px] font-bold uppercase tracking-tighter">Kalendar</span>
+    </a>
+    <a href="nota.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600 transition-all group">
+        <i class="fas fa-book-open text-xl transition-transform group-hover:-translate-y-1"></i>
+        <span class="text-[10px] font-bold uppercase tracking-tighter">Nota</span>
+    </a>
+    <a href="jadual.html" class="flex flex-col items-center gap-1 text-slate-400 hover:text-blue-600 transition-all group">
+        <i class="fas fa-clock text-xl transition-transform group-hover:-translate-y-1"></i>
+        <span class="text-[10px] font-bold uppercase tracking-tighter">Jadual</span>
+    </a>
+</nav>
+
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
@@ -149,7 +180,6 @@
             { key: "Konvokesyen", warna: "purple", tajuk: "Majlis Konvokesyen" }
         ];
 
-        // Regex untuk range tarikh UKM (Contoh: 28 Sept. - 8 Nov. 2026)
         const rangeRegex = /([A-Za-z\s\/]+?)\s+(\d{1,2})\s+([A-Za-z]+)[.]?\s*(?:-|–)\s*(\d{1,2})\s+([A-Za-z]+)[.]?\s+(\d{4})/gi;
         
         let match;
@@ -195,7 +225,6 @@
         const container = document.getElementById('containerTarikh');
         let currentActivity = null;
 
-        // Cari aktiviti sekarang
         for (let event of data) {
             if (today >= event.startDate && today <= event.endDate) {
                 currentActivity = event;
@@ -203,16 +232,13 @@
             }
         }
 
-        // Update Dashboard
         if (currentActivity) {
             document.getElementById('currentActivityTitle').innerText = currentActivity.tajuk;
-            
             let percentage = 0;
             if (currentActivity.tajuk.toLowerCase().includes("pembelajaran") || currentActivity.tajuk.toLowerCase().includes("kuliah")) {
                 const totalDuration = currentActivity.endDate - currentActivity.startDate;
                 const elapsed = today - currentActivity.startDate;
                 const weekNum = Math.floor(elapsed / (1000 * 60 * 60 * 24 * 7)) + 1;
-                
                 document.getElementById('currentStatusSub').innerText = `Minggu ke-${weekNum} sedang berjalan`;
                 percentage = Math.min(Math.round((elapsed / totalDuration) * 100), 100);
             } else {
@@ -223,7 +249,6 @@
             document.getElementById('progressBar').style.width = `${percentage}%`;
         }
 
-        // Papar sekurang-kurangnya 11 items (Atau semua jika lebih)
         container.innerHTML = data.map((item, index) => {
             const isNow = currentActivity && item.rawDate === currentActivity.rawDate;
             const statusBadge = isNow ? '<span class="ml-2 text-[10px] bg-green-500 text-white px-2 py-0.5 rounded-full animate-pulse uppercase tracking-tighter">Sekarang</span>' : '';
