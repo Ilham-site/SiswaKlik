@@ -5,10 +5,10 @@
                 <i class="fas fa-arrow-left text-gray-400 group-hover:text-blue-600"></i>
             </button>
             <div>
-                <h3 class="font-black text-slate-800 text-lg md:text-xl truncate max-w-[200px] md:max-w-md" id="display-filename">Memuatkan...</h3>
+                <h3 class="font-black text-slate-800 text-lg md:text-xl truncate max-w-[200px]" id="display-filename">Memuatkan...</h3>
                 <div class="flex items-center gap-2">
-                    <span id="sync-dot" class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
-                    <p id="sync-status" class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Sistem PDF</p>
+                    <span id="sync-dot" class="w-2 h-2 bg-green-500 rounded-full"></span>
+                    <p id="sync-status" class="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-blue-600">Paparan Dokumen</p>
                 </div>
             </div>
         </div>
@@ -24,104 +24,124 @@
         </div>
     </div>
 
-    <div class="flex-1 bg-slate-200 p-2 md:p-4 overflow-hidden relative flex flex-col items-center">
-        <div id="loading-overlay" class="absolute inset-0 z-10 flex flex-col items-center justify-center bg-slate-100">
-            <div class="relative">
-                <i class="fas fa-circle-notch animate-spin text-5xl text-blue-600"></i>
-                <i class="fas fa-file-pdf absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600 text-sm"></i>
-            </div>
-            <p class="text-slate-500 font-bold mt-4 animate-bounce">Menyediakan dokumen...</p>
+    <div class="flex-1 bg-slate-100 overflow-hidden relative">
+        <div id="loading-overlay" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white">
+            <i class="fas fa-circle-notch animate-spin text-5xl text-blue-600 mb-4"></i>
+            <p class="text-slate-500 font-bold">Menghubungkan fail...</p>
         </div>
         
-        <iframe id="pdf-viewer" class="w-full h-full rounded-xl shadow-2xl hidden bg-white" frameborder="0" allow="autoplay"></iframe>
+        <div id="pdf-container" class="w-full h-full">
+            </div>
     </div>
 </div>
 
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    // Global variable untuk simpan URL supaya boleh dibersihkan
-    let currentObjectUrl = null;
     const editingId = localStorage.getItem('editing_file_id');
     const editingName = localStorage.getItem('editing_file_name');
     const accessToken = localStorage.getItem('siswaklik_access_token');
-    
-    document.getElementById('display-filename').innerText = editingName || "Dokumen Tidak Dikenali";
+    let currentBlobUrl = null;
+
+    document.getElementById('display-filename').innerText = editingName || "Fail PDF";
 
     function goBack() {
-        if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl);
-        if (typeof loadView === 'function') loadView('folder.html');
+        if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
+        loadView('folder.html');
     }
 
     async function initViewer() {
-        const viewer = document.getElementById('pdf-viewer');
+        const container = document.getElementById('pdf-container');
         const loader = document.getElementById('loading-overlay');
-        
+
         try {
             const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
             const fileData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
 
-            let pdfUrl = '';
-
-            // 1. Check fail local
             if (fileData && fileData.content) {
-                pdfUrl = fileData.content;
-                if (!fileData.driveId) {
-                    document.getElementById('upload-drive-btn').classList.remove('hidden');
-                }
-                displayPdf(pdfUrl);
+                // PAPARAN DARI LOCAL STORAGE (BASE64)
+                if (!fileData.driveId) document.getElementById('upload-drive-btn').classList.remove('hidden');
+                renderPdf(fileData.content);
             } 
-            // 2. Check fail Google Drive
             else if (accessToken && editingId && !editingId.startsWith('local-')) {
+                // PAPARAN DARI GOOGLE DRIVE
                 const response = await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}?alt=media`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
-                
-                if (!response.ok) throw new Error("Gagal akses fail di Drive. Sila log masuk semula.");
-                
-                const blob = await response.blob();
-                if (currentObjectUrl) URL.revokeObjectURL(currentObjectUrl); // Buang yang lama
-                currentObjectUrl = URL.createObjectURL(blob);
-                
-                document.getElementById('sync-status').innerText = "Fail di Google Drive";
-                displayPdf(currentObjectUrl);
-            } else {
-                throw new Error("Data fail tidak ditemui!");
-            }
 
+                if (!response.ok) throw new Error("Akses Google Drive ditolak. Sila login semula.");
+
+                const blob = await response.blob();
+                currentBlobUrl = URL.createObjectURL(blob);
+                renderPdf(currentBlobUrl);
+                document.getElementById('sync-status').innerText = "Cloud Sync Aktif";
+            } else {
+                throw new Error("Fail tidak dijumpai.");
+            }
         } catch (err) {
             console.error(err);
-            Swal.fire('Ralat', err.message, 'error');
-            loader.innerHTML = `<p class="text-red-500 font-bold">${err.message}</p>`;
+            loader.innerHTML = `<div class="p-6 text-center">
+                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                <p class="font-bold text-slate-800">${err.message}</p>
+                <button onclick="goBack()" class="mt-4 text-blue-600 font-bold">Kembali ke Folder</button>
+            </div>`;
         }
     }
 
-    function displayPdf(url) {
-        const viewer = document.getElementById('pdf-viewer');
+    function renderPdf(url) {
+        const container = document.getElementById('pdf-container');
         const loader = document.getElementById('loading-overlay');
-        
-        // Reset iframe src untuk pastikan ia load baru
-        viewer.src = ''; 
+
+        // Guna Object Tag sebagai fallback jika Iframe bermasalah
+        container.innerHTML = `
+            <object data="${url}" type="application/pdf" class="w-full h-full">
+                <iframe src="${url}" class="w-full h-full border-none" frameborder="0">
+                    <p>Browser anda tidak menyokong paparan PDF. <a href="${url}" target="_blank">Klik sini untuk muat turun.</a></p>
+                </iframe>
+            </object>
+        `;
+
+        // Sembunyikan loader selepas 1.5 saat (beri masa browser render)
         setTimeout(() => {
-            viewer.src = url;
-            viewer.classList.remove('hidden');
-            // Beri sedikit masa untuk iframe render sebelum hilangkan loading
-            setTimeout(() => {
-                loader.classList.add('hidden');
-            }, 500);
-        }, 100);
+            loader.classList.add('hidden');
+        }, 1500);
     }
 
+    // Fungsi Padam
+    async function confirmDelete() {
+        const result = await Swal.fire({
+            title: 'Padam Fail?',
+            text: "Tindakan ini tidak boleh diundur!",
+            icon: 'warning',
+            showCancelButton: true,
+            confirmButtonColor: '#ef4444',
+            confirmButtonText: 'Ya, Padam',
+            cancelButtonText: 'Batal'
+        });
+
+        if (result.isConfirmed) {
+            let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+            localStorage.setItem('siswa_local_files', JSON.stringify(localFiles.filter(f => f.id !== editingId && f.driveId !== editingId)));
+
+            if (accessToken && editingId && !editingId.startsWith('local-')) {
+                await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}`, {
+                    method: 'DELETE',
+                    headers: { 'Authorization': `Bearer ${accessToken}` }
+                });
+            }
+            goBack();
+        }
+    }
+
+    // Fungsi Simpan ke Drive
     async function uploadToDrive() {
         const btn = document.getElementById('upload-drive-btn');
-        const originalText = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> MENYIMPAN...`;
+        btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan...`;
 
         try {
             const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-            const fileIndex = localFiles.findIndex(f => f.id === editingId);
-            const file = localFiles[fileIndex];
+            const file = localFiles.find(f => f.id === editingId);
 
             const metadata = {
                 name: file.name,
@@ -141,51 +161,16 @@
 
             if (response.ok) {
                 const driveData = await response.json();
-                localFiles[fileIndex].driveId = driveData.id;
-                localFiles[fileIndex].status = 'synced';
+                file.driveId = driveData.id;
+                file.status = 'synced';
                 localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-                
-                Swal.fire('Berjaya', 'Fail telah disimpan ke Google Drive!', 'success');
+                Swal.fire('Berjaya', 'Tersimpan di Google Drive!', 'success');
                 btn.classList.add('hidden');
-                document.getElementById('sync-status').innerText = "Tersimpan di Drive";
             }
         } catch (err) {
-            Swal.fire('Ralat', 'Gagal memuat naik: ' + err.message, 'error');
-            btn.innerHTML = originalText;
+            Swal.fire('Ralat', 'Gagal simpan ke Drive', 'error');
             btn.disabled = false;
-        }
-    }
-
-    async function confirmDelete() {
-        const result = await Swal.fire({
-            title: 'Hapus Fail?',
-            text: "Fail ini akan dipadamkan secara kekal!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            cancelButtonColor: '#64748b',
-            confirmButtonText: 'Ya, Padam!',
-            cancelButtonText: 'Batal'
-        });
-
-        if (result.isConfirmed) {
-            try {
-                let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-                const updatedFiles = localFiles.filter(f => f.id !== editingId && f.driveId !== editingId);
-                localStorage.setItem('siswa_local_files', JSON.stringify(updatedFiles));
-
-                if (accessToken && editingId && !editingId.startsWith('local-')) {
-                    await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}`, {
-                        method: 'DELETE',
-                        headers: { 'Authorization': `Bearer ${accessToken}` }
-                    });
-                }
-
-                await Swal.fire('Dipadam!', 'Fail anda telah dihapuskan.', 'success');
-                goBack();
-            } catch (err) {
-                Swal.fire('Ralat', 'Gagal memadam fail.', 'error');
-            }
+            btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> SIMPAN KE DRIVE`;
         }
     }
 
@@ -196,26 +181,21 @@
         return new Blob([u8arr], {type:mime});
     }
 
-    // Jalankan viewer
     initViewer();
 </script>
 
 <style>
-    /* Paksa Iframe jadi besar dan responsive */
-    #pdf-viewer {
+    /* Paksa container skrin penuh */
+    #pdf-container {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+    }
+    object, iframe {
+        display: block;
         width: 100%;
         height: 100%;
-        border: none;
-        display: block;
-    }
-    
-    /* Animasi masuk */
-    .animate-in {
-        animation: fadeIn 0.4s ease-out;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; transform: translateY(20px); }
-        to { opacity: 1; transform: translateY(0); }
     }
 </style>
