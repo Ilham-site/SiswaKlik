@@ -47,24 +47,25 @@
 </style>
 
 <script>
-    // State untuk folder semasa (Default: Root SiswaKlik)
-    let currentFolderId = localStorage.getItem('siswaklik_current_folder_id') || localStorage.getItem('siswaklik_drive_folder_id') || 'root';
+    // 1. Inisialisasi State Folder (Ambil dari cache atau guna root asal)
+    let rootFolderId = localStorage.getItem('siswaklik_drive_folder_id') || 'root';
+    let currentFolderId = localStorage.getItem('siswaklik_current_folder_id') || rootFolderId;
 
     async function renderFiles() {
         const container = document.getElementById('fileList');
         const pathLabel = document.getElementById('current-path');
+        const accessToken = localStorage.getItem('siswaklik_access_token');
         
-        // Kemaskini label path
+        // Kemaskini Breadcrumb
         const currentName = localStorage.getItem('siswaklik_current_folder_name') || '';
         pathLabel.innerHTML = currentName ? `<i class="fas fa-chevron-right text-[10px] mx-1"></i> <span class="text-blue-600">${currentName}</span>` : '';
 
-        // Tunjukkan Loading
-        container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 animate-pulse">Menyemak fail...</div>`;
+        container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 animate-pulse"><i class="fas fa-sync fa-spin mr-2"></i>Menyemak fail...</div>`;
 
-        // 1. Dapatkan Folder & Fail dari API (Jika online)
-        const accessToken = localStorage.getItem('siswaklik_access_token');
         let driveItems = [];
+        let localFiles = [];
 
+        // 2. Ambil data dari Google Drive jika ada token
         if (accessToken) {
             try {
                 const q = `'${currentFolderId}' in parents and trashed = false`;
@@ -73,13 +74,14 @@
                 });
                 const data = await response.json();
                 driveItems = data.files || [];
-            } catch (e) { console.error("Drive fetch error", e); }
+            } catch (e) { 
+                console.error("Drive fetch error", e); 
+            }
         }
 
-        // 2. Dapatkan Local Files (Hanya jika di Root)
-        const localFiles = (currentFolderId === 'root' || currentFolderId === localStorage.getItem('siswaklik_drive_folder_id')) 
-            ? JSON.parse(localStorage.getItem('siswa_local_files')) || [] 
-            : [];
+        // 3. Ambil data dari LocalStorage dan TAPIS mengikut parentId semasa
+        const allLocal = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+        localFiles = allLocal.filter(f => f.parentId === currentFolderId && f.status === 'pending_sync');
 
         if (driveItems.length === 0 && localFiles.length === 0) {
             container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400">Folder ini kosong.</div>`;
@@ -88,7 +90,7 @@
 
         container.innerHTML = '';
 
-        // Render Folder Dulu
+        // 4. Render Folder Dahulu
         driveItems.filter(i => i.mimeType === 'application/vnd.google-apps.folder').forEach(folder => {
             container.innerHTML += `
                 <div onclick="enterFolder('${folder.id}', '${folder.name}')" class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
@@ -98,32 +100,46 @@
                 </div>`;
         });
 
-        // Render Fail PDF (Drive + Local)
-        const allPdfs = [
-            ...driveItems.filter(i => i.mimeType === 'application/pdf').map(f => ({...f, status: 'synced'})),
-            ...localFiles.filter(f => f.status === 'pending_sync')
-        ];
+        // 5. Render Fail PDF (Gabungan Drive + Local yang belum sync)
+        const drivePdfs = driveItems.filter(i => i.mimeType === 'application/pdf').map(f => ({...f, status: 'synced'}));
+        const allPdfsToDisplay = [...drivePdfs, ...localFiles];
 
-        allPdfs.forEach(file => {
+        allPdfsToDisplay.forEach(file => {
+            const isSynced = file.status === 'synced';
             container.innerHTML += `
                 <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all">
                     <div class="text-blue-600 text-3xl mb-4"><i class="fas fa-file-pdf"></i></div>
-                    <h4 class="font-bold text-slate-800 truncate">${file.name}</h4>
+                    <h4 class="font-bold text-slate-800 truncate" title="${file.name}">${file.name}</h4>
                     <div class="flex items-center justify-between mt-4">
-                        <span class="text-[10px] font-black uppercase ${file.status === 'synced' ? 'text-green-500' : 'text-amber-500 animate-pulse'}">
-                            ${file.status === 'synced' ? '<i class="fas fa-check-circle"></i> Cloud' : '<i class="fas fa-clock"></i> Pending'}
+                        <span class="text-[10px] font-black uppercase ${isSynced ? 'text-green-500' : 'text-amber-500 animate-pulse'}">
+                            ${isSynced ? '<i class="fas fa-check-circle"></i> Cloud' : '<i class="fas fa-clock"></i> Memproses'}
                         </span>
-                        <button onclick="openEditor('${file.id || file.driveId}', '${file.name}')" class="text-blue-600 font-bold text-sm">Buka</button>
+                        <button onclick="openEditor('${file.id || file.driveId}', '${file.name}')" class="text-blue-600 font-bold text-sm hover:underline">Buka</button>
                     </div>
                 </div>`;
         });
     }
 
-    // FUNGSI MODAL
+    // --- FUNGSI NAVIGASI ---
+    function enterFolder(id, name) {
+        currentFolderId = id;
+        localStorage.setItem('siswaklik_current_folder_id', id);
+        localStorage.setItem('siswaklik_current_folder_name', name);
+        renderFiles();
+    }
+
+    function navigateToRoot() {
+        currentFolderId = rootFolderId;
+        localStorage.setItem('siswaklik_current_folder_id', rootFolderId);
+        localStorage.removeItem('siswaklik_current_folder_name');
+        renderFiles();
+    }
+
+    // --- FUNGSI MODAL ---
     function openFolderModal() { document.getElementById('folderModal').classList.remove('hidden'); }
     function closeFolderModal() { document.getElementById('folderModal').classList.add('hidden'); }
 
-    // CREATE FOLDER KE GOOGLE DRIVE
+    // --- LOGIK DRIVE & UPLOAD ---
     async function createNewFolder() {
         const name = document.getElementById('folderNameInput').value;
         const accessToken = localStorage.getItem('siswaklik_access_token');
@@ -144,7 +160,7 @@
                 body: JSON.stringify({
                     name: name,
                     mimeType: 'application/vnd.google-apps.folder',
-                    parents: [currentFolderId]
+                    parents: [currentFolderId] // Folder baru masuk dalam folder semasa
                 })
             });
 
@@ -154,26 +170,11 @@
                 renderFiles();
             }
         } catch (err) {
-            alert("Gagal mencipta folder. Pastikan anda online.");
+            alert("Gagal mencipta folder. Periksa sambungan internet.");
         } finally {
             btn.disabled = false;
             btn.innerHTML = 'Cipta';
         }
-    }
-
-    // NAVIGASI
-    function enterFolder(id, name) {
-        currentFolderId = id;
-        localStorage.setItem('siswaklik_current_folder_id', id);
-        localStorage.setItem('siswaklik_current_folder_name', name);
-        renderFiles();
-    }
-
-    function navigateToRoot() {
-        currentFolderId = localStorage.getItem('siswaklik_drive_folder_id') || 'root';
-        localStorage.removeItem('siswaklik_current_folder_id');
-        localStorage.removeItem('siswaklik_current_folder_name');
-        renderFiles();
     }
 
     async function handleLocalUpload(input) {
@@ -183,19 +184,25 @@
         const reader = new FileReader();
         reader.onload = function(e) {
             const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+            
             const newFile = {
                 id: 'local-' + Date.now(),
                 name: file.name,
                 content: e.target.result,
                 status: 'pending_sync',
-                parentId: currentFolderId, // Simpan info folder mana dia diupload
+                parentId: currentFolderId, // FAIL DISIMPAN MENGIKUT FOLDER SEMASA
                 date: new Date().toISOString()
             };
             
             localFiles.push(newFile);
             localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
+            
+            // Reset input file
+            input.value = "";
+            
             renderFiles();
             
+            // Panggil background sync jika fungsi wujud dalam fail.html
             if(typeof backgroundSync === 'function') backgroundSync();
         };
         reader.readAsDataURL(file);
@@ -204,8 +211,12 @@
     function openEditor(fileId, fileName) {
         localStorage.setItem('editing_file_id', fileId);
         localStorage.setItem('editing_file_name', fileName);
-        loadView('pdf.html');
+        // Tukar view ke editor PDF
+        if (typeof loadView === 'function') {
+            loadView('pdf.html');
+        }
     }
 
+    // Jalankan render pertama kali
     renderFiles();
 </script>
