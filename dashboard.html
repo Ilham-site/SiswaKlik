@@ -1,250 +1,121 @@
-<!DOCTYPE html>
-<html lang="ms">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SiswaKlik - Dashboard Hub</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .animate-in { animation: fadeIn 0.5s ease-out; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
-        .glass-card { background: rgba(255, 255, 255, 0.7); backdrop-filter: blur(10px); border: 1px solid rgba(226, 232, 240, 0.8); }
-    </style>
-</head>
-<body class="bg-[#F8FAFC]">
-
-    <div class="max-w-6xl mx-auto space-y-8 animate-in p-4 md:p-0">
-        
-        <header class="flex flex-col md:flex-row md:items-center justify-between gap-6">
-            <div class="flex items-center gap-5">
-                <button onclick="parent.toggleSidebar(true)" class="group p-4 bg-white border border-slate-200 rounded-[1.5rem] text-blue-600 shadow-sm hover:bg-blue-600 hover:text-white transition-all duration-300 active:scale-95">
-                    <i class="fas fa-grid-2 text-xl group-hover:rotate-90 transition-transform duration-300"></i>
-                    <span class="ml-2 font-bold text-sm md:hidden">Menu</span>
-                </button>
-                <div>
-                    <h1 class="text-3xl md:text-4xl font-black text-slate-900 tracking-tight">
-                        Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Pelajar</span>!
-                    </h1>
-                    <p class="text-slate-500 font-medium mt-1 flex items-center gap-2">
-                        <span class="relative flex h-2 w-2">
-                          <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                          <span class="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                        </span>
-                        Sesi Akademik 2025/2026 sedang berlangsung
-                    </p>
-                </div>
-            </div>
-        </header>
-
-        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
-            <div class="lg:col-span-2 space-y-6">
-                <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 min-h-[400px]">
-                    <div class="flex justify-between items-center mb-8">
-                        <div class="flex items-center gap-3">
-                            <div class="w-10 h-10 bg-orange-100 text-orange-600 rounded-xl flex items-center justify-center">
-                                <i class="fas fa-file-signature text-lg"></i>
-                            </div>
-                            <h2 class="text-xl font-black text-slate-800">Jadual Peperiksaan</h2>
-                        </div>
-                        <button onclick="document.getElementById('kmjpInput').click()" class="text-xs font-bold bg-blue-50 text-blue-600 px-5 py-2.5 rounded-xl hover:bg-blue-100 transition-all flex items-center gap-2">
-                            <i class="fas fa-plus-circle"></i> Import KMJP
-                        </button>
-                        <input type="file" id="kmjpInput" class="hidden" accept=".pdf" onchange="processKMJP(this)">
-                    </div>
-
-                    <div id="examContainer" class="space-y-4">
-                        <div class="text-center py-16">
-                            <div class="w-20 h-20 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
-                                <i class="fas fa-calendar-minus text-3xl text-slate-200"></i>
-                            </div>
-                            <p class="text-slate-400 text-sm font-medium italic">Tiada jadual peperiksaan dikesan.<br>Sila muat naik fail KMJP anda.</p>
-                        </div>
-                    </div>
-                </div>
-            </div>
-
-            <div class="space-y-8">
-                
-                <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden group">
-                    <i class="fas fa-university absolute -right-4 -bottom-4 text-white/10 text-9xl group-hover:scale-110 transition-transform duration-500"></i>
-                    <h3 class="text-lg font-bold mb-6 flex items-center gap-2">
-                        <i class="fas fa-info-circle opacity-70"></i> Status Semasa
-                    </h3>
-                    <div class="space-y-5 relative z-10">
-                        <div>
-                            <p class="text-[10px] opacity-70 uppercase tracking-[0.2em] font-bold mb-1">Aktiviti Akademik</p>
-                            <p id="semesterStatus" class="text-2xl font-black leading-tight drop-shadow-md">Memuatkan...</p>
-                        </div>
-                        <div class="pt-2">
-                            <span class="text-[10px] font-bold bg-white/20 backdrop-blur-md px-4 py-2 rounded-full border border-white/10 uppercase tracking-widest">
-                                UKM Bangi
-                            </span>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="bg-white p-7 rounded-[2.5rem] shadow-sm border border-slate-100">
-                    <h3 class="font-bold text-slate-800 mb-5 flex items-center gap-2">
-                        <i class="fas fa-clock text-blue-500"></i> Aktiviti Terdekat
-                    </h3>
-                    <div id="upcomingEvents" class="space-y-4">
-                        <div class="p-5 bg-slate-50 rounded-[1.8rem] border border-slate-100">
-                            <p id="nextActivityTitle" class="font-bold text-slate-700 text-sm leading-snug">Sila kemaskini kalendar di tab Status Akademik</p>
-                            <div class="flex items-center gap-2 mt-3 text-[10px] text-blue-600 font-bold uppercase tracking-wider">
-                                <i class="fas fa-calendar-day"></i>
-                                <span id="nextActivityDate">TIADA DATA</span>
-                            </div>
-                        </div>
-                    </div>
-                    <button onclick="parent.loadPage('semester.html')" class="mt-6 w-full flex items-center justify-center gap-3 py-4 bg-slate-900 text-white rounded-[1.5rem] text-xs font-black hover:bg-blue-600 transition-all duration-300 group shadow-lg shadow-slate-200">
-                        PENGURUSAN SEMESTER <i class="fas fa-chevron-right text-[10px] group-hover:translate-x-1 transition-transform"></i>
-                    </button>
-                </div>
-
-            </div>
+<div class="animate-in space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h2 class="text-2xl font-800 text-slate-800">Selamat Kembali!</h2>
+            <p class="text-slate-500 text-sm font-medium">Jom semak status akademik anda hari ini.</p>
+        </div>
+        <div class="h-12 w-12 bg-blue-600 rounded-2xl flex items-center justify-center text-white shadow-lg shadow-blue-200">
+            <i class="fas fa-th-large"></i>
         </div>
     </div>
 
-    <script>
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-
-        // Nama pengguna dari localStorage
-        const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Muhammad Nur Ilham' };
-        document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
-
-        function updateAcademicStats() {
-            const academicData = JSON.parse(localStorage.getItem('siswa_academic_calendar'));
-            const statusEl = document.getElementById('semesterStatus');
+    <div class="bg-gradient-to-br from-blue-600 to-blue-700 p-6 rounded-[2.5rem] text-white shadow-xl shadow-blue-100 relative overflow-hidden">
+        <div class="relative z-10">
+            <div class="flex justify-between items-start mb-4">
+                <span class="bg-white/20 px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-wider backdrop-blur-md">Status Semasa</span>
+                <i class="fas fa-calendar-check text-white/50 text-xl"></i>
+            </div>
+            <h3 id="dashCurrentActivity" class="text-xl font-bold mb-1">Memuatkan...</h3>
+            <p id="dashDateRange" class="text-blue-100 text-xs font-medium mb-4 italic">Sila tunggu sebentar</p>
             
-            if (academicData && academicData.length > 0) {
-                const now = new Date().getTime();
-                let activeEvent = academicData[0];
-                
-                academicData.forEach(ev => {
-                    if(now >= ev.startDate) activeEvent = ev;
-                });
+            <div class="space-y-2">
+                <div class="flex justify-between text-[10px] font-bold uppercase">
+                    <span>Progres Semester</span>
+                    <span id="dashProgressText">0%</span>
+                </div>
+                <div class="h-2.5 bg-white/20 rounded-full overflow-hidden">
+                    <div id="dashProgressBar" class="h-full bg-white rounded-full transition-all duration-1000" style="width: 0%"></div>
+                </div>
+            </div>
+        </div>
+        <div class="absolute -right-10 -bottom-10 h-40 w-40 bg-white/10 rounded-full blur-3xl"></div>
+    </div>
 
-                document.getElementById('nextActivityTitle').innerText = activeEvent.title;
-                document.getElementById('nextActivityDate').innerText = activeEvent.rawDate;
-                statusEl.innerText = activeEvent.title;
-            } else {
-                statusEl.innerText = "Belum Dikemaskini";
+    <div class="grid grid-cols-2 gap-4">
+        <button onclick="loadPage('semester.html', this)" class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:border-blue-200 transition-all text-left group">
+            <div class="h-12 w-12 bg-indigo-50 text-indigo-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <i class="fas fa-graduation-cap"></i>
+            </div>
+            <span class="block font-bold text-slate-800 text-sm">Kalendar</span>
+            <span class="text-[10px] text-slate-400 font-medium text-nowrap">Semak tarikh penting</span>
+        </button>
+
+        <button onclick="loadPage('kmjp.html', this)" class="bg-white p-5 rounded-[2rem] border border-slate-100 shadow-sm hover:border-blue-200 transition-all text-left group">
+            <div class="h-12 w-12 bg-rose-50 text-rose-600 rounded-2xl flex items-center justify-center mb-4 group-hover:scale-110 transition-transform">
+                <i class="fas fa-folder-open"></i>
+            </div>
+            <span class="block font-bold text-slate-800 text-sm">KMJP Drive</span>
+            <span class="text-[10px] text-slate-400 font-medium">Arkib nota & fail</span>
+        </button>
+    </div>
+
+    <div class="bg-white p-6 rounded-[2.5rem] border border-slate-100 shadow-sm">
+        <div class="flex items-center justify-between mb-5">
+            <h4 class="font-bold text-slate-800 uppercase text-xs tracking-widest">Peperiksaan Akan Datang</h4>
+            <i class="fas fa-chevron-right text-slate-300 text-xs"></i>
+        </div>
+        <div id="dashExamList" class="space-y-4">
+            <div class="text-center py-4">
+                <p class="text-xs text-slate-400 font-medium italic">Tiada peperiksaan dalam rekod.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    // Data Akademik (Sama seperti dalam semester.html untuk sinkronisasi)
+    const academicEvents = [
+        { title: "Cuti Pertengahan Semester 2", startDate: new Date(2026, 2, 23), endDate: new Date(2026, 2, 29), rawDate: "23 - 29 Mac 2026" },
+        { title: "Perkuliahan Semester 2 (Bahagian 2)", startDate: new Date(2026, 2, 30), endDate: new Date(2026, 4, 17), rawDate: "30 Mac - 17 Mei 2026" },
+        { title: "Ulangkaji & Peperiksaan Akhir S2", startDate: new Date(2026, 4, 18), endDate: new Date(2026, 5, 14), rawDate: "18 Mei - 14 Jun 2026" },
+        { title: "Cuti Akhir Semester 2", startDate: new Date(2026, 5, 15), endDate: new Date(2026, 6, 12), rawDate: "15 Jun - 12 Julai 2026" }
+    ];
+
+    function updateDashboardStatus() {
+        const now = new Date();
+        let activeEvent = academicEvents[0];
+        let passedEvents = 0;
+
+        academicEvents.forEach(item => {
+            if (now >= item.startDate) {
+                activeEvent = item;
+                passedEvents++;
             }
-        }
+        });
 
-        function renderExams() {
-            const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
-            const container = document.getElementById('examContainer');
+        const progressPercent = Math.round((passedEvents / academicEvents.length) * 100);
+
+        // Update UI
+        document.getElementById('dashCurrentActivity').innerText = activeEvent.title;
+        document.getElementById('dashDateRange').innerText = activeEvent.rawDate;
+        document.getElementById('dashProgressBar').style.width = progressPercent + '%';
+        document.getElementById('dashProgressText').innerText = progressPercent + '%';
+    }
+
+    function renderDashExams() {
+        const container = document.getElementById('dashExamList');
+        const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
+        
+        if (exams.length > 0) {
+            // Ambil 2 yang terdekat sahaja untuk dashboard
+            const sortedExams = exams.sort((a, b) => new Date(a.date) - new Date(b.date)).slice(0, 2);
             
-            if (exams.length > 0) {
-                container.innerHTML = exams.map(exam => `
-                    <div class="flex items-center gap-5 p-5 rounded-[2.2rem] border border-slate-100 hover:border-blue-200 hover:bg-blue-50/40 transition-all duration-300 group">
-                        <div class="bg-white shadow-sm border border-slate-100 p-3 rounded-2xl text-center min-w-[75px] group-hover:scale-105 transition-transform">
-                            <p class="text-[9px] font-black text-slate-400 uppercase tracking-tighter">${new Date(exam.date).toLocaleString('ms-MY', {month: 'short'})}</p>
-                            <p class="text-2xl font-black text-blue-600">${new Date(exam.date).getDate()}</p>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-slate-800 leading-tight group-hover:text-blue-700 transition-colors">${exam.title}</h4>
-                            <div class="flex flex-wrap gap-4 mt-2">
-                                <span class="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1.5">
-                                    <i class="far fa-clock text-blue-400"></i> ${exam.time}
-                                </span>
-                                <span class="text-[10px] text-slate-500 font-bold uppercase flex items-center gap-1.5">
-                                    <i class="fas fa-map-marker-alt text-rose-400"></i> ${exam.location}
-                                </span>
-                            </div>
-                        </div>
-                        <button onclick="deleteExam('${exam.id}')" class="h-10 w-10 flex items-center justify-center text-slate-200 hover:text-red-500 hover:bg-red-50 rounded-xl transition-all">
-                            <i class="fas fa-trash-alt text-sm"></i>
-                        </button>
+            container.innerHTML = sortedExams.map(ex => `
+                <div class="flex items-center gap-4 p-3 bg-slate-50 rounded-2xl border border-slate-100">
+                    <div class="h-10 w-10 bg-white rounded-xl flex flex-col items-center justify-center border border-slate-200 font-bold text-blue-600 shrink-0 text-[10px]">
+                        <span>${new Date(ex.date).getDate()}</span>
+                        <span class="uppercase text-[8px]">${new Date(ex.date).toLocaleString('ms-MY', {month: 'short'})}</span>
                     </div>
-                `).join('');
-            }
+                    <div class="overflow-hidden">
+                        <h5 class="font-bold text-slate-800 text-xs truncate">${ex.code}</h5>
+                        <p class="text-[10px] text-slate-500 truncate">${ex.title}</p>
+                    </div>
+                </div>
+            `).join('');
         }
+    }
 
-        async function processKMJP(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            try {
-                Swal.fire({ 
-                    title: 'Memproses PDF', 
-                    text: 'Mengekstrak maklumat peperiksaan...', 
-                    allowOutsideClick: false, 
-                    didOpen: () => Swal.showLoading() 
-                });
-                
-                const reader = new FileReader();
-                reader.onload = async function() {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let text = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        text += content.items.map(item => item.str).join(' ');
-                    }
-
-                    const cleanText = text.replace(/\s+/g, ' ');
-                    const pattern = /([A-Z]{4}\d{4})\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+.*?(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+)/gi;
-                    
-                    const found = [];
-                    let m;
-                    while ((m = pattern.exec(cleanText)) !== null) {
-                        if (m[2].includes("Penilaian Berterusan")) continue;
-                        found.push({
-                            id: 'ex-'+Math.random().toString(36).substr(2,7),
-                            code: m[1], title: m[2].trim(),
-                            date: m[3].split('/').reverse().join('-'),
-                            time: m[4], location: m[5].trim()
-                        });
-                    }
-                    localStorage.setItem('siswa_exams', JSON.stringify(found));
-                    renderExams();
-                    Swal.fire({
-                        icon: 'success',
-                        title: 'Berjaya!',
-                        text: `${found.length} subjek dikesan dan disimpan.`,
-                        confirmButtonColor: '#2563eb'
-                    });
-                };
-                reader.readAsArrayBuffer(file);
-            } catch(e) { 
-                Swal.fire('Ralat', 'Gagal memproses fail PDF tersebut.', 'error'); 
-            }
-            input.value = "";
-        }
-
-        function deleteExam(id) {
-            Swal.fire({
-                title: 'Padam subjek?',
-                text: "Maklumat peperiksaan ini akan dibuang.",
-                icon: 'warning',
-                showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                cancelButtonColor: '#94a3b8',
-                confirmButtonText: 'Ya, Padam',
-                cancelButtonText: 'Batal'
-            }).then((result) => {
-                if (result.isConfirmed) {
-                    let exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
-                    exams = exams.filter(e => e.id !== id);
-                    localStorage.setItem('siswa_exams', JSON.stringify(exams));
-                    renderExams();
-                }
-            });
-        }
-
-        window.onload = () => {
-            updateAcademicStats();
-            renderExams();
-        };
-    </script>
-</body>
-</html>
+    // Jalankan fungsi
+    updateDashboardStatus();
+    renderDashExams();
+</script>
