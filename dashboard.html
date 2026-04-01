@@ -1,10 +1,24 @@
-<div id="dashboard-content" class="animate-in p-4 md:p-8 lg:p-12">
+<!DOCTYPE html>
+<html lang="ms">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SiswaKlik - Dashboard Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .animate-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
+</head>
+<body class="bg-[#F8FAFC] p-4 md:p-8 lg:p-12">
 
-    <div class="max-w-6xl mx-auto space-y-8">
+    <div class="max-w-6xl mx-auto space-y-8 animate-in">
+        
         <header class="flex justify-between items-start">
             <div>
                 <h1 class="text-3xl font-extrabold text-slate-900">Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Pelajar</span>!</h1>
@@ -13,6 +27,7 @@
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
             <div class="lg:col-span-2">
                 <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 h-full">
                     <div class="flex justify-between items-center mb-6">
@@ -35,6 +50,7 @@
             </div>
 
             <div class="space-y-8">
+                
                 <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden">
                     <i class="fas fa-university absolute -right-4 -bottom-4 text-white/10 text-9xl"></i>
                     <h3 class="text-lg font-bold mb-4">Ringkasan Akademik</h3>
@@ -59,47 +75,43 @@
                             <p id="nextActivityDate" class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">Tiada Data</p>
                         </div>
                     </div>
-                    <button onclick="loadPage('semester.html', document.querySelector('button[onclick*=\'semester.html\']'))" class="mt-4 w-full text-center py-4 bg-blue-50 text-blue-600 rounded-[1.5rem] text-xs font-black hover:bg-blue-100 transition-all border border-blue-100 uppercase tracking-wide">
+                    <button onclick="window.location.href='semester.html'" class="mt-4 w-full text-center py-4 bg-blue-50 text-blue-600 rounded-[1.5rem] text-xs font-black hover:bg-blue-100 transition-all border border-blue-100 uppercase tracking-wide">
                         Lihat Kalendar Akademik <i class="fas fa-arrow-right ml-2"></i>
                     </button>
                 </div>
+
             </div>
         </div>
     </div>
 
     <script>
-        (function() {
-            // Setup Nama Pelajar
-            const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Pelajar' };
-            const nameEl = document.getElementById('userNameDisplay');
-            if(nameEl) nameEl.innerText = userData.name.split(' ')[0];
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-            // Render Data Sedia Ada
-            if (typeof renderExams === "function") renderExams();
-            if (typeof updateAcademicStats === "function") updateAcademicStats();
-            
-            // Re-inisialisasi PDF worker jika perlu
-            if (window.pdfjsLib) {
-                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-            }
-        })();
+        // Setup paparan nama
+        const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Pelajar' };
+        document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
 
-        // Fungsi-fungsi Global (Supaya boleh dipanggil oleh button)
-        window.updateAcademicStats = function() {
+        function updateAcademicStats() {
             const academicData = JSON.parse(localStorage.getItem('siswa_academic_calendar'));
+            
             if (academicData && academicData.length > 0) {
                 const now = new Date().getTime();
                 let activeEvent = academicData[0];
-                academicData.forEach(ev => { if(now >= ev.startDate) activeEvent = ev; });
+                
+                // Cari aktiviti terdekat berdasarkan tarikh hari ini
+                academicData.forEach(ev => {
+                    if(now >= ev.startDate) activeEvent = ev;
+                });
+
                 document.getElementById('nextActivityTitle').innerText = activeEvent.title;
                 document.getElementById('nextActivityDate').innerText = activeEvent.rawDate;
             }
         }
 
-        window.renderExams = function() {
+        function renderExams() {
             const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
             const container = document.getElementById('examContainer');
-            if (!container) return;
+            
             if (exams.length > 0) {
                 container.innerHTML = exams.map(exam => `
                     <div class="flex items-center gap-4 p-5 rounded-[2rem] border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition group">
@@ -122,11 +134,13 @@
             }
         }
 
-        window.processKMJP = async function(input) {
+        async function processKMJP(input) {
             const file = input.files[0];
             if (!file) return;
+
             try {
-                Swal.fire({ title: 'Memproses...', text: 'Mengekstrak jadual', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                Swal.fire({ title: 'Memproses...', text: 'Mengekstrak jadual peperiksaan', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                
                 const reader = new FileReader();
                 reader.onload = async function() {
                     const typedarray = new Uint8Array(this.result);
@@ -137,13 +151,20 @@
                         const content = await page.getTextContent();
                         text += content.items.map(item => item.str).join(' ');
                     }
+
                     const cleanText = text.replace(/\s+/g, ' ');
                     const pattern = /([A-Z]{4}\d{4})\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+.*?(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+)/gi;
+                    
                     const found = [];
                     let m;
                     while ((m = pattern.exec(cleanText)) !== null) {
                         if (m[2].includes("Penilaian Berterusan")) continue;
-                        found.push({ id: 'ex-'+Math.random().toString(36).substr(2,7), code: m[1], title: m[2].trim(), date: m[3].split('/').reverse().join('-'), time: m[4], location: m[5].trim() });
+                        found.push({
+                            id: 'ex-'+Math.random().toString(36).substr(2,7),
+                            code: m[1], title: m[2].trim(),
+                            date: m[3].split('/').reverse().join('-'),
+                            time: m[4], location: m[5].trim()
+                        });
                     }
                     localStorage.setItem('siswa_exams', JSON.stringify(found));
                     renderExams();
@@ -154,15 +175,17 @@
             input.value = "";
         }
 
-        window.deleteExam = function(id) {
+        function deleteExam(id) {
             let exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
             exams = exams.filter(e => e.id !== id);
             localStorage.setItem('siswa_exams', JSON.stringify(exams));
             renderExams();
         }
 
-        // Jalankan render awal
-        renderExams();
-        updateAcademicStats();
+        window.onload = () => {
+            updateAcademicStats();
+            renderExams();
+        };
     </script>
-</div>
+</body>
+</html>
