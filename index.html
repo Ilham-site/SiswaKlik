@@ -8,30 +8,11 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
-        
-        .drawer-transition { 
-            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
-        }
-        
-        .glass-nav { 
-            background: rgba(255, 255, 255, 0.8); 
-            backdrop-filter: blur(12px); 
-            -webkit-backdrop-filter: blur(12px);
-        }
-
-        .nav-active { 
-            background-color: #eff6ff !important; 
-            color: #2563eb !important; 
-            font-weight: 800; 
-            border-right: 4px solid #2563eb; 
-        }
-
-        /* Memastikan main content mempunyai ruang yang cukup */
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        .drawer-transition { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
+        .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+        .nav-active { background-color: #eff6ff; color: #2563eb; font-weight: 800; border-right: 4px solid #2563eb; }
         #app-root { min-height: calc(100vh - 80px); }
-
-        /* Sembunyikan scrollbar sidebar */
-        aside::-webkit-scrollbar { width: 0px; }
     </style>
 </head>
 <body class="bg-[#F8FAFC] min-h-screen">
@@ -48,10 +29,8 @@
                 <h1 class="text-xl font-black text-slate-800 tracking-tight">SiswaKlik</h1>
             </div>
         </div>
-        
         <div class="flex items-center gap-4">
             <div id="systemDate" class="hidden md:block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]"></div>
-            <div class="h-8 w-[1px] bg-slate-200 mx-2 hidden md:block"></div>
             <img id="userAvatar" src="https://via.placeholder.com/40" class="w-10 h-10 rounded-2xl border-2 border-white shadow-md object-cover">
         </div>
     </nav>
@@ -71,42 +50,18 @@
         
         <nav class="p-6 space-y-3 flex-1 overflow-y-auto">
             <button onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-[1.5rem] text-slate-600 font-semibold transition-all group">
-                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
+                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white">
                     <i class="fas fa-th-large"></i>
                 </div>
                 <span>Dashboard</span>
             </button>
-
             <button onclick="loadPage('semester.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-[1.5rem] text-slate-600 font-semibold transition-all group">
-                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
+                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center">
                     <i class="fas fa-chart-line"></i>
                 </div>
                 <span>Status Akademik</span>
             </button>
-
-            <button onclick="loadPage('kmjp.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-[1.5rem] text-slate-600 font-semibold transition-all group">
-                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
-                    <i class="fas fa-file-invoice"></i>
-                </div>
-                <span>Jadual Peperiksaan</span>
-            </button>
-
-            <button onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-[1.5rem] text-slate-600 font-semibold transition-all group">
-                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
-                    <i class="fas fa-folder-open"></i>
-                </div>
-                <span>Fail Peribadi</span>
-            </button>
         </nav>
-
-        <div class="p-6 border-t border-slate-50 bg-slate-50/50">
-            <button onclick="logout()" class="w-full flex items-center gap-4 p-4 text-red-500 hover:bg-red-50 rounded-2xl transition-all font-bold group">
-                <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
-                    <i class="fas fa-sign-out-alt group-hover:-translate-x-1 transition-transform"></i>
-                </div>
-                <span>Log Keluar</span>
-            </button>
-        </div>
     </aside>
 
     <main id="app-root" class="p-4 md:p-8 lg:p-10 max-w-7xl mx-auto"></main>
@@ -133,34 +88,22 @@
         closeBtn.onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        // Fungsi memuatkan halaman dinamik ke dalam #app-root
         async function loadPage(page, element) {
             try {
                 const response = await fetch(page);
-                if (!response.ok) throw new Error("Fail tidak dijumpai");
-                
                 const html = await response.text();
                 const appRoot = document.getElementById('app-root');
                 
-                // Ekstrak kandungan dalam <body> sahaja jika fail yang di-fetch ada tag body
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(html, 'text/html');
-                const bodyContent = doc.body ? doc.body.innerHTML : html;
+                // Masukkan kandungan tanpa tag body/html dari fail luar
+                appRoot.innerHTML = html;
                 
-                appRoot.innerHTML = bodyContent;
-                
-                // Kemaskini butang aktif di sidebar
+                // Aktifkan menu sidebar
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
-                if(element) {
-                    element.classList.add('nav-active');
-                } else {
-                    const sideBtn = document.querySelector(`button[onclick*="${page}"]`);
-                    if(sideBtn) sideBtn.classList.add('nav-active');
-                }
-                
+                if(element) element.classList.add('nav-active');
+
                 toggleSidebar(false);
-                
-                // Jalankan semula scripts yang ada dalam kandungan yang dimuatkan
+
+                // Jalankan semula skrip yang ada dalam fail yang di-fetch
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -168,34 +111,15 @@
                     newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
-                
-                window.scrollTo(0, 0);
             } catch (err) {
-                console.error("Gagal memuatkan:", err);
-                appRoot.innerHTML = `<div class="p-20 text-center font-bold text-red-500">Ralat: Gagal memuatkan ${page}</div>`;
+                console.error("Gagal memuatkan halaman:", err);
             }
         }
 
-        function updateDate() {
+        window.onload = () => {
             const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
             document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
-        }
-
-        function logout() {
-            localStorage.clear();
-            window.location.href = 'login.html';
-        }
-
-        window.onload = () => {
-            updateDate();
-            
-            // Set maklumat profil (Avatar)
-            const user = JSON.parse(localStorage.getItem('siswaklik_user')) || { picture: 'https://via.placeholder.com/40' };
-            document.getElementById('userAvatar').src = user.picture;
-            
-            // Muat turun dashboard secara automatik bila buka index.html
-            const dashBtn = document.querySelector('button[onclick*="dashboard.html"]');
-            loadPage('dashboard.html', dashBtn);
+            loadPage('dashboard.html', document.querySelector('.nav-item'));
         };
     </script>
 </body>
