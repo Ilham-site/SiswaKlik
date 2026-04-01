@@ -8,7 +8,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
         
         .drawer-transition { 
             transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
@@ -21,14 +21,17 @@
         }
 
         .nav-active { 
-            background-color: #eff6ff; 
-            color: #2563eb; 
+            background-color: #eff6ff !important; 
+            color: #2563eb !important; 
             font-weight: 800; 
             border-right: 4px solid #2563eb; 
         }
 
-        /* Memastikan main content tidak tenggelam bawah nav */
+        /* Memastikan main content mempunyai ruang yang cukup */
         #app-root { min-height: calc(100vh - 80px); }
+
+        /* Sembunyikan scrollbar sidebar */
+        aside::-webkit-scrollbar { width: 0px; }
     </style>
 </head>
 <body class="bg-[#F8FAFC] min-h-screen">
@@ -114,7 +117,6 @@
         const menuBtn = document.getElementById('menuBtn');
         const closeBtn = document.getElementById('closeBtn');
 
-        // Fungsi buka/tutup sidebar
         function toggleSidebar(show) {
             if (show) {
                 sidebar.classList.remove('-translate-x-full');
@@ -131,7 +133,7 @@
         closeBtn.onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        // Fungsi memuatkan halaman tanpa refresh
+        // Fungsi memuatkan halaman dinamik ke dalam #app-root
         async function loadPage(page, element) {
             try {
                 const response = await fetch(page);
@@ -140,10 +142,14 @@
                 const html = await response.text();
                 const appRoot = document.getElementById('app-root');
                 
-                // Masukkan kandungan
-                appRoot.innerHTML = html;
+                // Ekstrak kandungan dalam <body> sahaja jika fail yang di-fetch ada tag body
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(html, 'text/html');
+                const bodyContent = doc.body ? doc.body.innerHTML : html;
                 
-                // Kemaskini UI Sidebar
+                appRoot.innerHTML = bodyContent;
+                
+                // Kemaskini butang aktif di sidebar
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) {
                     element.classList.add('nav-active');
@@ -152,10 +158,9 @@
                     if(sideBtn) sideBtn.classList.add('nav-active');
                 }
                 
-                // Tutup sidebar selepas pilih (untuk mobile)
                 toggleSidebar(false);
                 
-                // Jalankan script dalam fail yang di-fetch
+                // Jalankan semula scripts yang ada dalam kandungan yang dimuatkan
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -167,12 +172,7 @@
                 window.scrollTo(0, 0);
             } catch (err) {
                 console.error("Gagal memuatkan:", err);
-                document.getElementById('app-root').innerHTML = `
-                    <div class="flex flex-col items-center justify-center py-20 text-center">
-                        <i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i>
-                        <h2 class="text-xl font-bold">Halaman Tidak Ditemui</h2>
-                        <p class="text-slate-500">Gagal memuatkan fail: ${page}</p>
-                    </div>`;
+                appRoot.innerHTML = `<div class="p-20 text-center font-bold text-red-500">Ralat: Gagal memuatkan ${page}</div>`;
             }
         }
 
@@ -188,12 +188,12 @@
 
         window.onload = () => {
             updateDate();
-            // Data mockup jika localStorage kosong (untuk testing)
-            const user = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Muhammad Ilham', picture: 'https://via.placeholder.com/40' };
             
+            // Set maklumat profil (Avatar)
+            const user = JSON.parse(localStorage.getItem('siswaklik_user')) || { picture: 'https://via.placeholder.com/40' };
             document.getElementById('userAvatar').src = user.picture;
             
-            // Load dashboard secara default
+            // Muat turun dashboard secara automatik bila buka index.html
             const dashBtn = document.querySelector('button[onclick*="dashboard.html"]');
             loadPage('dashboard.html', dashBtn);
         };
