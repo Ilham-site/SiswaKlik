@@ -15,10 +15,10 @@
                     <h2 class="text-xl font-black text-slate-800 flex items-center gap-2">
                         <i class="fas fa-file-signature text-orange-500"></i> Jadual Peperiksaan
                     </h2>
-                    <button onclick="document.getElementById('kmjpInput').click()" class="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100 transition">
+                    <button onclick="document.getElementById('kmjpInputDash').click()" class="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100 transition">
                         <i class="fas fa-file-import mr-1"></i> Import KMJP
                     </button>
-                    <input type="file" id="kmjpInput" class="hidden" accept=".pdf" onchange="processKMJP(this)">
+                    <input type="file" id="kmjpInputDash" class="hidden" accept=".pdf" onchange="processKMJP(this)">
                 </div>
 
                 <div id="examContainer" class="space-y-4">
@@ -37,10 +37,7 @@
                 <div class="space-y-4 relative z-10">
                     <div>
                         <p class="text-xs opacity-70 uppercase tracking-widest font-bold mb-1">Status Semasa</p>
-                        <p id="semesterStatus" class="text-xl font-black leading-tight">Semester 2<br>Minggu ke-5</p>
-                    </div>
-                    <div class="pt-2">
-                        <span class="text-[10px] font-bold bg-white/20 px-3 py-1.5 rounded-full border border-white/10 uppercase">Sesi 2025/2026</span>
+                        <p id="semesterStatus" class="text-xl font-black leading-tight">Semester 2<br>Sesi 2025/2026</p>
                     </div>
                 </div>
             </div>
@@ -51,8 +48,8 @@
                 </h3>
                 <div id="upcomingEvents" class="space-y-4">
                     <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                        <p id="nextActivityTitle" class="font-bold text-slate-700 text-sm">Sila kemaskini kalendar</p>
-                        <p id="nextActivityDate" class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">Tiada Data</p>
+                        <p id="nextActivityTitle" class="font-bold text-slate-700 text-sm italic">Tiada aktiviti dikesan</p>
+                        <p id="nextActivityDate" class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">Sila kemaskini kalendar</p>
                     </div>
                 </div>
                 <button onclick="loadPage('semester.html')" class="mt-4 w-full text-center py-4 bg-blue-50 text-blue-600 rounded-[1.5rem] text-xs font-black hover:bg-blue-100 transition-all border border-blue-100 uppercase tracking-wide">
@@ -64,12 +61,36 @@
 </div>
 
 <script>
-    // Logic khusus untuk Dashboard
     (function() {
         const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Pelajar' };
         document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
 
-        window.updateAcademicStats = function() {
+        window.renderExams = function() {
+            const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
+            const container = document.getElementById('examContainer');
+            if (exams.length > 0) {
+                container.innerHTML = exams.map(exam => `
+                    <div class="flex items-center gap-4 p-5 rounded-[2rem] border border-slate-100 bg-white hover:border-blue-100 hover:bg-blue-50/30 transition group shadow-sm">
+                        <div class="bg-blue-50 border border-blue-100 p-3 rounded-2xl text-center min-w-[70px]">
+                            <p class="text-[10px] font-bold text-blue-400 uppercase">${new Date(exam.date).toLocaleString('ms-MY', {month: 'short'})}</p>
+                            <p class="text-xl font-black text-blue-600">${new Date(exam.date).getDate()}</p>
+                        </div>
+                        <div class="flex-1">
+                            <h4 class="font-bold text-slate-800 leading-tight">${exam.title}</h4>
+                            <p class="text-[10px] text-slate-500 mt-1 uppercase font-bold">
+                                <i class="far fa-clock mr-1 text-blue-400"></i> ${exam.time} • 
+                                <i class="fas fa-map-marker-alt mr-1 text-rose-400"></i> ${exam.location}
+                            </p>
+                        </div>
+                        <button onclick="deleteExam('${exam.id}')" class="p-2 text-slate-300 hover:text-red-500 transition">
+                            <i class="fas fa-trash-alt text-xs"></i>
+                        </button>
+                    </div>
+                `).join('');
+            }
+        };
+
+        window.updateDashboardStats = function() {
             const academicData = JSON.parse(localStorage.getItem('siswa_academic_calendar'));
             if (academicData && academicData.length > 0) {
                 const now = new Date().getTime();
@@ -77,31 +98,6 @@
                 academicData.forEach(ev => { if(now >= ev.startDate) activeEvent = ev; });
                 document.getElementById('nextActivityTitle').innerText = activeEvent.title;
                 document.getElementById('nextActivityDate').innerText = activeEvent.rawDate;
-            }
-        };
-
-        window.renderExams = function() {
-            const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
-            const container = document.getElementById('examContainer');
-            if (exams.length > 0) {
-                container.innerHTML = exams.map(exam => `
-                    <div class="flex items-center gap-4 p-5 rounded-[2rem] border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition group">
-                        <div class="bg-white shadow-sm border border-slate-100 p-3 rounded-2xl text-center min-w-[70px]">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase">${new Date(exam.date).toLocaleString('ms-MY', {month: 'short'})}</p>
-                            <p class="text-xl font-black text-blue-600">${new Date(exam.date).getDate()}</p>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-slate-800 leading-tight">${exam.title}</h4>
-                            <p class="text-xs text-slate-500 mt-1 uppercase font-medium tracking-tighter">
-                                <i class="far fa-clock mr-1 text-blue-400"></i> ${exam.time} • 
-                                <i class="fas fa-map-marker-alt mr-1 text-rose-400"></i> ${exam.location}
-                            </p>
-                        </div>
-                        <button onclick="deleteExam('${exam.id}')" class="p-2 text-slate-200 hover:text-red-500 transition">
-                            <i class="fas fa-trash-alt text-xs"></i>
-                        </button>
-                    </div>
-                `).join('');
             }
         };
 
@@ -149,8 +145,7 @@
             renderExams();
         };
 
-        // Inisialisasi paparan
-        updateAcademicStats();
         renderExams();
+        updateDashboardStats();
     })();
 </script>
