@@ -18,7 +18,7 @@
                 <i class="fas fa-trash"></i> <span class="hidden md:inline">PADAM</span>
             </button>
             
-            <button id="upload-drive-btn" onclick="uploadToDrive()" class="hidden bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2">
+            <button id="upload-drive-btn" class="hidden bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2" onclick="uploadToDrive()">
                 <i class="fas fa-cloud-upload-alt"></i> SIMPAN KE DRIVE
             </button>
         </div>
@@ -38,162 +38,180 @@
 <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
-    const editingId = localStorage.getItem('editing_file_id');
-    const editingName = localStorage.getItem('editing_file_name');
-    const accessToken = localStorage.getItem('siswaklik_access_token');
-    let currentBlobUrl = null;
+    // Guna IIFE untuk elakkan konflik variable jika fail dimuatkan berkali-kali
+    (function() {
+        const editingId = localStorage.getItem('editing_file_id');
+        const editingName = localStorage.getItem('editing_file_name');
+        const accessToken = localStorage.getItem('siswaklik_access_token');
+        let currentBlobUrl = null;
 
-    document.getElementById('display-filename').innerText = editingName || "Fail PDF";
+        document.getElementById('display-filename').innerText = editingName || "Fail PDF";
 
-    function goBack() {
-        if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
-        loadView('folder.html');
-    }
-
-    async function initViewer() {
-        const container = document.getElementById('pdf-container');
-        const loader = document.getElementById('loading-overlay');
-
-        try {
-            const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-            const fileData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
-
-            if (fileData && fileData.content) {
-                // PAPARAN DARI LOCAL STORAGE (BASE64)
-                if (!fileData.driveId) document.getElementById('upload-drive-btn').classList.remove('hidden');
-                renderPdf(fileData.content);
-            } 
-            else if (accessToken && editingId && !editingId.startsWith('local-')) {
-                // PAPARAN DARI GOOGLE DRIVE
-                const response = await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}?alt=media`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-
-                if (!response.ok) throw new Error("Akses Google Drive ditolak. Sila login semula.");
-
-                const blob = await response.blob();
-                currentBlobUrl = URL.createObjectURL(blob);
-                renderPdf(currentBlobUrl);
-                document.getElementById('sync-status').innerText = "Cloud Sync Aktif";
-            } else {
-                throw new Error("Fail tidak dijumpai.");
+        window.goBack = function() {
+            if (currentBlobUrl) {
+                URL.revokeObjectURL(currentBlobUrl);
+                currentBlobUrl = null;
             }
-        } catch (err) {
-            console.error(err);
-            loader.innerHTML = `<div class="p-6 text-center">
-                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                <p class="font-bold text-slate-800">${err.message}</p>
-                <button onclick="goBack()" class="mt-4 text-blue-600 font-bold">Kembali ke Folder</button>
-            </div>`;
+            // Kosongkan container sebelum keluar
+            document.getElementById('pdf-container').innerHTML = '';
+            if (typeof loadView === 'function') loadView('folder.html');
+        };
+
+        async function initViewer() {
+            const container = document.getElementById('pdf-container');
+            const loader = document.getElementById('loading-overlay');
+            
+            // Reset container
+            container.innerHTML = '';
+            loader.classList.remove('hidden');
+
+            try {
+                const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                const fileData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
+
+                if (fileData && fileData.content) {
+                    // PAPARAN DARI LOCAL STORAGE
+                    if (!fileData.driveId) document.getElementById('upload-drive-btn').classList.remove('hidden');
+                    
+                    // Tukar base64 ke blob URL untuk prestasi lebih baik dalam viewer
+                    const blob = dataURLtoBlob(fileData.content);
+                    currentBlobUrl = URL.createObjectURL(blob);
+                    renderPdf(currentBlobUrl);
+                } 
+                else if (accessToken && editingId && !editingId.startsWith('local-')) {
+                    // PAPARAN DARI GOOGLE DRIVE
+                    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}?alt=media`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+
+                    if (!response.ok) throw new Error("Akses Google Drive ditolak.");
+
+                    const blob = await response.blob();
+                    currentBlobUrl = URL.createObjectURL(blob);
+                    renderPdf(currentBlobUrl);
+                    document.getElementById('sync-status').innerText = "Cloud Sync Aktif";
+                } else {
+                    throw new Error("Fail tidak dijumpai.");
+                }
+            } catch (err) {
+                console.error(err);
+                loader.innerHTML = `
+                    <div class="p-6 text-center">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
+                        <p class="font-bold text-slate-800">${err.message}</p>
+                        <button onclick="goBack()" class="mt-4 text-blue-600 font-bold">Kembali ke Folder</button>
+                    </div>`;
+            }
         }
-    }
 
-    function renderPdf(url) {
-        const container = document.getElementById('pdf-container');
-        const loader = document.getElementById('loading-overlay');
+        function renderPdf(url) {
+            const container = document.getElementById('pdf-container');
+            const loader = document.getElementById('loading-overlay');
 
-        // Guna Object Tag sebagai fallback jika Iframe bermasalah
-        container.innerHTML = `
-            <object data="${url}" type="application/pdf" class="w-full h-full">
-                <iframe src="${url}" class="w-full h-full border-none" frameborder="0">
-                    <p>Browser anda tidak menyokong paparan PDF. <a href="${url}" target="_blank">Klik sini untuk muat turun.</a></p>
+            // Gunakan iframe yang lebih stabil untuk PDF
+            container.innerHTML = `
+                <iframe src="${url}#toolbar=0" class="w-full h-full border-none" frameborder="0">
+                    <p>Browser tidak menyokong. <a href="${url}" target="_blank">Muat turun</a></p>
                 </iframe>
-            </object>
-        `;
+            `;
 
-        // Sembunyikan loader selepas 1.5 saat (beri masa browser render)
-        setTimeout(() => {
-            loader.classList.add('hidden');
-        }, 1500);
-    }
-
-    // Fungsi Padam
-    async function confirmDelete() {
-        const result = await Swal.fire({
-            title: 'Padam Fail?',
-            text: "Tindakan ini tidak boleh diundur!",
-            icon: 'warning',
-            showCancelButton: true,
-            confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Ya, Padam',
-            cancelButtonText: 'Batal'
-        });
-
-        if (result.isConfirmed) {
-            let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-            localStorage.setItem('siswa_local_files', JSON.stringify(localFiles.filter(f => f.id !== editingId && f.driveId !== editingId)));
-
-            if (accessToken && editingId && !editingId.startsWith('local-')) {
-                await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-            }
-            goBack();
-        }
-    }
-
-    // Fungsi Simpan ke Drive
-    async function uploadToDrive() {
-        const btn = document.getElementById('upload-drive-btn');
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan...`;
-
-        try {
-            const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-            const file = localFiles.find(f => f.id === editingId);
-
-            const metadata = {
-                name: file.name,
-                mimeType: 'application/pdf',
-                parents: [localStorage.getItem('siswaklik_current_folder_id') || 'root']
+            // Teknikal: Pastikan loader hilang selepas iframe 'load'
+            const iframe = container.querySelector('iframe');
+            iframe.onload = () => {
+                setTimeout(() => loader.classList.add('hidden'), 500);
             };
+            
+            // Fallback jika onload tidak trigger
+            setTimeout(() => loader.classList.add('hidden'), 2000);
+        }
 
-            const formData = new FormData();
-            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            formData.append('file', dataURLtoBlob(file.content));
-
-            const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${accessToken}` },
-                body: formData
+        window.confirmDelete = async function() {
+            const result = await Swal.fire({
+                title: 'Padam Fail?',
+                text: "Tindakan ini tidak boleh diundur!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Padam',
+                cancelButtonText: 'Batal'
             });
 
-            if (response.ok) {
-                const driveData = await response.json();
-                file.driveId = driveData.id;
-                file.status = 'synced';
-                localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-                Swal.fire('Berjaya', 'Tersimpan di Google Drive!', 'success');
-                btn.classList.add('hidden');
+            if (result.isConfirmed) {
+                let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                localStorage.setItem('siswa_local_files', JSON.stringify(localFiles.filter(f => f.id !== editingId && f.driveId !== editingId)));
+
+                if (accessToken && editingId && !editingId.startsWith('local-')) {
+                    try {
+                        await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}`, {
+                            method: 'DELETE',
+                            headers: { 'Authorization': `Bearer ${accessToken}` }
+                        });
+                    } catch(e) { console.error("Gagal padam di Drive", e); }
+                }
+                goBack();
             }
-        } catch (err) {
-            Swal.fire('Ralat', 'Gagal simpan ke Drive', 'error');
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> SIMPAN KE DRIVE`;
+        };
+
+        window.uploadToDrive = async function() {
+            const btn = document.getElementById('upload-drive-btn');
+            const originalContent = btn.innerHTML;
+            btn.disabled = true;
+            btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan...`;
+
+            try {
+                const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                const file = localFiles.find(f => f.id === editingId);
+
+                const metadata = {
+                    name: file.name,
+                    mimeType: 'application/pdf',
+                    parents: [localStorage.getItem('siswaklik_current_folder_id') || 'root']
+                };
+
+                const formData = new FormData();
+                formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                formData.append('file', dataURLtoBlob(file.content));
+
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    const driveData = await response.json();
+                    file.driveId = driveData.id;
+                    file.status = 'synced';
+                    localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
+                    Swal.fire('Berjaya', 'Tersimpan di Google Drive!', 'success');
+                    btn.classList.add('hidden');
+                }
+            } catch (err) {
+                Swal.fire('Ralat', 'Gagal simpan ke Drive', 'error');
+                btn.disabled = false;
+                btn.innerHTML = originalContent;
+            }
+        };
+
+        function dataURLtoBlob(dataurl) {
+            var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
+                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
+            while(n--) u8arr[n] = bstr.charCodeAt(n);
+            return new Blob([u8arr], {type:mime});
         }
-    }
 
-    function dataURLtoBlob(dataurl) {
-        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-        while(n--) u8arr[n] = bstr.charCodeAt(n);
-        return new Blob([u8arr], {type:mime});
-    }
-
-    initViewer();
+        // Mula viewer
+        initViewer();
+    })();
 </script>
 
 <style>
-    /* Paksa container skrin penuh */
     #pdf-container {
         position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: #f1f5f9;
     }
-    object, iframe {
+    iframe {
         display: block;
         width: 100%;
         height: 100%;
