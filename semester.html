@@ -3,10 +3,9 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>SiswaKlik - Kalendar Akademik</title>
+    <title>SiswaKlik - Kalendar Akademik Pintar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -19,45 +18,40 @@
 </head>
 <body class="bg-[#F8FAFC] p-4 md:p-8 lg:p-10">
 
-<div class="max-w-4xl mx-auto mb-6">
+<div class="max-w-5xl mx-auto mb-6">
     <button onclick="goToHome()" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-2xl text-slate-700 font-bold text-sm hover:bg-slate-50 transition-all shadow-sm">
         <i class="fas fa-arrow-left text-blue-600"></i> Dashboard Utama
     </button>
 </div>
 
-<div class="max-w-4xl mx-auto space-y-6 animate-fade-up">
+<div class="max-w-5xl mx-auto space-y-6 animate-fade-up">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
-            <h1 class="text-3xl font-black text-slate-900 tracking-tight">Kalendar Akademik</h1>
-            <p class="text-slate-500 font-medium">Sesi 2025/2026 diekstrak daripada dokumen rasmi UKM.</p>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="fetchAndProcessStaticPDF()" class="bg-blue-600 px-5 py-3 rounded-2xl text-sm font-bold text-white hover:bg-blue-700 transition flex items-center gap-2 shadow-lg shadow-blue-200">
-                <i class="fas fa-sync-alt"></i> Kemaskini Data
-            </button>
+            <h1 class="text-3xl font-black text-slate-900 tracking-tight">Kalendar Akademik UKM</h1>
+            <p class="text-slate-500 font-medium italic">Data Sesi 2025/2026</p>
         </div>
     </div>
 
     <div class="card-gradient rounded-[3rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden">
         <div class="relative z-10">
             <div class="flex items-center justify-between mb-8">
-                <span class="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">Status Semester</span>
+                <span class="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">Status Aktiviti Semasa</span>
                 <i class="fas fa-university text-white/30 text-2xl"></i>
             </div>
             
             <div class="space-y-6">
                 <div>
-                    <h2 class="text-3xl md:text-4xl font-black mb-2" id="currentActivity">Sedia Memproses</h2>
-                    <p class="text-blue-100 font-medium" id="dateRange">Sila tekan butang kemaskini...</p>
+                    <h2 class="text-3xl md:text-5xl font-black mb-2" id="currentActivity">Memproses Data...</h2>
+                    <p class="text-blue-100 text-lg font-medium" id="dateRange">-</p>
                 </div>
                 
                 <div class="pt-4 border-t border-white/10">
                     <div class="flex justify-between items-end mb-3">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-blue-200">Progres Sesi</p>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-blue-200" id="weekStatus">Pengiraan Minggu...</p>
                         <p class="text-2xl font-black" id="progressText">0%</p>
                     </div>
                     <div class="w-full h-3 bg-black/20 rounded-full overflow-hidden">
-                        <div id="progressBar" class="h-full bg-emerald-400 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(52,211,153,0.5)]" style="width: 0%"></div>
+                        <div id="progressBar" class="h-full bg-emerald-400 rounded-full transition-all duration-1000" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
@@ -67,41 +61,34 @@
 
     <div class="space-y-4">
         <div class="flex items-center justify-between px-2">
-            <h3 class="font-extrabold text-slate-800 flex items-center gap-2">
-                <i class="fas fa-list-ul text-blue-600"></i> Aliran Kalendar Akademik (11 Fasa)
+            <h3 class="font-extrabold text-slate-800 flex items-center gap-2 text-xl">
+                <i class="fas fa-stream text-blue-600"></i> Fasa Akademik (11 Perkara Utama)
             </h3>
         </div>
         
-        <div id="calendarList" class="grid gap-3 pb-10">
-            <div class="bg-white p-12 rounded-[2.5rem] border border-dashed border-slate-200 text-center" id="loadingState">
-                <p class="text-slate-400 font-medium">Memuatkan data dari kalendar_akademik.pdf...</p>
+        <div id="calendarList" class="grid grid-cols-1 md:grid-cols-2 gap-4 pb-20">
             </div>
-        </div>
     </div>
 </div>
 
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    // Nama fail PDF yang diupload ke Github
     const PDF_URL = 'kalendar_akademik.pdf'; 
 
     function goToHome() {
-        // Jika dalam konteks SPA index.html, gunakan fungsi loadPage parent
         if (window.parent && typeof window.parent.loadPage === 'function') {
             window.parent.loadPage('dashboard.html');
         } else {
-            // Jika akses terus, kembali ke root
-            window.location.href = '/';
+            window.location.href = 'index.html';
         }
     }
 
-    async function fetchAndProcessStaticPDF() {
-        Swal.fire({ title: 'Menyemak Fail...', text: 'Mengekstrak 11 data akademik UKM', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-        
+    // Fungsi automatik tarik PDF semasa load
+    async function autoFetchPDF() {
         try {
             const response = await fetch(PDF_URL);
-            if (!response.ok) throw new Error("Fail PDF tidak ditemui di server.");
+            if (!response.ok) throw new Error("Fail PDF tidak dijumpai.");
             
             const arrayBuffer = await response.arrayBuffer();
             const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
@@ -114,122 +101,147 @@
             }
 
             const events = parseUKMCalendar(fullText);
-            
             if (events.length > 0) {
                 localStorage.setItem('siswa_academic_calendar', JSON.stringify(events));
                 renderUI(events);
-                Swal.fire('Berjaya!', '11 fasa akademik telah dikemaskini.', 'success');
-            } else {
-                throw new Error("Tiada format tarikh yang sah dikesan.");
             }
         } catch (e) {
-            console.error(e);
-            Swal.fire('Ralat', 'Gagal memproses kalendar_akademik.pdf. Sila pastikan fail tersebut ada di GitHub anda.', 'error');
+            console.error("PDF Error:", e);
+            document.getElementById('currentActivity').innerText = "Ralat Memuat Fail";
         }
     }
 
     function parseUKMCalendar(text) {
-        // Membersihkan teks daripada ruang kosong berlebihan
         const cleanText = text.replace(/\s+/g, ' ');
         const events = [];
         
-        // Regex khusus untuk format UKM: Perkara + Tarikh (e.g. "Sesi Pembelajaran 6 Okt-16 Nov. 2025")
-        // Mencari 11 fasa utama mengikut dokumen
+        // Target 11 fasa utama 
         const phases = [
-            "Pendaftaran Diri Pelajar Baharu",
-            "Lapor Diri Pelajar Baharu dan MAW",
-            "Sesi Pembelajaran (Prasiswazah dan Pascasiswazah)",
-            "Cuti Pertengahan Semester",
-            "Majlis Konvokesyen UKM ke-53",
-            "Minggu Ulangkaji",
-            "Peperiksaan",
-            "Cuti Semester",
-            "Cuti Perayaan",
-            "Hari Raya Aidilfitri",
-            "Semester 3"
+            { name: "Pendaftaran Diri Pelajar Baharu (Pascasiswazah)", icon: "fa-user-plus" },
+            { name: "Lapor Diri Pelajar Baharu dan MAW (Prasiswazah)", icon: "fa-id-card" },
+            { name: "Sesi Pembelajaran", icon: "fa-book-reader" },
+            { name: "Cuti Perayaan", icon: "fa-star-and-crescent" },
+            { name: "Cuti Pertengahan Semester", icon: "fa-coffee" },
+            { name: "Majlis Konvokesyen UKM ke-53", icon: "fa-graduation-cap" },
+            { name: "Minggu Ulangkaji", icon: "fa-pencil-alt" },
+            { name: "Peperiksaan", icon: "fa-file-alt" },
+            { name: "Cuti Semester", icon: "fa-umbrella-beach" },
+            { name: "Hari Raya Aidilfitri", icon: "fa-mosque" },
+            { name: "Semester 3", icon: "fa-calendar-plus" }
         ];
 
-        // Pattern tarikh UKM: dd mmm - dd mmm yyyy
+        // Regex untuk tarikh UKM 
         const dateRegex = /(\d{1,2}\s+[A-Z][a-z]+\.?\s?[-–]\s?\d{1,2}\s+[A-Z][a-z]+\.?\s\d{4})/g;
         
         let m;
+        const tempResults = [];
+
         while ((m = dateRegex.exec(cleanText)) !== null) {
             const rawDate = m[0];
             const pos = m.index;
+            const context = cleanText.substring(pos - 150, pos).trim();
             
-            // Ambil teks sebelum tarikh sebagai tajuk
-            let titleArea = cleanText.substring(pos - 100, pos).trim();
-            let matchedTitle = "Aktiviti Akademik";
+            let matchedPhase = phases.find(p => context.toLowerCase().includes(p.name.toLowerCase().substring(0, 15)));
+            let title = matchedPhase ? matchedPhase.name : "Aktiviti Akademik";
+            let icon = matchedPhase ? matchedPhase.icon : "fa-calendar-day";
 
-            for (let phase of phases) {
-                if (titleArea.toLowerCase().includes(phase.toLowerCase())) {
-                    matchedTitle = phase;
-                    break;
-                }
-            }
+            let semester = context.includes("Semester 1") ? "Semester 1" : 
+                           (context.includes("Semester 2") ? "Semester 2" : "Semester 3");
+            
+            // Ekstrak Tempoh (e.g. 2 minggu) 
+            let durationMatch = cleanText.substring(pos, pos + 60).match(/(\d+)\s+(minggu|weeks|hari|days)/i);
+            let duration = durationMatch ? durationMatch[0] : "Rujuk PDF";
 
-            // Ekstrak tarikh mula untuk sorting
             const startPart = rawDate.split(/[-–]/)[0].trim();
             const yearMatch = rawDate.match(/\d{4}/);
-            const year = yearMatch ? yearMatch[0] : "2025";
+            const year = yearMatch ? yearMatch[0] : "2026";
             
-            events.push({
-                title: matchedTitle,
-                rawDate: rawDate,
+            tempResults.push({
+                title,
+                semester,
+                rawDate,
+                duration,
+                icon,
                 startDate: new Date(`${startPart} ${year}`).getTime() || 0
             });
         }
 
-        // Susun mengikut kronologi dan ambil fasa yang unik (elakkan duplikasi)
-        return events.sort((a, b) => a.startDate - b.startDate).slice(0, 11);
+        const uniqueTitles = new Set();
+        return tempResults
+            .sort((a, b) => a.startDate - b.startDate)
+            .filter(item => {
+                if (!uniqueTitles.has(item.title + item.semester) && uniqueTitles.size < 15) {
+                    uniqueTitles.add(item.title + item.semester);
+                    return true;
+                }
+                return false;
+            });
+    }
+
+    function calculateWeek(startDate) {
+        const now = new Date();
+        const start = new Date(startDate);
+        const diff = now - start;
+        const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7)) + 1;
+        return weeks > 0 ? weeks : 0;
     }
 
     function renderUI(data) {
         const container = document.getElementById('calendarList');
         const now = new Date().getTime();
         
-        if (!data || data.length === 0) return;
-
         let activeEvent = data[0];
-        let passedEvents = 0;
+        let passedCount = 0;
 
-        data.forEach(ev => { 
+        data.forEach(ev => {
             if(now >= ev.startDate) {
                 activeEvent = ev;
-                passedEvents++;
+                passedCount++;
             }
         });
 
-        const progressPercent = Math.round((passedEvents / data.length) * 100);
-
+        // Update Header Status
         document.getElementById('currentActivity').innerText = activeEvent.title;
-        document.getElementById('dateRange').innerText = activeEvent.rawDate;
-        document.getElementById('progressBar').style.width = progressPercent + '%';
-        document.getElementById('progressText').innerText = progressPercent + '%';
+        document.getElementById('dateRange').innerText = `${activeEvent.rawDate} (${activeEvent.semester})`;
+        
+        // Pengiraan Minggu Kuliah Dinamik 
+        if (activeEvent.title.includes("Pembelajaran")) {
+            const wk = calculateWeek(activeEvent.startDate);
+            document.getElementById('weekStatus').innerText = `${activeEvent.semester} • MINGGU KE-${wk}`;
+        } else {
+            document.getElementById('weekStatus').innerText = `${activeEvent.semester} • SEDANG BERLANGSUNG`;
+        }
 
-        container.innerHTML = data.map((item, index) => {
-            const isPast = now > item.startDate;
-            const isActive = item.startDate === activeEvent.startDate;
-            
+        const progress = Math.round((passedCount / data.length) * 100);
+        document.getElementById('progressText').innerText = progress + "%";
+        document.getElementById('progressBar').style.width = progress + "%";
+
+        container.innerHTML = data.map((item) => {
+            const isActive = (item === activeEvent);
+            const isPast = now > (item.startDate + 604800000); // Seminggu selepas mula
+
             return `
-                <div class="flex items-center gap-5 bg-white p-5 rounded-3xl border ${isActive ? 'border-blue-500 ring-2 ring-blue-100' : (isPast ? 'border-slate-100 opacity-60' : 'border-slate-200')} transition-all">
-                    <div class="h-12 w-12 ${isPast ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 text-white'} rounded-2xl flex items-center justify-center font-black shrink-0 shadow-sm">
-                        ${index + 1}
+                <div class="bg-white p-6 rounded-[2.5rem] border-2 ${isActive ? 'border-blue-500 bg-blue-50/20 shadow-lg' : 'border-white'} transition-all">
+                    <div class="flex items-center gap-4">
+                        <div class="h-14 w-14 ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'} rounded-2xl flex items-center justify-center text-xl shrink-0">
+                            <i class="fas ${item.icon}"></i>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex justify-between">
+                                <span class="text-[10px] font-bold text-blue-500 uppercase">${item.semester}</span>
+                                ${isActive ? '<span class="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">AKTIF</span>' : ''}
+                            </div>
+                            <h4 class="font-bold text-slate-800 text-lg leading-tight truncate">${item.title}</h4>
+                            <p class="text-xs text-slate-400 font-medium mt-1">${item.rawDate}</p>
+                        </div>
                     </div>
-                    <div class="flex-1">
-                        <h4 class="font-bold text-slate-800 leading-tight">${item.title}</h4>
-                        <p class="text-xs text-slate-500 mt-1 font-medium italic">${item.rawDate}</p>
-                    </div>
-                    ${isActive ? '<span class="text-[10px] bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-bold animate-pulse">AKTIF</span>' : ''}
                 </div>
             `;
         }).join('');
     }
 
-    // Auto-load data jika sudah ada dalam cache
     window.onload = () => {
-        const cached = localStorage.getItem('siswa_academic_calendar');
-        if (cached) renderUI(JSON.parse(cached));
+        autoFetchPDF();
     };
 </script>
 </body>
