@@ -6,6 +6,7 @@
     <title>SiswaKlik - Kalendar Akademik</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
@@ -19,20 +20,20 @@
 <body class="bg-[#F8FAFC] p-4 md:p-8 lg:p-10">
 
 <div class="max-w-4xl mx-auto mb-6">
-    <a href="dashboard.html" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-2xl text-slate-700 font-bold text-sm hover:bg-slate-50 transition-all shadow-sm">
+    <button onclick="goToHome()" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-2xl text-slate-700 font-bold text-sm hover:bg-slate-50 transition-all shadow-sm">
         <i class="fas fa-arrow-left text-blue-600"></i> Dashboard Utama
-    </a>
+    </button>
 </div>
 
 <div class="max-w-4xl mx-auto space-y-6 animate-fade-up">
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-black text-slate-900 tracking-tight">Kalendar Akademik</h1>
-            <p class="text-slate-500 font-medium">Data diekstrak secara automatik daripada dokumen rasmi.</p>
+            <p class="text-slate-500 font-medium">Sesi 2025/2026 diekstrak daripada dokumen rasmi UKM.</p>
         </div>
         <div class="flex gap-2">
             <button onclick="fetchAndProcessStaticPDF()" class="bg-blue-600 px-5 py-3 rounded-2xl text-sm font-bold text-white hover:bg-blue-700 transition flex items-center gap-2 shadow-lg shadow-blue-200">
-                <i class="fas fa-sync-alt"></i> Kemaskini
+                <i class="fas fa-sync-alt"></i> Kemaskini Data
             </button>
         </div>
     </div>
@@ -40,19 +41,19 @@
     <div class="card-gradient rounded-[3rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden">
         <div class="relative z-10">
             <div class="flex items-center justify-between mb-8">
-                <span class="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">Sesi Akademik 2025/2026</span>
+                <span class="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">Status Semester</span>
                 <i class="fas fa-university text-white/30 text-2xl"></i>
             </div>
             
             <div class="space-y-6">
                 <div>
                     <h2 class="text-3xl md:text-4xl font-black mb-2" id="currentActivity">Sedia Memproses</h2>
-                    <p class="text-blue-100 font-medium" id="dateRange">Menunggu data kalendar...</p>
+                    <p class="text-blue-100 font-medium" id="dateRange">Sila tekan butang kemaskini...</p>
                 </div>
                 
                 <div class="pt-4 border-t border-white/10">
                     <div class="flex justify-between items-end mb-3">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-blue-200">Progres Semester</p>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-blue-200">Progres Sesi</p>
                         <p class="text-2xl font-black" id="progressText">0%</p>
                     </div>
                     <div class="w-full h-3 bg-black/20 rounded-full overflow-hidden">
@@ -67,13 +68,13 @@
     <div class="space-y-4">
         <div class="flex items-center justify-between px-2">
             <h3 class="font-extrabold text-slate-800 flex items-center gap-2">
-                <i class="fas fa-list-ul text-blue-600"></i> Aliran Kalendar Akademik
+                <i class="fas fa-list-ul text-blue-600"></i> Aliran Kalendar Akademik (11 Fasa)
             </h3>
         </div>
         
-        <div id="calendarList" class="grid gap-3">
+        <div id="calendarList" class="grid gap-3 pb-10">
             <div class="bg-white p-12 rounded-[2.5rem] border border-dashed border-slate-200 text-center" id="loadingState">
-                <p class="text-slate-400 font-medium">Sila pastikan fail 'kalendar_akademik.pdf' tersedia.</p>
+                <p class="text-slate-400 font-medium">Memuatkan data dari kalendar_akademik.pdf...</p>
             </div>
         </div>
     </div>
@@ -82,20 +83,25 @@
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-    // Pastikan nama fail ini sama dengan yang anda upload di GitHub
+    // Nama fail PDF yang diupload ke Github
     const PDF_URL = 'kalendar_akademik.pdf'; 
 
-    async function fetchAndProcessStaticPDF() {
-        try {
-            // Tunjukkan data lama jika ada
-            const cachedData = localStorage.getItem('siswa_academic_calendar');
-            if (cachedData) renderUI(JSON.parse(cachedData));
+    function goToHome() {
+        // Jika dalam konteks SPA index.html, gunakan fungsi loadPage parent
+        if (window.parent && typeof window.parent.loadPage === 'function') {
+            window.parent.loadPage('dashboard.html');
+        } else {
+            // Jika akses terus, kembali ke root
+            window.location.href = '/';
+        }
+    }
 
+    async function fetchAndProcessStaticPDF() {
+        Swal.fire({ title: 'Menyemak Fail...', text: 'Mengekstrak 11 data akademik UKM', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+        
+        try {
             const response = await fetch(PDF_URL);
-            if (!response.ok) {
-                console.warn("Fail PDF tidak dijumpai di server.");
-                return; // Berhenti senyap-senyap tanpa pop-up
-            }
+            if (!response.ok) throw new Error("Fail PDF tidak ditemui di server.");
             
             const arrayBuffer = await response.arrayBuffer();
             const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
@@ -108,35 +114,74 @@
             }
 
             const events = parseUKMCalendar(fullText);
+            
             if (events.length > 0) {
                 localStorage.setItem('siswa_academic_calendar', JSON.stringify(events));
                 renderUI(events);
+                Swal.fire('Berjaya!', '11 fasa akademik telah dikemaskini.', 'success');
+            } else {
+                throw new Error("Tiada format tarikh yang sah dikesan.");
             }
         } catch (e) {
-            console.error("Proses senyap: Gagal memproses PDF.", e);
+            console.error(e);
+            Swal.fire('Ralat', 'Gagal memproses kalendar_akademik.pdf. Sila pastikan fail tersebut ada di GitHub anda.', 'error');
         }
     }
 
     function parseUKMCalendar(text) {
+        // Membersihkan teks daripada ruang kosong berlebihan
+        const cleanText = text.replace(/\s+/g, ' ');
         const events = [];
-        const regex = /([A-Za-z\s\/]+)\s+(\d{1,2}\s+[A-Z][a-z]+\.?\s?[-–]\s?\d{1,2}\s+[A-Z][a-z]+\.?\s\d{4})/g;
+        
+        // Regex khusus untuk format UKM: Perkara + Tarikh (e.g. "Sesi Pembelajaran 6 Okt-16 Nov. 2025")
+        // Mencari 11 fasa utama mengikut dokumen
+        const phases = [
+            "Pendaftaran Diri Pelajar Baharu",
+            "Lapor Diri Pelajar Baharu dan MAW",
+            "Sesi Pembelajaran (Prasiswazah dan Pascasiswazah)",
+            "Cuti Pertengahan Semester",
+            "Majlis Konvokesyen UKM ke-53",
+            "Minggu Ulangkaji",
+            "Peperiksaan",
+            "Cuti Semester",
+            "Cuti Perayaan",
+            "Hari Raya Aidilfitri",
+            "Semester 3"
+        ];
+
+        // Pattern tarikh UKM: dd mmm - dd mmm yyyy
+        const dateRegex = /(\d{1,2}\s+[A-Z][a-z]+\.?\s?[-–]\s?\d{1,2}\s+[A-Z][a-z]+\.?\s\d{4})/g;
         
         let m;
-        while ((m = regex.exec(text)) !== null) {
-            const title = m[1].trim();
-            const rawDate = m[2].trim();
-            const parts = rawDate.split(/[-–]/);
-            const startStr = parts[0].trim();
+        while ((m = dateRegex.exec(cleanText)) !== null) {
+            const rawDate = m[0];
+            const pos = m.index;
+            
+            // Ambil teks sebelum tarikh sebagai tajuk
+            let titleArea = cleanText.substring(pos - 100, pos).trim();
+            let matchedTitle = "Aktiviti Akademik";
+
+            for (let phase of phases) {
+                if (titleArea.toLowerCase().includes(phase.toLowerCase())) {
+                    matchedTitle = phase;
+                    break;
+                }
+            }
+
+            // Ekstrak tarikh mula untuk sorting
+            const startPart = rawDate.split(/[-–]/)[0].trim();
             const yearMatch = rawDate.match(/\d{4}/);
-            const year = yearMatch ? yearMatch[0] : new Date().getFullYear();
+            const year = yearMatch ? yearMatch[0] : "2025";
             
             events.push({
-                title: title,
+                title: matchedTitle,
                 rawDate: rawDate,
-                startDate: new Date(`${startStr} ${year}`).getTime() || 0
+                startDate: new Date(`${startPart} ${year}`).getTime() || 0
             });
         }
-        return events.sort((a, b) => a.startDate - b.startDate);
+
+        // Susun mengikut kronologi dan ambil fasa yang unik (elakkan duplikasi)
+        return events.sort((a, b) => a.startDate - b.startDate).slice(0, 11);
     }
 
     function renderUI(data) {
@@ -162,23 +207,30 @@
         document.getElementById('progressBar').style.width = progressPercent + '%';
         document.getElementById('progressText').innerText = progressPercent + '%';
 
-        container.innerHTML = data.map(item => {
+        container.innerHTML = data.map((item, index) => {
             const isPast = now > item.startDate;
+            const isActive = item.startDate === activeEvent.startDate;
+            
             return `
-                <div class="flex items-center gap-5 bg-white p-5 rounded-3xl border ${isPast ? 'border-slate-100 opacity-60' : 'border-blue-100 shadow-sm'} transition-all">
-                    <div class="h-14 w-14 ${isPast ? 'bg-slate-50 text-slate-400' : 'bg-blue-50 text-blue-600'} rounded-2xl flex flex-col items-center justify-center font-black border border-blue-50 shrink-0">
-                        <i class="fas ${isPast ? 'fa-check-circle' : 'fa-calendar-day'} text-lg"></i>
+                <div class="flex items-center gap-5 bg-white p-5 rounded-3xl border ${isActive ? 'border-blue-500 ring-2 ring-blue-100' : (isPast ? 'border-slate-100 opacity-60' : 'border-slate-200')} transition-all">
+                    <div class="h-12 w-12 ${isPast ? 'bg-slate-100 text-slate-400' : 'bg-blue-600 text-white'} rounded-2xl flex items-center justify-center font-black shrink-0 shadow-sm">
+                        ${index + 1}
                     </div>
-                    <div>
+                    <div class="flex-1">
                         <h4 class="font-bold text-slate-800 leading-tight">${item.title}</h4>
-                        <p class="text-xs text-slate-500 mt-1 font-medium">${item.rawDate}</p>
+                        <p class="text-xs text-slate-500 mt-1 font-medium italic">${item.rawDate}</p>
                     </div>
+                    ${isActive ? '<span class="text-[10px] bg-blue-100 text-blue-600 px-3 py-1 rounded-full font-bold animate-pulse">AKTIF</span>' : ''}
                 </div>
             `;
         }).join('');
     }
 
-    window.onload = fetchAndProcessStaticPDF;
+    // Auto-load data jika sudah ada dalam cache
+    window.onload = () => {
+        const cached = localStorage.getItem('siswa_academic_calendar');
+        if (cached) renderUI(JSON.parse(cached));
+    };
 </script>
 </body>
 </html>
