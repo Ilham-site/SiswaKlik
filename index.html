@@ -5,13 +5,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SiswaKlik | Hub Akademik</title>
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700&display=swap');
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .drawer-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); }
         .nav-active { background-color: #eff6ff; color: #2563eb; font-weight: 700; border-right: 4px solid #2563eb; }
+        .animate-in { animation: fadeIn 0.5s ease-out; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -72,62 +76,35 @@
     <main id="app-root" class="p-6 md:p-10 max-w-7xl mx-auto"></main>
 
     <script>
-        let logoutTimer;
-        const TIMEOUT_DURATION = 30 * 60 * 1000;
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        function resetTimer() {
-            clearTimeout(logoutTimer);
-            logoutTimer = setTimeout(logout, TIMEOUT_DURATION);
-        }
-
-        function setupActivityListeners() {
-            ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
-                document.addEventListener(evt, resetTimer, true);
-            });
-        }
-
-        function updateDate() {
-            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
-        }
-
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('drawerOverlay');
-
-        function toggleSidebar(show) {
-            sidebar.classList.toggle('-translate-x-full', !show);
-            overlay.classList.toggle('hidden', !show);
-        }
-
-        document.getElementById('menuBtn').onclick = () => toggleSidebar(true);
-        document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
-        overlay.onclick = () => toggleSidebar(false);
-
-        // FUNGSI LOAD PAGE YANG TELAH DIBERSIHKAN
         async function loadPage(page, element) {
             try {
                 const response = await fetch(page);
                 if (!response.ok) throw new Error("Fail tidak dijumpai");
                 
-                const html = await response.text();
+                const rawHtml = await response.text();
+                const parser = new DOMParser();
+                const doc = parser.parseFromString(rawHtml, 'text/html');
                 
-                // Masukkan kandungan ke dalam app-root
+                // Ambil kandungan di dalam body sahaja
+                const content = doc.querySelector('body') ? doc.querySelector('body').innerHTML : rawHtml;
+                
                 const appRoot = document.getElementById('app-root');
-                appRoot.innerHTML = html;
+                appRoot.innerHTML = content;
                 
                 // Update UI Sidebar
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) {
                     element.classList.add('nav-active');
                 } else {
-                    // Jika load dari butang luar (cth: dari dalam dashboard), cari butang sidebar yang sepadan
                     const sideBtn = document.querySelector(`button[onclick*="${page}"]`);
                     if(sideBtn) sideBtn.classList.add('nav-active');
                 }
                 
                 toggleSidebar(false);
                 
-                // Jalankan script yang ada dalam fail yang di-fetch
+                // Re-run scripts
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -136,13 +113,25 @@
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
                 
-                resetTimer();
-                // Scroll ke atas setiap kali tukar page
                 window.scrollTo(0, 0);
             } catch (err) {
-                console.error("Gagal memuatkan halaman:", err);
+                console.error("Ralat:", err);
                 document.getElementById('app-root').innerHTML = `<div class="text-center py-20 text-red-500">Ralat: Fail <b>${page}</b> tidak ditemui.</div>`;
             }
+        }
+
+        function toggleSidebar(show) {
+            document.getElementById('sidebar').classList.toggle('-translate-x-full', !show);
+            document.getElementById('drawerOverlay').classList.toggle('hidden', !show);
+        }
+
+        document.getElementById('menuBtn').onclick = () => toggleSidebar(true);
+        document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
+        document.getElementById('drawerOverlay').onclick = () => toggleSidebar(false);
+
+        function updateDate() {
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
         }
 
         function logout() {
@@ -153,15 +142,11 @@
         window.onload = () => {
             updateDate();
             const user = JSON.parse(localStorage.getItem('siswaklik_user'));
-            
             if (!user) {
                 window.location.href = 'login.html';
             } else {
                 document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
-                const dashBtn = document.querySelector('button[onclick*="dashboard.html"]');
-                loadPage('dashboard.html', dashBtn);
-                setupActivityListeners();
-                resetTimer();
+                loadPage('dashboard.html');
             }
         };
     </script>
