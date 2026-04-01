@@ -56,11 +56,19 @@
                     <h3 class="text-lg font-bold mb-4">Ringkasan Akademik</h3>
                     <div class="space-y-4 relative z-10">
                         <div>
-                            <p class="text-xs opacity-70 uppercase tracking-widest font-bold mb-1">Status Semasa</p>
-                            <p id="semesterStatus" class="text-xl font-black leading-tight">Semester 2<br>Minggu ke-5</p>
+                            <p class="text-[10px] opacity-70 uppercase tracking-widest font-bold mb-1" id="weekStatus">Memuatkan...</p>
+                            <p id="semesterStatus" class="text-xl font-black leading-tight mb-1">Memproses Kalendar...</p>
+                            <p id="dateRange" class="text-xs text-blue-100 font-medium">-</p>
                         </div>
+                        
                         <div class="pt-2">
-                            <span class="text-[10px] font-bold bg-white/20 px-3 py-1.5 rounded-full border border-white/10 uppercase">Sesi 2025/2026</span>
+                            <div class="flex justify-between items-end mb-2">
+                                <span class="text-[10px] font-bold bg-white/20 px-3 py-1.5 rounded-full border border-white/10 uppercase" id="sessionTag">Sesi 2025/2026</span>
+                                <p class="text-lg font-black" id="progressText">0%</p>
+                            </div>
+                            <div class="w-full h-2 bg-black/20 rounded-full overflow-hidden">
+                                <div id="progressBar" class="h-full bg-emerald-400 rounded-full transition-all duration-1000" style="width: 0%"></div>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -91,20 +99,70 @@
         const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Pelajar' };
         document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
 
-        function updateAcademicStats() {
-            const academicData = JSON.parse(localStorage.getItem('siswa_academic_calendar'));
-            
-            if (academicData && academicData.length > 0) {
-                const now = new Date().getTime();
-                let activeEvent = academicData[0];
+        // Fungsi parsing tarikh (sama seperti semester.html)
+        function parseDate(dateStr) {
+            const parts = dateStr.split(/[-–]/);
+            const startPart = parts[0].trim();
+            const endPart = parts[parts.length - 1].trim();
+            const yearMatch = dateStr.match(/\d{4}/);
+            const year = yearMatch ? yearMatch[0] : new Date().getFullYear();
+            const monthMap = { 'Jan': 'Jan', 'Feb': 'Feb', 'Mac': 'Mar', 'Apr': 'Apr', 'Mei': 'May', 'Jun': 'Jun', 'Jul': 'Jul', 'Ogos': 'Aug', 'Sept': 'Sep', 'Okt': 'Oct', 'Nov': 'Nov', 'Dis': 'Dec' };
+            let processedStart = startPart;
+            for (const [ms, en] of Object.entries(monthMap)) { if (processedStart.includes(ms)) { processedStart = processedStart.replace(ms, en); break; } }
+            if (!Object.keys(monthMap).some(m => startPart.includes(m))) {
+                const monthFromEnd = endPart.match(/[A-Za-z]+/)[0];
+                processedStart += ` ${monthMap[monthFromEnd] || monthFromEnd}`;
+            }
+            return new Date(`${processedStart} ${year}`);
+        }
+
+        async function updateAcademicStats() {
+            try {
+                const response = await fetch('kalendar_akademik.json');
+                if (!response.ok) throw new Error();
+                const data = await response.json();
                 
-                // Cari aktiviti terdekat berdasarkan tarikh hari ini
-                academicData.forEach(ev => {
-                    if(now >= ev.startDate) activeEvent = ev;
+                const allEvents = [];
+                const semesters = ['semester_1', 'semester_2', 'semester_3'];
+                semesters.forEach(semKey => {
+                    const semLabel = semKey.replace('_', ' ').toUpperCase();
+                    data.aktiviti_akademik[semKey].forEach(item => {
+                        allEvents.push({
+                            title: item.perkara,
+                            rawDate: item.tarikh,
+                            semester: semLabel,
+                            startDate: parseDate(item.tarikh)
+                        });
+                    });
                 });
 
+                const now = new Date();
+                let activeEvent = allEvents[0];
+                let passedCount = 0;
+
+                allEvents.forEach(ev => {
+                    if (now >= ev.startDate) {
+                        activeEvent = ev;
+                        passedCount++;
+                    }
+                });
+
+                // Paparan Ringkasan Akademik (Kotak Biru)
+                document.getElementById('semesterStatus').innerText = activeEvent.title;
+                document.getElementById('dateRange').innerText = `${activeEvent.rawDate} (${activeEvent.semester})`;
+                document.getElementById('weekStatus').innerText = `${activeEvent.semester} • SEDANG BERLANGSUNG`;
+                document.getElementById('sessionTag').innerText = `Sesi ${data.sesi}`;
+                
+                const progress = Math.round((passedCount / allEvents.length) * 100);
+                document.getElementById('progressText').innerText = progress + "%";
+                document.getElementById('progressBar').style.width = progress + "%";
+
+                // Paparan Aktiviti Terdekat (Kotak Putih Bawah)
                 document.getElementById('nextActivityTitle').innerText = activeEvent.title;
                 document.getElementById('nextActivityDate').innerText = activeEvent.rawDate;
+
+            } catch (e) {
+                console.error("Gagal memuatkan statistik akademik");
             }
         }
 
@@ -140,7 +198,6 @@
 
             try {
                 Swal.fire({ title: 'Memproses...', text: 'Mengekstrak jadual peperiksaan', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                
                 const reader = new FileReader();
                 reader.onload = async function() {
                     const typedarray = new Uint8Array(this.result);
@@ -151,10 +208,8 @@
                         const content = await page.getTextContent();
                         text += content.items.map(item => item.str).join(' ');
                     }
-
                     const cleanText = text.replace(/\s+/g, ' ');
                     const pattern = /([A-Z]{4}\d{4})\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+.*?(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+)/gi;
-                    
                     const found = [];
                     let m;
                     while ((m = pattern.exec(cleanText)) !== null) {
