@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; overflow-x: hidden; }
         .drawer-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); }
         .nav-active { background-color: #eff6ff; color: #2563eb; font-weight: 700; border-right: 4px solid #2563eb; }
@@ -36,7 +36,7 @@
         <div class="flex items-center gap-4">
             <div id="systemDate" class="hidden md:block text-xs font-bold text-gray-400 uppercase tracking-widest"></div>
             <div class="h-8 w-[1px] bg-gray-200 mx-2 hidden md:block"></div>
-            <img id="userAvatar" src="" class="w-10 h-10 rounded-2xl border-2 border-white shadow-md">
+            <img id="userAvatar" src="https://via.placeholder.com/40" class="w-10 h-10 rounded-2xl border-2 border-white shadow-md">
         </div>
     </nav>
 
@@ -58,11 +58,8 @@
             <button onclick="loadPage('semester.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-graduation-cap"></i> Status Akademik
             </button>
-            <button onclick="loadPage('kalendar.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
-                <i class="fas fa-calendar-alt"></i> Kalendar Pintar
-            </button>
-            <button onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
-                <i class="fas fa-folder-open"></i> Fail Peribadi
+            <button onclick="loadPage('kmjp.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+                <i class="fas fa-file-invoice"></i> Ekstrak KMJP
             </button>
         </nav>
 
@@ -73,9 +70,10 @@
         </div>
     </aside>
 
-    <main id="app-root" class="p-6 md:p-10 max-w-7xl mx-auto"></main>
+    <main id="app-root" class="p-6 md:p-10 max-w-7xl mx-auto min-h-[calc(100vh-80px)]"></main>
 
     <script>
+        // Setup PDF.js Worker
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
         async function loadPage(page, element) {
@@ -84,14 +82,10 @@
                 if (!response.ok) throw new Error("Fail tidak dijumpai");
                 
                 const rawHtml = await response.text();
-                const parser = new DOMParser();
-                const doc = parser.parseFromString(rawHtml, 'text/html');
-                
-                // Ambil kandungan di dalam body sahaja
-                const content = doc.querySelector('body') ? doc.querySelector('body').innerHTML : rawHtml;
-                
                 const appRoot = document.getElementById('app-root');
-                appRoot.innerHTML = content;
+                
+                // Masukkan kandungan terus (Tailwind akan proses kelas yang ada)
+                appRoot.innerHTML = rawHtml;
                 
                 // Update UI Sidebar
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
@@ -104,7 +98,7 @@
                 
                 toggleSidebar(false);
                 
-                // Re-run scripts
+                // Jalankan semula skrip di dalam fail yang dimuatkan
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -136,18 +130,18 @@
 
         function logout() {
             localStorage.clear();
-            window.location.href = 'login.html';
+            location.reload(); 
         }
 
         window.onload = () => {
             updateDate();
-            const user = JSON.parse(localStorage.getItem('siswaklik_user'));
-            if (!user) {
-                window.location.href = 'login.html';
-            } else {
-                document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
-                loadPage('dashboard.html');
+            // Data mockup jika tiada dalam localStorage
+            if(!localStorage.getItem('siswaklik_user')) {
+                localStorage.setItem('siswaklik_user', JSON.stringify({name: 'Nur Ilham', picture: 'https://via.placeholder.com/40'}));
             }
+            const user = JSON.parse(localStorage.getItem('siswaklik_user'));
+            document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
+            loadPage('dashboard.html');
         };
     </script>
 </body>
