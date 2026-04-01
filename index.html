@@ -4,15 +4,46 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>SiswaKlik | Hub Akademik</title>
+    
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+
     <style>
-        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
-        .drawer-transition { transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); }
-        .glass-nav { background: rgba(255, 255, 255, 0.8); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
-        .nav-active { background-color: #eff6ff; color: #2563eb; font-weight: 800; border-right: 4px solid #2563eb; }
-        #app-root { min-height: calc(100vh - 80px); }
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            overflow-x: hidden;
+        }
+        
+        .drawer-transition { 
+            transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1); 
+        }
+        
+        .glass-nav { 
+            background: rgba(255, 255, 255, 0.8); 
+            backdrop-filter: blur(12px); 
+            -webkit-backdrop-filter: blur(12px);
+        }
+
+        .nav-active { 
+            background-color: #eff6ff !important; 
+            color: #2563eb !important; 
+            font-weight: 800 !important; 
+            border-right: 4px solid #2563eb; 
+        }
+
+        #app-root { 
+            min-height: calc(100vh - 80px); 
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
     </style>
 </head>
 <body class="bg-[#F8FAFC] min-h-screen">
@@ -29,8 +60,10 @@
                 <h1 class="text-xl font-black text-slate-800 tracking-tight">SiswaKlik</h1>
             </div>
         </div>
+        
         <div class="flex items-center gap-4">
             <div id="systemDate" class="hidden md:block text-[10px] font-bold text-slate-400 uppercase tracking-[0.2em]"></div>
+            <div class="h-8 w-[1px] bg-slate-200 mx-2 hidden md:block"></div>
             <img id="userAvatar" src="https://via.placeholder.com/40" class="w-10 h-10 rounded-2xl border-2 border-white shadow-md object-cover">
         </div>
     </nav>
@@ -50,21 +83,45 @@
         
         <nav class="p-6 space-y-3 flex-1 overflow-y-auto">
             <button onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-[1.5rem] text-slate-600 font-semibold transition-all group">
-                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white">
+                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
                     <i class="fas fa-th-large"></i>
                 </div>
                 <span>Dashboard</span>
             </button>
+
             <button onclick="loadPage('semester.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-[1.5rem] text-slate-600 font-semibold transition-all group">
-                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center">
+                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
                     <i class="fas fa-chart-line"></i>
                 </div>
                 <span>Status Akademik</span>
             </button>
+
+            <button onclick="loadPage('kmjp.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-[1.5rem] text-slate-600 font-semibold transition-all group">
+                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
+                    <i class="fas fa-file-invoice"></i>
+                </div>
+                <span>Jadual Peperiksaan</span>
+            </div>
+
+            <button onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-[1.5rem] text-slate-600 font-semibold transition-all group">
+                <div class="w-10 h-10 bg-slate-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
+                    <i class="fas fa-folder-open"></i>
+                </div>
+                <span>Fail Peribadi</span>
+            </button>
         </nav>
+
+        <div class="p-6 border-t border-slate-50 bg-slate-50/50">
+            <button onclick="logout()" class="w-full flex items-center gap-4 p-4 text-red-500 hover:bg-red-50 rounded-2xl transition-all font-bold group">
+                <div class="w-10 h-10 bg-red-50 rounded-xl flex items-center justify-center group-hover:bg-white transition-colors">
+                    <i class="fas fa-sign-out-alt group-hover:-translate-x-1 transition-transform"></i>
+                </div>
+                <span>Log Keluar</span>
+            </button>
+        </div>
     </aside>
 
-    <main id="app-root" class="p-4 md:p-8 lg:p-10 max-w-7xl mx-auto"></main>
+    <main id="app-root"></main>
 
     <script>
         const sidebar = document.getElementById('sidebar');
@@ -72,6 +129,7 @@
         const menuBtn = document.getElementById('menuBtn');
         const closeBtn = document.getElementById('closeBtn');
 
+        // Core App Logic
         function toggleSidebar(show) {
             if (show) {
                 sidebar.classList.remove('-translate-x-full');
@@ -91,19 +149,27 @@
         async function loadPage(page, element) {
             try {
                 const response = await fetch(page);
+                if (!response.ok) throw new Error("Gagal memuatkan fail");
+                
                 const html = await response.text();
                 const appRoot = document.getElementById('app-root');
                 
-                // Masukkan kandungan tanpa tag body/html dari fail luar
+                // Masukkan kandungan HTML
                 appRoot.innerHTML = html;
                 
-                // Aktifkan menu sidebar
+                // Urus keadaan Aktif Navigasi
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
-                if(element) element.classList.add('nav-active');
-
+                if(element) {
+                    element.classList.add('nav-active');
+                } else {
+                    const sideBtn = document.querySelector(`button[onclick*="${page}"]`);
+                    if(sideBtn) sideBtn.classList.add('nav-active');
+                }
+                
+                // Tutup sidebar untuk mobile
                 toggleSidebar(false);
-
-                // Jalankan semula skrip yang ada dalam fail yang di-fetch
+                
+                // EKSEKUSI SCRIPT: Sangat penting supaya JavaScript dalam fail dashboard/semester berfungsi
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -111,16 +177,60 @@
                     newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
+                
+                window.scrollTo(0, 0);
             } catch (err) {
-                console.error("Gagal memuatkan halaman:", err);
+                console.error(err);
+                appRoot.innerHTML = `
+                    <div class="flex flex-col items-center justify-center py-20 text-center">
+                        <i class="fas fa-exclamation-triangle text-amber-500 text-5xl mb-4"></i>
+                        <h2 class="text-xl font-bold">Ralat Muatan</h2>
+                        <p class="text-slate-500">Gagal memuatkan komponen ${page}. Sila pastikan fail tersebut wujud.</p>
+                    </div>`;
             }
         }
 
-        window.onload = () => {
+        function updateDate() {
             const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
-            loadPage('dashboard.html', document.querySelector('.nav-item'));
-        };
+            const dateEl = document.getElementById('systemDate');
+            if(dateEl) dateEl.innerText = new Date().toLocaleDateString('ms-MY', options);
+        }
+
+        function logout() {
+            Swal.fire({
+                title: 'Log Keluar?',
+                text: "Anda perlu log masuk semula nanti.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#2563eb',
+                cancelButtonColor: '#f1f5f9',
+                confirmButtonText: 'Ya, Log Keluar',
+                cancelButtonText: '<span style="color: #64748b">Batal</span>'
+            }).then((result) => {
+                if (result.isConfirmed) {
+                    localStorage.removeItem('siswaklik_user');
+                    window.location.href = 'login.html';
+                }
+            });
+        }
+
+        // Jalankan semasa aplikasi mula
+        window.addEventListener('DOMContentLoaded', () => {
+            updateDate();
+            
+            // Semak data user
+            const user = JSON.parse(localStorage.getItem('siswaklik_user')) || { 
+                name: 'Muhammad Ilham', 
+                picture: 'https://ui-avatars.com/api/?name=Muhammad+Ilham&background=2563eb&color=fff' 
+            };
+            
+            const avatarEl = document.getElementById('userAvatar');
+            if(avatarEl) avatarEl.src = user.picture;
+            
+            // Muat Dashboard secara automatik
+            const dashBtn = document.querySelector('button[onclick*="dashboard.html"]');
+            loadPage('dashboard.html', dashBtn);
+        });
     </script>
 </body>
 </html>
