@@ -10,33 +10,32 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background 0.3s; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .drawer-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .glass-nav { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); }
-        /* Style untuk butang aktif di sidebar */
-        .nav-active { background-color: #eff6ff !important; color: #2563eb !important; font-weight: 800 !important; border-right: 4px solid #2563eb; }
-        .nav-item:hover { transform: translateX(5px); background-color: #f8fafc; }
+        .nav-active { background-color: #eff6ff; color: #2563eb; font-weight: 700; border-right: 4px solid #2563eb; }
+        .nav-item:hover { transform: translateX(5px); }
         .animate-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
 
-    <nav class="glass-nav border-b sticky top-0 z-[100] px-6 py-4 flex justify-between items-center shadow-sm">
+    <nav class="glass-nav border-b sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
         <div class="flex items-center gap-4">
-            <button id="menuBtn" class="p-3 hover:bg-blue-50 rounded-2xl text-blue-600 transition-all border border-transparent hover:border-blue-100">
+            <button id="menuBtn" class="p-2 hover:bg-blue-50 rounded-xl text-blue-600 transition-colors">
                 <i class="fas fa-bars text-xl"></i>
             </button>
             <div class="flex items-center gap-2">
                 <div class="bg-blue-600 p-2 rounded-lg text-white">
                     <i class="fas fa-graduation-cap"></i>
                 </div>
-                <h1 class="text-xl font-bold text-gray-800 tracking-tight">SiswaKlik</h1>
+                <h1 class="text-xl font-bold text-gray-800">SiswaKlik</h1>
             </div>
         </div>
         
         <div class="flex items-center gap-4">
-            <div id="systemDate" class="hidden md:block text-[10px] font-bold text-gray-400 uppercase tracking-widest"></div>
+            <div id="systemDate" class="hidden md:block text-xs font-bold text-gray-400 uppercase tracking-widest"></div>
             <div class="h-8 w-[1px] bg-gray-200 mx-2 hidden md:block"></div>
             <div class="flex items-center gap-3">
                 <span id="userNameTop" class="text-sm font-bold text-slate-700 hidden sm:block">Pelajar</span>
@@ -45,31 +44,29 @@
         </div>
     </nav>
 
-    <div id="drawerOverlay" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden z-[110] transition-opacity"></div>
+    <div id="drawerOverlay" class="fixed inset-0 bg-slate-900/40 backdrop-blur-sm hidden z-[60]"></div>
 
-    <aside id="sidebar" class="fixed inset-y-0 left-0 w-80 bg-white z-[120] transform -translate-x-full drawer-transition flex flex-col shadow-2xl">
+    <aside id="sidebar" class="fixed inset-y-0 left-0 w-72 bg-white z-[70] transform -translate-x-full drawer-transition flex flex-col shadow-2xl">
         <div class="p-8 border-b flex justify-between items-center bg-blue-600 text-white">
             <div>
-                <p class="text-[10px] opacity-80 font-bold uppercase tracking-widest mb-1">SiswaKlik Hub</p>
-                <h2 class="font-black text-xl">Navigasi Pintar</h2>
+                <p class="text-xs opacity-75 font-bold uppercase tracking-widest mb-1">Menu Utama</p>
+                <h2 class="font-bold text-xl">Navigasi Pintar</h2>
             </div>
-            <button id="closeBtn" class="h-10 w-10 flex items-center justify-center rounded-xl hover:bg-white/20 transition-all">
-                <i class="fas fa-times text-xl"></i>
-            </button>
+            <button id="closeBtn" class="hover:rotate-90 transition-transform"><i class="fas fa-times text-xl"></i></button>
         </div>
         
-        <nav class="p-4 space-y-2 flex-1 mt-4 overflow-y-auto">
-            <button onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 rounded-2xl text-slate-600 transition-all font-semibold">
-                <i class="fas fa-th-large w-5 text-center"></i> Dashboard Utama
+        <nav class="p-4 space-y-2 flex-1 mt-4">
+            <button onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+                <i class="fas fa-th-large"></i> Dashboard
             </button>
-            <button onclick="loadPage('semester.html', this)" class="nav-item w-full flex items-center gap-4 p-4 rounded-2xl text-slate-600 transition-all font-semibold">
-                <i class="fas fa-calendar-check w-5 text-center"></i> Status Akademik
+            <button onclick="loadPage('semester.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+                <i class="fas fa-graduation-cap"></i> Status Akademik
             </button>
-            <button onclick="loadPage('kmjp.html', this)" class="nav-item w-full flex items-center gap-4 p-4 rounded-2xl text-slate-600 transition-all font-semibold">
-                <i class="fas fa-file-invoice w-5 text-center"></i> Jadual Peperiksaan (KMJP)
+            <button onclick="loadPage('kmjp.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+                <i class="fas fa-file-invoice"></i> Ekstrak KMJP
             </button>
-            <button onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 rounded-2xl text-slate-600 transition-all font-semibold">
-                <i class="fas fa-folder-open w-5 text-center"></i> Fail Peribadi
+            <button onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+                <i class="fas fa-folder-open"></i> Fail Peribadi
             </button>
         </nav>
 
@@ -80,8 +77,8 @@
         </div>
     </aside>
 
-    <main id="app-root" class="p-4 md:p-8 max-w-7xl mx-auto min-h-screen animate-fade">
-        <div class="flex items-center justify-center h-96">
+    <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
+        <div class="flex justify-center items-center h-64">
             <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
     </main>
@@ -89,6 +86,27 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
+        // Timer Auto-Logout (30 minit)
+        let logoutTimer;
+        const TIMEOUT_DURATION = 30 * 60 * 1000; 
+
+        function resetTimer() {
+            clearTimeout(logoutTimer);
+            logoutTimer = setTimeout(logout, TIMEOUT_DURATION);
+        }
+
+        function setupActivityListeners() {
+            ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+                document.addEventListener(evt, resetTimer, true);
+            });
+        }
+
+        function updateDate() {
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
+        }
+
+        // Kawalan Sidebar
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('drawerOverlay');
 
@@ -106,24 +124,26 @@
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
+        // FUNGSI LOAD PAGE TANPA REFRESH
         async function loadPage(page, element) {
             try {
                 const appRoot = document.getElementById('app-root');
-                appRoot.style.opacity = '0.4';
+                appRoot.style.opacity = '0.5'; 
                 
                 const response = await fetch(page);
-                if (!response.ok) throw new Error("Fail tidak dijumpai");
+                if (!response.ok) throw new Error("Fail " + page + " tidak dijumpai");
                 
                 const html = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 
-                // Ambil isi kandungan body sahaja dari fail yang di-fetch
+                // Ambil bahagian body sahaja dari fail html tersebut
                 const content = doc.body ? doc.body.innerHTML : html;
+                
                 appRoot.innerHTML = content;
                 appRoot.style.opacity = '1';
                 
-                // Update Butang Aktif
+                // Kemaskini Gaya Butang Aktif
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) {
                     element.classList.add('nav-active');
@@ -132,9 +152,9 @@
                     if(sideBtn) sideBtn.classList.add('nav-active');
                 }
                 
-                toggleSidebar(false); // Tutup menu selepas pilih
+                toggleSidebar(false);
                 
-                // Jalankan script yang ada dalam fail yang dimuatkan
+                // Jalankan semula scripts dalam content yang baru dimasukkan
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -142,35 +162,53 @@
                     newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
-
+                
+                resetTimer();
                 window.scrollTo(0, 0);
             } catch (err) {
-                appRoot.innerHTML = `<div class="text-center py-20"><p class="text-red-500 font-bold">Ralat: Gagal memuatkan ${page}</p></div>`;
+                console.error(err);
+                appRoot.innerHTML = `
+                    <div class="text-center py-20 bg-white rounded-[3rem] border border-dashed border-slate-200">
+                        <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
+                        <p class="text-red-500 font-bold">Ralat: Fail tidak ditemui.</p>
+                        <p class="text-slate-400 text-sm mt-2">Pastikan fail <b>${page}</b> wujud dalam folder anda.</p>
+                        <button onclick="location.reload()" class="mt-6 bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold">Cuba Lagi</button>
+                    </div>`;
+                appRoot.style.opacity = '1';
             }
-        }
-
-        function updateDate() {
-            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
         }
 
         function logout() {
             localStorage.clear();
-            window.location.href = 'login.html';
+            Swal.fire({
+                title: 'Log Keluar',
+                text: 'Sesi anda telah tamat.',
+                icon: 'info',
+                confirmButtonText: 'OK'
+            }).then(() => {
+                window.location.href = 'login.html';
+            });
         }
 
+        // Inisialisasi Apabila Page Dibuka
         window.onload = () => {
             updateDate();
-            // Ambil data user dari SiswaKlik login
+            
+            // Cek data user dari localStorage (Login System SiswaKlik)
             const user = JSON.parse(localStorage.getItem('siswaklik_user'));
+            
             if (!user) {
                 window.location.href = 'login.html';
             } else {
-                document.getElementById('userNameTop').innerText = user.name.split(' ')[0];
+                // Update Profil
                 document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
+                document.getElementById('userNameTop').innerText = user.name.split(' ')[0];
                 
-                // Muat naik Dashboard sebagai halaman pertama
+                // Load Dashboard sebagai halaman pertama
                 loadPage('dashboard.html');
+                
+                setupActivityListeners();
+                resetTimer();
             }
         };
     </script>
