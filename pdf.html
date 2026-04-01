@@ -18,99 +18,149 @@
                 <i class="fas fa-trash"></i> <span class="hidden md:inline">PADAM</span>
             </button>
             
-            <button id="upload-drive-btn" onclick="uploadToDrive()" class="hidden bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2">
+            <button id="upload-drive-btn" class="hidden bg-blue-600 text-white px-8 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition flex items-center gap-2">
                 <i class="fas fa-cloud-upload-alt"></i> SIMPAN KE DRIVE
             </button>
         </div>
     </div>
 
     <div class="flex-1 bg-slate-100 overflow-hidden relative">
-        <div id="loading-overlay" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white">
-            <i class="fas fa-circle-notch animate-spin text-5xl text-blue-600 mb-4"></i>
-            <p class="text-slate-500 font-bold">Menghubungkan fail...</p>
+        <div id="status-overlay" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white transition-opacity duration-300">
+            <div id="loader-content" class="text-center">
+                <i class="fas fa-circle-notch animate-spin text-5xl text-blue-600 mb-4"></i>
+                <p class="text-slate-500 font-bold">Menyediakan pemapar PDF...</p>
+            </div>
         </div>
         
-        <div id="pdf-container" class="w-full h-full">
-            <div id="pdfViewer"></div>
+        <div id="pdf-container" class="w-full h-full opacity-0 transition-opacity duration-500">
+            <div id="pdfViewerElement"></div>
         </div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 <link href="https://cdn.syncfusion.com/ej2/23.1.36/material.css" rel="stylesheet" />
 <script src="https://cdn.syncfusion.com/ej2/23.1.36/dist/ej2.min.js" type="text/javascript"></script>
+<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
 <script>
+    /**
+     * KONFIGURASI GLOBAL
+     * Pastikan SERVICE_URL sepadan dengan backend C# anda.
+     */
+    const SERVICE_URL = "https://localhost:44396/PdfViewer"; 
     const editingId = localStorage.getItem('editing_file_id');
     const editingName = localStorage.getItem('editing_file_name');
     const accessToken = localStorage.getItem('siswaklik_access_token');
     
-    // Gantikan URL ini dengan URL Server ASP.NET anda yang sedang berjalan
-    const SERVICE_URL = "https://localhost:44396/PdfViewer"; 
+    let pdfViewerInstance = null;
 
     document.getElementById('display-filename').innerText = editingName || "Fail PDF";
 
-    function goBack() {
-        loadView('folder.html');
-    }
+    /**
+     * FUNGSI UTAMA: Inisialisasi Viewer
+     * Menggunakan kawalan ralat untuk 'ej is not defined'
+     */
+    function initViewer() {
+        const overlay = document.getElementById('status-overlay');
+        const container = document.getElementById('pdf-container');
 
-    async function initViewer() {
-        const loader = document.getElementById('loading-overlay');
+        // Pastikan library Syncfusion sudah dimuatkan
+        if (typeof ej === 'undefined') {
+            console.warn("Syncfusion belum sedia, cuba lagi dalam 500ms...");
+            setTimeout(initViewer, 500);
+            return;
+        }
 
         try {
-            const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-            const fileData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
-
-            // Inisialisasi Syncfusion PDF Viewer
-            var viewer = new ej.pdfviewer.PdfViewer({
-                serviceUrl: SERVICE_URL,
-                documentPath: editingName, // Nama fail yang akan dihantar ke Backend Load()
-                style: { 'height': '100%' }
-            });
-            
-            // Inject module yang diperlukan (sama seperti React Inject)
+            // Register Syncfusion Modules (Sama seperti Inject dalam React)
             ej.pdfviewer.PdfViewer.Inject(
                 ej.pdfviewer.Toolbar, 
                 ej.pdfviewer.Magnification, 
                 ej.pdfviewer.Navigation, 
                 ej.pdfviewer.Annotation, 
                 ej.pdfviewer.TextSelection, 
-                ej.pdfviewer.TextSearch
+                ej.pdfviewer.TextSearch,
+                ej.pdfviewer.Print,
+                ej.pdfviewer.FormDesigner,
+                ej.pdfviewer.FormFields
             );
 
-            viewer.appendTo('#pdfViewer');
+            // Cipta Instance Viewer
+            pdfViewerInstance = new ej.pdfviewer.PdfViewer({
+                serviceUrl: SERVICE_URL,
+                documentPath: editingName, // Akan dihantar ke backend sebagai jsonObject["document"]
+                enableToolbar: true,
+                locale: 'en-US',
+                style: { 'height': '100%', 'width': '100%' }
+            });
 
-            if (fileData && fileData.content) {
-                // JIKA FAIL TEMPATAN (BASE64)
-                if (!fileData.driveId) document.getElementById('upload-drive-btn').classList.remove('hidden');
-                
-                // Kirim base64 ke viewer
-                viewer.load(fileData.content, null);
-                loader.classList.add('hidden');
-            } 
-            else if (editingId && !editingId.startsWith('local-')) {
-                // JIKA FAIL GOOGLE DRIVE
-                // Nota: Backend C# anda akan menggunakan 'editingName' untuk cari FileID di Drive
-                document.getElementById('sync-status').innerText = "Cloud Sync Aktif";
-                
-                // Kita tunggu viewer siap render
-                viewer.documentLoad = function() {
-                    loader.classList.add('hidden');
-                };
-            } else {
-                throw new Error("Fail tidak dijumpai.");
-            }
+            // Handler: Apabila dokumen berjaya dimuatkan
+            pdfViewerInstance.documentLoad = () => {
+                overlay.style.opacity = '0';
+                setTimeout(() => overlay.classList.add('hidden'), 300);
+                container.classList.remove('opacity-0');
+                console.log("Dokumen berjaya dimuatkan dari server.");
+            };
+
+            // Handler: Jika berlaku ralat pemuatan
+            pdfViewerInstance.ajaxRequestFailed = (args) => {
+                showError("Gagal berhubung dengan server PDF (CORS atau URL tidak sah).");
+            };
+
+            // Pasangkan ke elemen HTML
+            pdfViewerInstance.appendTo('#pdfViewerElement');
+
+            // Logik Hybrid: Local vs Drive
+            checkFileSource();
+
         } catch (err) {
-            console.error(err);
-            loader.innerHTML = `<div class="p-6 text-center">
-                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                <p class="font-bold text-slate-800">${err.message}</p>
-                <button onclick="goBack()" class="mt-4 text-blue-600 font-bold">Kembali ke Folder</button>
-            </div>`;
+            showError("Ralat sistem: " + err.message);
         }
     }
 
-    // Fungsi Padam (Kekal UI Asal)
+    /**
+     * SEMAK SUMBER FAIL: LocalStorage vs Google Drive
+     */
+    async function checkFileSource() {
+        const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+        const fileData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
+
+        if (fileData && fileData.content && !fileData.driveId) {
+            // FAIL LOKAL: Tunjukkan butang simpan ke drive
+            document.getElementById('upload-drive-btn').classList.remove('hidden');
+            document.getElementById('upload-drive-btn').onclick = uploadToDrive;
+            
+            // Muatkan secara base64 terus ke viewer
+            pdfViewerInstance.load(fileData.content, null);
+        } else if (editingId && !editingId.startsWith('local-')) {
+            // FAIL DRIVE: Sync dengan backend C#
+            document.getElementById('sync-status').innerText = "Cloud Sync Aktif";
+            // Viewer secara automatik akan memanggil ServiceURL/Load dengan documentPath
+        } else if (!fileData && (!editingId || editingId.startsWith('local-'))) {
+            showError("Fail tidak dijumpai dalam simpanan.");
+        }
+    }
+
+    /**
+     * FUNGSI: Papar Ralat pada Skrin
+     */
+    function showError(msg) {
+        const loaderContent = document.getElementById('loader-content');
+        loaderContent.innerHTML = `
+            <i class="fas fa-exclamation-triangle text-red-500 text-5xl mb-4"></i>
+            <p class="font-bold text-slate-800">${msg}</p>
+            <button onclick="goBack()" class="mt-4 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold">Kembali ke Folder</button>
+        `;
+    }
+
+    function goBack() {
+        if (pdfViewerInstance) pdfViewerInstance.destroy();
+        loadView('folder.html');
+    }
+
+    /**
+     * FUNGSI: Padam Fail (UI Asal)
+     */
     async function confirmDelete() {
         const result = await Swal.fire({
             title: 'Padam Fail?',
@@ -127,18 +177,23 @@
             localStorage.setItem('siswa_local_files', JSON.stringify(localFiles.filter(f => f.id !== editingId && f.driveId !== editingId)));
 
             if (accessToken && editingId && !editingId.startsWith('local-')) {
-                await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
+                try {
+                    await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                } catch (e) { console.error("Drive delete error", e); }
             }
             goBack();
         }
     }
 
-    // Fungsi Simpan ke Drive (Kekal UI Asal)
+    /**
+     * FUNGSI: Simpan ke Drive (UI Asal)
+     */
     async function uploadToDrive() {
         const btn = document.getElementById('upload-drive-btn');
+        const originalContent = btn.innerHTML;
         btn.disabled = true;
         btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan...`;
 
@@ -169,11 +224,11 @@
                 localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
                 Swal.fire('Berjaya', 'Tersimpan di Google Drive!', 'success');
                 btn.classList.add('hidden');
-            }
+            } else { throw new Error("Respons Drive tidak OK"); }
         } catch (err) {
-            Swal.fire('Ralat', 'Gagal simpan ke Drive', 'error');
+            Swal.fire('Ralat', 'Gagal simpan ke Drive. Pastikan anda telah login.', 'error');
             btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> SIMPAN KE DRIVE`;
+            btn.innerHTML = originalContent;
         }
     }
 
@@ -184,19 +239,30 @@
         return new Blob([u8arr], {type:mime});
     }
 
+    // Mulakan proses pemuatan
     initViewer();
 </script>
 
 <style>
+    /* Paksa container skrin penuh */
     #pdf-container {
         position: absolute;
         top: 0; left: 0; right: 0; bottom: 0;
     }
-    /* Memastikan Syncfusion Viewer memenuhi skrin */
-    #pdfViewer {
+    
+    /* Memastikan elemen viewer Syncfusion mengisi ruang */
+    #pdfViewerElement {
+        display: block;
         width: 100% !important;
         height: 100% !important;
     }
-    /* Sembunyikan watermark Syncfusion jika perlu (opsyenal) */
+
+    /* Penambahbaikan visual toolbar Syncfusion */
+    .e-pdfviewer-toolbar {
+        background-color: #f8fafc !important;
+        border-bottom: 1px solid #e2e8f0 !important;
+    }
+
+    /* Sembunyikan watermark jika tidak diperlukan (opsyenal) */
     .e-pv-watermark { display: none !important; }
 </style>
