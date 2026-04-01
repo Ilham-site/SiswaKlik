@@ -1,27 +1,16 @@
-<div class="max-w-4xl mx-auto mb-6 animate-fade-up">
-    <button onclick="loadPage('dashboard.html')" class="inline-flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 rounded-2xl text-slate-700 font-bold text-sm hover:bg-slate-50 transition-all shadow-sm">
-        <i class="fas fa-arrow-left text-blue-600"></i> Dashboard Utama
-    </button>
-</div>
-
-<div class="max-w-4xl mx-auto space-y-6 animate-fade-up">
-    <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-            <h1 class="text-3xl font-black text-slate-900 tracking-tight">Kalendar Akademik</h1>
-            <p class="text-slate-500 font-medium">Data diekstrak secara automatik daripada dokumen rasmi.</p>
-        </div>
-        <div class="flex gap-2">
-            <button onclick="fetchAndProcessStaticPDF()" class="bg-blue-600 px-5 py-3 rounded-2xl text-sm font-bold text-white hover:bg-blue-700 transition flex items-center gap-2 shadow-lg shadow-blue-200">
-                <i class="fas fa-sync-alt"></i> Kemaskini
-            </button>
-        </div>
+<div class="max-w-4xl mx-auto space-y-6 animate-in">
+    <div class="flex items-center gap-4 mb-2">
+        <button onclick="loadPage('dashboard.html')" class="bg-white p-3 rounded-2xl shadow-sm border border-slate-200 hover:bg-slate-50">
+            <i class="fas fa-chevron-left text-slate-400"></i>
+        </button>
+        <h2 class="text-2xl font-black text-slate-800">Kalendar Akademik</h2>
     </div>
 
     <div class="bg-gradient-to-br from-blue-800 to-blue-600 rounded-[3rem] p-8 md:p-10 text-white shadow-2xl relative overflow-hidden">
         <div class="relative z-10">
             <div class="flex items-center justify-between mb-8">
                 <span class="bg-white/20 backdrop-blur-md px-4 py-1.5 rounded-full text-[10px] font-bold uppercase tracking-widest border border-white/10">Sesi Akademik 2025/2026</span>
-                <i class="fas fa-university text-white/30 text-2xl"></i>
+                <button onclick="fetchAndProcessStaticPDF()" class="text-white/80 hover:text-white transition"><i class="fas fa-sync-alt"></i></button>
             </div>
             
             <div class="space-y-6">
@@ -36,7 +25,7 @@
                         <p class="text-2xl font-black" id="progressText">0%</p>
                     </div>
                     <div class="w-full h-3 bg-black/20 rounded-full overflow-hidden">
-                        <div id="progressBar" class="h-full bg-emerald-400 rounded-full transition-all duration-1000 shadow-[0_0_15px_rgba(52,211,153,0.5)]" style="width: 0%"></div>
+                        <div id="progressBar" class="h-full bg-emerald-400 rounded-full transition-all duration-1000" style="width: 0%"></div>
                     </div>
                 </div>
             </div>
@@ -45,15 +34,13 @@
     </div>
 
     <div class="space-y-4">
-        <div class="flex items-center justify-between px-2">
-            <h3 class="font-extrabold text-slate-800 flex items-center gap-2">
-                <i class="fas fa-list-ul text-blue-600"></i> Aliran Kalendar Akademik
-            </h3>
-        </div>
+        <h3 class="font-extrabold text-slate-800 px-2 flex items-center gap-2">
+            <i class="fas fa-list-ul text-blue-600"></i> Aliran Kalendar
+        </h3>
         
         <div id="calendarList" class="grid gap-3">
             <div class="bg-white p-12 rounded-[2.5rem] border border-dashed border-slate-200 text-center" id="loadingState">
-                <p class="text-slate-400 font-medium">Sila pastikan fail 'kalendar_akademik.pdf' tersedia.</p>
+                <p class="text-slate-400 font-medium italic">Tiada fail kalendar_akademik.pdf ditemui atau data belum dimuatkan.</p>
             </div>
         </div>
     </div>
@@ -65,9 +52,6 @@
 
         window.fetchAndProcessStaticPDF = async function() {
             try {
-                const cachedData = localStorage.getItem('siswa_academic_calendar');
-                if (cachedData) renderUI(JSON.parse(cachedData));
-
                 const response = await fetch(PDF_URL);
                 if (!response.ok) return;
                 
@@ -84,13 +68,14 @@
                 const events = parseUKMCalendar(fullText);
                 if (events.length > 0) {
                     localStorage.setItem('siswa_academic_calendar', JSON.stringify(events));
-                    renderUI(events);
+                    renderSemesterUI(events);
                 }
             } catch (e) { console.error("Ralat PDF:", e); }
         };
 
         function parseUKMCalendar(text) {
             const events = [];
+            // Regex untuk format: AKTIVITI 01 Jan - 07 Jan 2026
             const regex = /([A-Za-z\s\/]+)\s+(\d{1,2}\s+[A-Z][a-z]+\.?\s?[-–]\s?\d{1,2}\s+[A-Z][a-z]+\.?\s\d{4})/g;
             let m;
             while ((m = regex.exec(text)) !== null) {
@@ -106,7 +91,7 @@
             return events.sort((a, b) => a.startDate - b.startDate);
         }
 
-        function renderUI(data) {
+        window.renderSemesterUI = function(data) {
             const container = document.getElementById('calendarList');
             const now = new Date().getTime();
             let activeEvent = data[0];
@@ -126,17 +111,20 @@
                 const isPast = now > item.startDate;
                 return `
                     <div class="flex items-center gap-5 bg-white p-5 rounded-3xl border ${isPast ? 'border-slate-100 opacity-60' : 'border-blue-100 shadow-sm'} transition-all">
-                        <div class="h-14 w-14 ${isPast ? 'bg-slate-50 text-slate-400' : 'bg-blue-50 text-blue-600'} rounded-2xl flex flex-col items-center justify-center font-black border border-blue-50 shrink-0">
-                            <i class="fas ${isPast ? 'fa-check-circle' : 'fa-calendar-day'} text-lg"></i>
+                        <div class="h-12 w-12 ${isPast ? 'bg-slate-50 text-slate-400' : 'bg-blue-50 text-blue-600'} rounded-2xl flex items-center justify-center shrink-0">
+                            <i class="fas ${isPast ? 'fa-check-circle' : 'fa-calendar-day'}"></i>
                         </div>
                         <div>
-                            <h4 class="font-bold text-slate-800 leading-tight">${item.title}</h4>
-                            <p class="text-xs text-slate-500 mt-1 font-medium">${item.rawDate}</p>
+                            <h4 class="font-bold text-slate-800 leading-tight text-sm">${item.title}</h4>
+                            <p class="text-[10px] text-slate-500 mt-1 font-bold uppercase">${item.rawDate}</p>
                         </div>
                     </div>`;
             }).join('');
         }
 
-        fetchAndProcessStaticPDF();
+        // Jalankan render jika data dah ada
+        const cached = localStorage.getItem('siswa_academic_calendar');
+        if(cached) renderSemesterUI(JSON.parse(cached));
+        else fetchAndProcessStaticPDF();
     })();
 </script>
