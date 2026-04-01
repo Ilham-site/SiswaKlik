@@ -1,11 +1,10 @@
-<div class="animate-in">
+<div id="dashboard-content" class="animate-in p-4 md:p-8 lg:p-12">
     <style>
         .animate-in { animation: fadeIn 0.5s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
     </style>
 
     <div class="max-w-6xl mx-auto space-y-8">
-        
         <header class="flex justify-between items-start">
             <div>
                 <h1 class="text-3xl font-extrabold text-slate-900">Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Pelajar</span>!</h1>
@@ -14,7 +13,6 @@
         </header>
 
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-            
             <div class="lg:col-span-2">
                 <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 h-full">
                     <div class="flex justify-between items-center mb-6">
@@ -37,7 +35,6 @@
             </div>
 
             <div class="space-y-8">
-                
                 <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden">
                     <i class="fas fa-university absolute -right-4 -bottom-4 text-white/10 text-9xl"></i>
                     <h3 class="text-lg font-bold mb-4">Ringkasan Akademik</h3>
@@ -66,52 +63,43 @@
                         Lihat Kalendar Akademik <i class="fas fa-arrow-right ml-2"></i>
                     </button>
                 </div>
-
             </div>
         </div>
     </div>
 
     <script>
-        // Inisialisasi PDF.js Worker jika belum ada
-        if (!pdfjsLib.GlobalWorkerOptions.workerSrc) {
-            pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-        }
-
-        // Setup paparan nama
-        (function initDashboard() {
+        (function() {
+            // Setup Nama Pelajar
             const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Pelajar' };
-            const nameDisplay = document.getElementById('userNameDisplay');
-            if(nameDisplay) nameDisplay.innerText = userData.name.split(' ')[0];
+            const nameEl = document.getElementById('userNameDisplay');
+            if(nameEl) nameEl.innerText = userData.name.split(' ')[0];
+
+            // Render Data Sedia Ada
+            if (typeof renderExams === "function") renderExams();
+            if (typeof updateAcademicStats === "function") updateAcademicStats();
             
-            updateAcademicStats();
-            renderExams();
+            // Re-inisialisasi PDF worker jika perlu
+            if (window.pdfjsLib) {
+                pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
+            }
         })();
 
-        function updateAcademicStats() {
+        // Fungsi-fungsi Global (Supaya boleh dipanggil oleh button)
+        window.updateAcademicStats = function() {
             const academicData = JSON.parse(localStorage.getItem('siswa_academic_calendar'));
-            
             if (academicData && academicData.length > 0) {
                 const now = new Date().getTime();
                 let activeEvent = academicData[0];
-                
-                academicData.forEach(ev => {
-                    if(now >= ev.startDate) activeEvent = ev;
-                });
-
-                const titleEl = document.getElementById('nextActivityTitle');
-                const dateEl = document.getElementById('nextActivityDate');
-                
-                if(titleEl) titleEl.innerText = activeEvent.title;
-                if(dateEl) dateEl.innerText = activeEvent.rawDate;
+                academicData.forEach(ev => { if(now >= ev.startDate) activeEvent = ev; });
+                document.getElementById('nextActivityTitle').innerText = activeEvent.title;
+                document.getElementById('nextActivityDate').innerText = activeEvent.rawDate;
             }
         }
 
-        function renderExams() {
+        window.renderExams = function() {
             const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
             const container = document.getElementById('examContainer');
-            
             if (!container) return;
-
             if (exams.length > 0) {
                 container.innerHTML = exams.map(exam => `
                     <div class="flex items-center gap-4 p-5 rounded-[2rem] border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition group">
@@ -134,13 +122,11 @@
             }
         }
 
-        async function processKMJP(input) {
+        window.processKMJP = async function(input) {
             const file = input.files[0];
             if (!file) return;
-
             try {
-                Swal.fire({ title: 'Memproses...', text: 'Mengekstrak jadual peperiksaan', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                
+                Swal.fire({ title: 'Memproses...', text: 'Mengekstrak jadual', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                 const reader = new FileReader();
                 reader.onload = async function() {
                     const typedarray = new Uint8Array(this.result);
@@ -151,20 +137,13 @@
                         const content = await page.getTextContent();
                         text += content.items.map(item => item.str).join(' ');
                     }
-
                     const cleanText = text.replace(/\s+/g, ' ');
                     const pattern = /([A-Z]{4}\d{4})\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+.*?(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+)/gi;
-                    
                     const found = [];
                     let m;
                     while ((m = pattern.exec(cleanText)) !== null) {
                         if (m[2].includes("Penilaian Berterusan")) continue;
-                        found.push({
-                            id: 'ex-'+Math.random().toString(36).substr(2,7),
-                            code: m[1], title: m[2].trim(),
-                            date: m[3].split('/').reverse().join('-'),
-                            time: m[4], location: m[5].trim()
-                        });
+                        found.push({ id: 'ex-'+Math.random().toString(36).substr(2,7), code: m[1], title: m[2].trim(), date: m[3].split('/').reverse().join('-'), time: m[4], location: m[5].trim() });
                     }
                     localStorage.setItem('siswa_exams', JSON.stringify(found));
                     renderExams();
@@ -175,11 +154,15 @@
             input.value = "";
         }
 
-        function deleteExam(id) {
+        window.deleteExam = function(id) {
             let exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
             exams = exams.filter(e => e.id !== id);
             localStorage.setItem('siswa_exams', JSON.stringify(exams));
             renderExams();
         }
+
+        // Jalankan render awal
+        renderExams();
+        updateAcademicStats();
     </script>
 </div>
