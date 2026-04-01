@@ -10,7 +10,7 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; }
+        body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background 0.3s; }
         .drawer-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .glass-nav { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); }
         .nav-active { background-color: #eff6ff; color: #2563eb; font-weight: 700; border-right: 4px solid #2563eb; }
@@ -62,8 +62,8 @@
             <button onclick="loadPage('semester.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-graduation-cap"></i> Status Akademik
             </button>
-            <button onclick="loadPage('kmjp.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
-                <i class="fas fa-file-invoice"></i> Ekstrak KMJP
+            <button onclick="loadPage('kalendar.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+                <i class="fas fa-calendar-alt"></i> Kalendar Pintar
             </button>
             <button onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-folder-open"></i> Fail Peribadi
@@ -78,15 +78,12 @@
     </aside>
 
     <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
-        <div class="flex justify-center items-center h-64">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
-        </div>
-    </main>
+        </main>
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // Timer Auto-Logout (30 minit)
+        // Timer Auto-Logout
         let logoutTimer;
         const TIMEOUT_DURATION = 30 * 60 * 1000; 
 
@@ -106,44 +103,38 @@
             document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
         }
 
-        // Kawalan Sidebar
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('drawerOverlay');
 
         function toggleSidebar(show) {
-            if (show) {
-                sidebar.classList.remove('-translate-x-full');
-                overlay.classList.remove('hidden');
-            } else {
-                sidebar.classList.add('-translate-x-full');
-                overlay.classList.add('hidden');
-            }
+            sidebar.classList.toggle('-translate-x-full', !show);
+            overlay.classList.toggle('hidden', !show);
         }
 
         document.getElementById('menuBtn').onclick = () => toggleSidebar(true);
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        // FUNGSI LOAD PAGE TANPA REFRESH
+        // FUNGSI UTAMA LOAD PAGE
         async function loadPage(page, element) {
             try {
                 const appRoot = document.getElementById('app-root');
-                appRoot.style.opacity = '0.5'; 
+                appRoot.style.opacity = '0.5'; // Visual feedback loading
                 
                 const response = await fetch(page);
-                if (!response.ok) throw new Error("Fail " + page + " tidak dijumpai");
+                if (!response.ok) throw new Error("Fail tidak dijumpai");
                 
                 const html = await response.text();
+                
+                // Masukkan kandungan (tanpa head/body tags jika ada dalam fail sumber)
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
-                
-                // Ambil bahagian body sahaja dari fail html tersebut
                 const content = doc.body ? doc.body.innerHTML : html;
                 
                 appRoot.innerHTML = content;
                 appRoot.style.opacity = '1';
                 
-                // Kemaskini Gaya Butang Aktif
+                // Update UI Sidebar
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) {
                     element.classList.add('nav-active');
@@ -154,7 +145,7 @@
                 
                 toggleSidebar(false);
                 
-                // Jalankan semula scripts dalam content yang baru dimasukkan
+                // PENTING: Jalankan semula script dalam page yang di-load
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -166,46 +157,36 @@
                 resetTimer();
                 window.scrollTo(0, 0);
             } catch (err) {
-                console.error(err);
-                appRoot.innerHTML = `
-                    <div class="text-center py-20 bg-white rounded-[3rem] border border-dashed border-slate-200">
-                        <i class="fas fa-exclamation-circle text-4xl text-red-500 mb-4"></i>
-                        <p class="text-red-500 font-bold">Ralat: Fail tidak ditemui.</p>
-                        <p class="text-slate-400 text-sm mt-2">Pastikan fail <b>${page}</b> wujud dalam folder anda.</p>
-                        <button onclick="location.reload()" class="mt-6 bg-blue-600 text-white px-6 py-2 rounded-xl text-sm font-bold">Cuba Lagi</button>
+                console.error("Gagal memuatkan halaman:", err);
+                document.getElementById('app-root').innerHTML = `
+                    <div class="text-center py-20">
+                        <i class="fas fa-exclamation-triangle text-4xl text-amber-500 mb-4"></i>
+                        <p class="text-red-500 font-bold">Ralat: Fail <b>${page}</b> tidak ditemui.</p>
+                        <p class="text-slate-400 text-sm">Sila pastikan fail tersebut wujud dalam direktori yang sama.</p>
                     </div>`;
-                appRoot.style.opacity = '1';
             }
         }
 
         function logout() {
             localStorage.clear();
-            Swal.fire({
-                title: 'Log Keluar',
-                text: 'Sesi anda telah tamat.',
-                icon: 'info',
-                confirmButtonText: 'OK'
-            }).then(() => {
-                window.location.href = 'login.html';
-            });
+            window.location.href = 'login.html';
         }
 
-        // Inisialisasi Apabila Page Dibuka
+        // Inisialisasi
         window.onload = () => {
             updateDate();
-            
-            // Cek data user dari localStorage (Login System SiswaKlik)
             const user = JSON.parse(localStorage.getItem('siswaklik_user'));
             
             if (!user) {
                 window.location.href = 'login.html';
             } else {
-                // Update Profil
+                // Update maklumat profil di header
                 document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
                 document.getElementById('userNameTop').innerText = user.name.split(' ')[0];
                 
-                // Load Dashboard sebagai halaman pertama
-                loadPage('dashboard.html');
+                // Load dashboard secara default
+                const dashBtn = document.querySelector('button[onclick*="dashboard.html"]');
+                loadPage('dashboard.html', dashBtn);
                 
                 setupActivityListeners();
                 resetTimer();
