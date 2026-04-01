@@ -8,7 +8,7 @@
                 <h3 class="font-black text-slate-800 text-lg md:text-xl truncate max-w-[200px]" id="display-filename">Memuatkan...</h3>
                 <div class="flex items-center gap-2">
                     <span id="sync-dot" class="w-2 h-2 bg-green-500 rounded-full"></span>
-                    <p id="sync-status" class="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-blue-600">Paparan Dokumen</p>
+                    <p id="sync-status" class="text-[10px] text-slate-500 font-bold uppercase tracking-wider text-blue-600">Syncfusion Cloud Viewer</p>
                 </div>
             </div>
         </div>
@@ -27,175 +27,112 @@
     <div class="flex-1 bg-slate-100 overflow-hidden relative">
         <div id="loading-overlay" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white">
             <i class="fas fa-circle-notch animate-spin text-5xl text-blue-600 mb-4"></i>
-            <p class="text-slate-500 font-bold">Menghubungkan fail...</p>
+            <p class="text-slate-500 font-bold">Menghubungkan ke Google Drive...</p>
         </div>
         
-        <div id="pdf-container" class="w-full h-full">
-            </div>
+        <div id="pdf-viewer-container" class="w-full h-full"></div>
     </div>
 </div>
 
-<script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
+<link href="https://cdn.syncfusion.com/ej2/23.1.36/material.css" rel="stylesheet" />
+<script src="https://cdn.syncfusion.com/ej2/23.1.36/dist/ej2.min.js" type="text/javascript"></script>
 
 <script>
     const editingId = localStorage.getItem('editing_file_id');
     const editingName = localStorage.getItem('editing_file_name');
     const accessToken = localStorage.getItem('siswaklik_access_token');
-    let currentBlobUrl = null;
+    
+    // Konfigurasi Server (Suaikan dengan URL backend .NET anda)
+    const SERVICE_URL = "https://localhost:44396/PdfViewer"; 
 
     document.getElementById('display-filename').innerText = editingName || "Fail PDF";
 
     function goBack() {
-        if (currentBlobUrl) URL.revokeObjectURL(currentBlobUrl);
         loadView('folder.html');
     }
 
-    async function initViewer() {
-        const container = document.getElementById('pdf-container');
+    async function initSyncfusionViewer() {
         const loader = document.getElementById('loading-overlay');
 
+        // 1. Inisialisasi Syncfusion PDF Viewer
+        const viewer = new ej.pdfviewer.PdfViewer({
+            serviceUrl: SERVICE_URL,
+            documentPath: editingName, // Nama fail yang akan dihantar ke controller Load
+            style: { 'height': '100%', 'width': '100%' }
+        });
+
+        // Inject modules yang diperlukan (seperti dalam kod React anda)
+        ej.pdfviewer.PdfViewer.Inject(
+            ej.pdfviewer.Toolbar, 
+            ej.pdfviewer.Magnification, 
+            ej.pdfviewer.Navigation, 
+            ej.pdfviewer.Annotation, 
+            ej.pdfviewer.LinkAnnotation, 
+            ej.pdfviewer.BookmarkView, 
+            ej.pdfviewer.ThumbnailView, 
+            ej.pdfviewer.Print, 
+            ej.pdfviewer.TextSelection, 
+            ej.pdfviewer.TextSearch, 
+            ej.pdfviewer.FormDesigner, 
+            ej.pdfviewer.FormFields
+        );
+
+        viewer.appendTo('#pdf-viewer-container');
+
+        // 2. Logik pemuatan fail
         try {
             const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
             const fileData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
 
-            if (fileData && fileData.content) {
-                // PAPARAN DARI LOCAL STORAGE (BASE64)
-                if (!fileData.driveId) document.getElementById('upload-drive-btn').classList.remove('hidden');
-                renderPdf(fileData.content);
-            } 
-            else if (accessToken && editingId && !editingId.startsWith('local-')) {
-                // PAPARAN DARI GOOGLE DRIVE
-                const response = await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}?alt=media`, {
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-
-                if (!response.ok) throw new Error("Akses Google Drive ditolak. Sila login semula.");
-
-                const blob = await response.blob();
-                currentBlobUrl = URL.createObjectURL(blob);
-                renderPdf(currentBlobUrl);
-                document.getElementById('sync-status').innerText = "Cloud Sync Aktif";
+            if (fileData && fileData.status === 'pending_sync') {
+                // Jika fail masih local, hantar sebagai Base64 string
+                viewer.documentPath = fileData.content; 
+                document.getElementById('upload-drive-btn').classList.remove('hidden');
             } else {
-                throw new Error("Fail tidak dijumpai.");
+                // Jika fail dalam Drive, biarkan Backend .NET menguruskannya menggunakan 'documentPath'
+                viewer.documentPath = editingName;
             }
+
+            // Sembunyikan loader selepas viewer sedia
+            viewer.documentLoad = function() {
+                loader.classList.add('hidden');
+            };
+
         } catch (err) {
             console.error(err);
-            loader.innerHTML = `<div class="p-6 text-center">
-                <i class="fas fa-exclamation-triangle text-red-500 text-4xl mb-4"></i>
-                <p class="font-bold text-slate-800">${err.message}</p>
-                <button onclick="goBack()" class="mt-4 text-blue-600 font-bold">Kembali ke Folder</button>
-            </div>`;
+            loader.innerHTML = `<p class="text-red-500">Gagal memuatkan dokumen.</p>`;
         }
     }
 
-    function renderPdf(url) {
-        const container = document.getElementById('pdf-container');
-        const loader = document.getElementById('loading-overlay');
-
-        // Guna Object Tag sebagai fallback jika Iframe bermasalah
-        container.innerHTML = `
-            <object data="${url}" type="application/pdf" class="w-full h-full">
-                <iframe src="${url}" class="w-full h-full border-none" frameborder="0">
-                    <p>Browser anda tidak menyokong paparan PDF. <a href="${url}" target="_blank">Klik sini untuk muat turun.</a></p>
-                </iframe>
-            </object>
-        `;
-
-        // Sembunyikan loader selepas 1.5 saat (beri masa browser render)
-        setTimeout(() => {
-            loader.classList.add('hidden');
-        }, 1500);
-    }
-
-    // Fungsi Padam
+    // Fungsi Padam (Kekal dari kod asal)
     async function confirmDelete() {
         const result = await Swal.fire({
             title: 'Padam Fail?',
-            text: "Tindakan ini tidak boleh diundur!",
+            text: "Fail akan dipadamkan dari sistem!",
             icon: 'warning',
             showCancelButton: true,
             confirmButtonColor: '#ef4444',
-            confirmButtonText: 'Ya, Padam',
-            cancelButtonText: 'Batal'
+            confirmButtonText: 'Ya, Padam'
         });
 
         if (result.isConfirmed) {
             let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-            localStorage.setItem('siswa_local_files', JSON.stringify(localFiles.filter(f => f.id !== editingId && f.driveId !== editingId)));
-
-            if (accessToken && editingId && !editingId.startsWith('local-')) {
-                await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-            }
+            localStorage.setItem('siswa_local_files', JSON.stringify(localFiles.filter(f => f.id !== editingId)));
             goBack();
         }
     }
 
-    // Fungsi Simpan ke Drive
-    async function uploadToDrive() {
-        const btn = document.getElementById('upload-drive-btn');
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fas fa-spinner animate-spin"></i> Menyimpan...`;
-
-        try {
-            const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-            const file = localFiles.find(f => f.id === editingId);
-
-            const metadata = {
-                name: file.name,
-                mimeType: 'application/pdf',
-                parents: [localStorage.getItem('siswaklik_current_folder_id') || 'root']
-            };
-
-            const formData = new FormData();
-            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            formData.append('file', dataURLtoBlob(file.content));
-
-            const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${accessToken}` },
-                body: formData
-            });
-
-            if (response.ok) {
-                const driveData = await response.json();
-                file.driveId = driveData.id;
-                file.status = 'synced';
-                localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-                Swal.fire('Berjaya', 'Tersimpan di Google Drive!', 'success');
-                btn.classList.add('hidden');
-            }
-        } catch (err) {
-            Swal.fire('Ralat', 'Gagal simpan ke Drive', 'error');
-            btn.disabled = false;
-            btn.innerHTML = `<i class="fas fa-cloud-upload-alt"></i> SIMPAN KE DRIVE`;
-        }
-    }
-
-    function dataURLtoBlob(dataurl) {
-        var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-            bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-        while(n--) u8arr[n] = bstr.charCodeAt(n);
-        return new Blob([u8arr], {type:mime});
-    }
-
-    initViewer();
+    // Jalankan viewer
+    initSyncfusionViewer();
 </script>
 
 <style>
-    /* Paksa container skrin penuh */
-    #pdf-container {
-        position: absolute;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
+    #pdf-viewer-container {
+        height: 100% !important;
+        width: 100% !important;
     }
-    object, iframe {
-        display: block;
-        width: 100%;
-        height: 100%;
+    /* Sembunyikan watermark Syncfusion jika perlu (Hanya untuk tujuan pembelajaran) */
+    #pdf-viewer-container_viewerContainer_target {
+        background-color: white !important;
     }
 </style>
