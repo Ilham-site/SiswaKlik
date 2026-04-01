@@ -9,64 +9,34 @@
     <div class="bg-gradient-to-br from-blue-700 to-indigo-800 rounded-[2.5rem] p-8 text-white shadow-xl">
         <div class="flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="text-center md:text-left">
-                <h3 class="text-xl font-bold">Simpan KMJP ke Cloud</h3>
-                <p class="text-blue-100 text-sm mt-2">Fail akan disimpan dalam folder SiswaKlik/KMJP di Google Drive anda.</p>
+                <h3 class="text-xl font-bold">Muat Naik KMJP</h3>
+                <p class="text-blue-100 text-sm mt-2">Sistem akan mengekstrak subjek, tarikh, masa dan tempat peperiksaan secara automatik.</p>
             </div>
-            <input type="file" id="pdfInput" class="hidden" accept=".pdf" onchange="handleKMJPUpload(this)">
-            <button onclick="document.getElementById('pdfInput').click()" class="bg-white text-blue-700 px-8 py-4 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg shrink-0">
-                <i class="fas fa-cloud-upload-alt mr-2"></i> Muat Naik KMJP
+            <input type="file" id="pdfInputKMJP" class="hidden" accept=".pdf" onchange="handleKMJPUpload(this)">
+            <button onclick="document.getElementById('pdfInputKMJP').click()" class="bg-white text-blue-700 px-8 py-4 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg shrink-0">
+                <i class="fas fa-file-pdf mr-2"></i> Pilih Fail PDF
             </button>
         </div>
     </div>
 
     <section>
-        <div class="flex justify-between items-center mb-6">
+        <div class="flex justify-between items-center mb-6 px-2">
             <h3 class="font-bold text-slate-800">Senarai Peperiksaan Aktif</h3>
             <span id="exam-count" class="text-xs font-bold bg-blue-100 text-blue-600 px-3 py-1 rounded-full">0 Subjek</span>
         </div>
-        <div id="exam-list" class="space-y-4"></div>
+        <div id="exam-list" class="space-y-4">
+            </div>
     </section>
 </div>
 
 <script>
     (function() {
-        async function getKMJPFolderId() {
-            const user = JSON.parse(localStorage.getItem('siswaklik_user'));
-            const parentId = localStorage.getItem('siswaklik_drive_folder_id');
-            const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='KMJP' and '${parentId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`, {
-                headers: { 'Authorization': `Bearer ${user.access_token}` }
-            });
-            const data = await res.json();
-            if (data.files && data.files.length > 0) return data.files[0].id;
-
-            const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${user.access_token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ name: 'KMJP', mimeType: 'application/vnd.google-apps.folder', parents: [parentId] })
-            });
-            const newFolder = await createRes.json();
-            return newFolder.id;
-        }
-
         window.handleKMJPUpload = async function(input) {
             const file = input.files[0];
             if(!file) return;
-            Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
+            Swal.fire({ title: 'Memproses...', didOpen: () => Swal.showLoading() });
 
             try {
-                const user = JSON.parse(localStorage.getItem('siswaklik_user'));
-                const folderId = await getKMJPFolderId();
-                const metadata = { name: `KMJP_${Date.now()}.pdf`, parents: [folderId] };
-                const formData = new FormData();
-                formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                formData.append('file', file);
-
-                await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                    method: 'POST',
-                    headers: { 'Authorization': `Bearer ${user.access_token}` },
-                    body: formData
-                });
-
                 const reader = new FileReader();
                 reader.onload = async function() {
                     const typedarray = new Uint8Array(this.result);
@@ -80,7 +50,7 @@
                     processKMJPText(text);
                 };
                 reader.readAsArrayBuffer(file);
-            } catch(e) { Swal.fire('Ralat', 'Gagal ke Drive', 'error'); }
+            } catch(e) { Swal.fire('Ralat', 'Gagal memproses fail', 'error'); }
         };
 
         function processKMJPText(text) {
@@ -98,37 +68,38 @@
                 });
             }
             localStorage.setItem('siswa_exams', JSON.stringify(found));
-            renderExams();
+            renderExamsList();
             Swal.fire('Berjaya!', 'Jadual dikemaskini.', 'success');
         }
 
-        window.renderExams = function() {
+        window.renderExamsList = function() {
             const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
             const container = document.getElementById('exam-list');
             document.getElementById('exam-count').innerText = `${exams.length} Subjek`;
+            
             if(exams.length === 0) {
                 container.innerHTML = `<div class="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-slate-200 text-slate-400">Tiada data peperiksaan.</div>`;
                 return;
             }
+
             container.innerHTML = exams.map(ex => `
-                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center justify-between">
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center justify-between shadow-sm">
                     <div class="flex items-center gap-5">
-                        <div class="h-14 w-14 bg-blue-50 text-blue-600 rounded-2xl flex flex-col items-center justify-center border border-blue-100 font-black">
+                        <div class="h-14 w-14 bg-blue-50 text-blue-600 rounded-2xl flex flex-col items-center justify-center border border-blue-100 font-black shrink-0">
                             <span class="text-[9px] uppercase">${new Date(ex.date).toLocaleString('ms-MY', {month: 'short'})}</span>
                             <span class="text-xl">${new Date(ex.date).getDate()}</span>
                         </div>
                         <div>
-                            <h4 class="font-black text-slate-800 uppercase">${ex.code}</h4>
-                            <p class="text-xs text-slate-400 font-bold">${ex.title}</p>
-                            <div class="flex gap-4 text-[10px] font-bold text-slate-500 mt-1 uppercase">
-                                <span><i class="fas fa-clock text-blue-400"></i> ${ex.time}</span>
-                                <span><i class="fas fa-map-marker-alt text-rose-400"></i> ${ex.location}</span>
+                            <h4 class="font-black text-slate-800 uppercase text-sm md:text-base">${ex.code} - ${ex.title}</h4>
+                            <div class="flex flex-wrap gap-x-4 gap-y-1 text-[10px] font-bold text-slate-500 mt-2 uppercase tracking-wide">
+                                <span><i class="fas fa-clock text-blue-400 mr-1"></i> ${ex.time}</span>
+                                <span><i class="fas fa-map-marker-alt text-rose-400 mr-1"></i> ${ex.location}</span>
                             </div>
                         </div>
                     </div>
                 </div>`).join('');
         };
 
-        renderExams();
+        renderExamsList();
     })();
 </script>
