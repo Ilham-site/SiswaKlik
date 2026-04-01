@@ -6,7 +6,6 @@
     <title>SiswaKlik - Kalendar Akademik Pintar</title>
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;700;800&display=swap');
@@ -28,7 +27,7 @@
     <div class="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-black text-slate-900 tracking-tight">Kalendar Akademik UKM</h1>
-            <p class="text-slate-500 font-medium italic">Data Sesi 2025/2026</p>
+            <p class="text-slate-500 font-medium italic" id="sessionInfo">Memuatkan Data Sesi...</p>
         </div>
     </div>
 
@@ -41,13 +40,13 @@
             
             <div class="space-y-6">
                 <div>
-                    <h2 class="text-3xl md:text-5xl font-black mb-2" id="currentActivity">Memproses Data...</h2>
+                    <h2 class="text-3xl md:text-5xl font-black mb-2" id="currentActivity">Memproses Kalendar...</h2>
                     <p class="text-blue-100 text-lg font-medium" id="dateRange">-</p>
                 </div>
                 
                 <div class="pt-4 border-t border-white/10">
                     <div class="flex justify-between items-end mb-3">
-                        <p class="text-[10px] font-bold uppercase tracking-widest text-blue-200" id="weekStatus">Pengiraan Minggu...</p>
+                        <p class="text-[10px] font-bold uppercase tracking-widest text-blue-200" id="weekStatus">Sila Tunggu...</p>
                         <p class="text-2xl font-black" id="progressText">0%</p>
                     </div>
                     <div class="w-full h-3 bg-black/20 rounded-full overflow-hidden">
@@ -62,7 +61,7 @@
     <div class="space-y-4">
         <div class="flex items-center justify-between px-2">
             <h3 class="font-extrabold text-slate-800 flex items-center gap-2 text-xl">
-                <i class="fas fa-stream text-blue-600"></i> Fasa Akademik (11 Perkara Utama)
+                <i class="fas fa-stream text-blue-600"></i> Fasa Akademik Terperinci
             </h3>
         </div>
         
@@ -72,9 +71,7 @@
 </div>
 
 <script>
-    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
-
-    const PDF_URL = 'kalendar_akademik.pdf'; 
+    const JSON_URL = 'kalendar_akademik.json';
 
     function goToHome() {
         if (window.parent && typeof window.parent.loadPage === 'function') {
@@ -84,155 +81,141 @@
         }
     }
 
-    // Fungsi automatik tarik PDF semasa load
-    async function autoFetchPDF() {
+    // Pemetaan ikon berdasarkan kata kunci aktiviti
+    const iconMap = {
+        "Pendaftaran": "fa-user-plus",
+        "Lapor Diri": "fa-id-card",
+        "Pembelajaran": "fa-book-reader",
+        "Cuti Pertengahan": "fa-coffee",
+        "Konvokesyen": "fa-graduation-cap",
+        "Ulangkaji": "fa-pencil-alt",
+        "Peperiksaan": "fa-file-alt",
+        "Cuti Semester": "fa-umbrella-beach",
+        "Cuti Perayaan": "fa-star-and-crescent"
+    };
+
+    function getIcon(title) {
+        for (const [key, icon] of Object.entries(iconMap)) {
+            if (title.includes(key)) return icon;
+        }
+        return "fa-calendar-day";
+    }
+
+    async function fetchAcademicData() {
         try {
-            const response = await fetch(PDF_URL);
-            if (!response.ok) throw new Error("Fail PDF tidak dijumpai.");
+            const response = await fetch(JSON_URL);
+            if (!response.ok) throw new Error("Gagal memuatkan fail JSON.");
+            const data = await response.json();
             
-            const arrayBuffer = await response.arrayBuffer();
-            const pdf = await pdfjsLib.getDocument(arrayBuffer).promise;
-            
-            let fullText = "";
-            for (let i = 1; i <= pdf.numPages; i++) {
-                const page = await pdf.getPage(i);
-                const content = await page.getTextContent();
-                fullText += content.items.map(item => item.str).join(" ") + " ";
-            }
-
-            const events = parseUKMCalendar(fullText);
-            if (events.length > 0) {
-                localStorage.setItem('siswa_academic_calendar', JSON.stringify(events));
-                renderUI(events);
-            }
+            processAndRender(data);
         } catch (e) {
-            console.error("PDF Error:", e);
-            document.getElementById('currentActivity').innerText = "Ralat Memuat Fail";
+            console.error("Error:", e);
+            document.getElementById('currentActivity').innerText = "Ralat Memuat Data";
         }
     }
 
-    function parseUKMCalendar(text) {
-        const cleanText = text.replace(/\s+/g, ' ');
-        const events = [];
+    function parseDate(dateStr) {
+        // Contoh format: "6 Okt - 16 Nov. 2025" atau "26 Jan - 15 Feb. 2026"
+        const parts = dateStr.split(/[-–]/);
+        const startPart = parts[0].trim();
+        const endPart = parts[parts.length - 1].trim();
         
-        // Target 11 fasa utama 
-        const phases = [
-            { name: "Pendaftaran Diri Pelajar Baharu (Pascasiswazah)", icon: "fa-user-plus" },
-            { name: "Lapor Diri Pelajar Baharu dan MAW (Prasiswazah)", icon: "fa-id-card" },
-            { name: "Sesi Pembelajaran", icon: "fa-book-reader" },
-            { name: "Cuti Perayaan", icon: "fa-star-and-crescent" },
-            { name: "Cuti Pertengahan Semester", icon: "fa-coffee" },
-            { name: "Majlis Konvokesyen UKM ke-53", icon: "fa-graduation-cap" },
-            { name: "Minggu Ulangkaji", icon: "fa-pencil-alt" },
-            { name: "Peperiksaan", icon: "fa-file-alt" },
-            { name: "Cuti Semester", icon: "fa-umbrella-beach" },
-            { name: "Hari Raya Aidilfitri", icon: "fa-mosque" },
-            { name: "Semester 3", icon: "fa-calendar-plus" }
-        ];
+        // Ambil tahun dari bahagian akhir string
+        const yearMatch = dateStr.match(/\d{4}/);
+        const year = yearMatch ? yearMatch[0] : new Date().getFullYear();
 
-        // Regex untuk tarikh UKM 
-        const dateRegex = /(\d{1,2}\s+[A-Z][a-z]+\.?\s?[-–]\s?\d{1,2}\s+[A-Z][a-z]+\.?\s\d{4})/g;
+        // Tukar bulan Melayu ringkas ke format English untuk Date object
+        const monthMap = { 
+            'Jan': 'Jan', 'Feb': 'Feb', 'Mac': 'Mar', 'Apr': 'Apr', 'Mei': 'May', 'Jun': 'Jun',
+            'Jul': 'Jul', 'Ogos': 'Aug', 'Sept': 'Sep', 'Okt': 'Oct', 'Nov': 'Nov', 'Dis': 'Dec'
+        };
+
+        let processedStart = startPart;
+        for (const [ms, en] of Object.entries(monthMap)) {
+            if (processedStart.includes(ms)) {
+                processedStart = processedStart.replace(ms, en);
+                break;
+            }
+        }
         
-        let m;
-        const tempResults = [];
-
-        while ((m = dateRegex.exec(cleanText)) !== null) {
-            const rawDate = m[0];
-            const pos = m.index;
-            const context = cleanText.substring(pos - 150, pos).trim();
-            
-            let matchedPhase = phases.find(p => context.toLowerCase().includes(p.name.toLowerCase().substring(0, 15)));
-            let title = matchedPhase ? matchedPhase.name : "Aktiviti Akademik";
-            let icon = matchedPhase ? matchedPhase.icon : "fa-calendar-day";
-
-            let semester = context.includes("Semester 1") ? "Semester 1" : 
-                           (context.includes("Semester 2") ? "Semester 2" : "Semester 3");
-            
-            // Ekstrak Tempoh (e.g. 2 minggu) 
-            let durationMatch = cleanText.substring(pos, pos + 60).match(/(\d+)\s+(minggu|weeks|hari|days)/i);
-            let duration = durationMatch ? durationMatch[0] : "Rujuk PDF";
-
-            const startPart = rawDate.split(/[-–]/)[0].trim();
-            const yearMatch = rawDate.match(/\d{4}/);
-            const year = yearMatch ? yearMatch[0] : "2026";
-            
-            tempResults.push({
-                title,
-                semester,
-                rawDate,
-                duration,
-                icon,
-                startDate: new Date(`${startPart} ${year}`).getTime() || 0
-            });
+        // Jika startPart tidak ada bulan (e.g. "19 Sept - 5 Okt"), ambil bulan dari endPart
+        if (!Object.keys(monthMap).some(m => startPart.includes(m))) {
+            const monthFromEnd = endPart.match(/[A-Za-z]+/)[0];
+            processedStart += ` ${monthMap[monthFromEnd] || monthFromEnd}`;
         }
 
-        const uniqueTitles = new Set();
-        return tempResults
-            .sort((a, b) => a.startDate - b.startDate)
-            .filter(item => {
-                if (!uniqueTitles.has(item.title + item.semester) && uniqueTitles.size < 15) {
-                    uniqueTitles.add(item.title + item.semester);
-                    return true;
-                }
-                return false;
+        return new Date(`${processedStart} ${year}`);
+    }
+
+    function processAndRender(data) {
+        document.getElementById('sessionInfo').innerText = `Data Sesi ${data.sesi} (Kemaskini: ${data.kemaskini})`;
+        
+        const allEvents = [];
+        const semesters = ['semester_1', 'semester_2', 'semester_3'];
+
+        semesters.forEach(semKey => {
+            const semLabel = semKey.replace('_', ' ').toUpperCase();
+            data.aktiviti_akademik[semKey].forEach(item => {
+                allEvents.push({
+                    title: item.perkara,
+                    rawDate: item.tarikh,
+                    duration: item.tempoh,
+                    semester: semLabel,
+                    icon: getIcon(item.perkara),
+                    startDate: parseDate(item.tarikh)
+                });
             });
+        });
+
+        renderUI(allEvents);
     }
 
-    function calculateWeek(startDate) {
-        const now = new Date();
-        const start = new Date(startDate);
-        const diff = now - start;
-        const weeks = Math.floor(diff / (1000 * 60 * 60 * 24 * 7)) + 1;
-        return weeks > 0 ? weeks : 0;
-    }
-
-    function renderUI(data) {
+    function renderUI(events) {
         const container = document.getElementById('calendarList');
-        const now = new Date().getTime();
+        const now = new Date();
         
-        let activeEvent = data[0];
+        // Cari aktiviti yang sedang berlangsung atau yang terdekat
+        let activeEvent = events[0];
         let passedCount = 0;
 
-        data.forEach(ev => {
-            if(now >= ev.startDate) {
+        events.forEach(ev => {
+            if (now >= ev.startDate) {
                 activeEvent = ev;
                 passedCount++;
             }
         });
 
-        // Update Header Status
+        // Update Hero Section
         document.getElementById('currentActivity').innerText = activeEvent.title;
         document.getElementById('dateRange').innerText = `${activeEvent.rawDate} (${activeEvent.semester})`;
         
-        // Pengiraan Minggu Kuliah Dinamik 
-        if (activeEvent.title.includes("Pembelajaran")) {
-            const wk = calculateWeek(activeEvent.startDate);
-            document.getElementById('weekStatus').innerText = `${activeEvent.semester} • MINGGU KE-${wk}`;
-        } else {
-            document.getElementById('weekStatus').innerText = `${activeEvent.semester} • SEDANG BERLANGSUNG`;
-        }
-
-        const progress = Math.round((passedCount / data.length) * 100);
+        // Progress bar logic
+        const progress = Math.round((passedCount / events.length) * 100);
         document.getElementById('progressText').innerText = progress + "%";
         document.getElementById('progressBar').style.width = progress + "%";
+        document.getElementById('weekStatus').innerText = `${activeEvent.semester} • SEDANG BERLANGSUNG`;
 
-        container.innerHTML = data.map((item) => {
+        // Render Cards
+        container.innerHTML = events.map(item => {
             const isActive = (item === activeEvent);
-            const isPast = now > (item.startDate + 604800000); // Seminggu selepas mula
+            const isPast = now > item.startDate && !isActive;
 
             return `
                 <div class="bg-white p-6 rounded-[2.5rem] border-2 ${isActive ? 'border-blue-500 bg-blue-50/20 shadow-lg' : 'border-white'} transition-all">
                     <div class="flex items-center gap-4">
-                        <div class="h-14 w-14 ${isActive ? 'bg-blue-600 text-white' : 'bg-slate-100 text-slate-400'} rounded-2xl flex items-center justify-center text-xl shrink-0">
+                        <div class="h-14 w-14 ${isActive ? 'bg-blue-600 text-white' : (isPast ? 'bg-slate-100 text-slate-300' : 'bg-slate-50 text-slate-400')} rounded-2xl flex items-center justify-center text-xl shrink-0">
                             <i class="fas ${item.icon}"></i>
                         </div>
-                        <div class="flex-1">
-                            <div class="flex justify-between">
-                                <span class="text-[10px] font-bold text-blue-500 uppercase">${item.semester}</span>
-                                ${isActive ? '<span class="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold">AKTIF</span>' : ''}
+                        <div class="flex-1 overflow-hidden">
+                            <div class="flex justify-between items-center">
+                                <span class="text-[10px] font-bold ${isActive ? 'text-blue-500' : 'text-slate-400'} uppercase">${item.semester}</span>
+                                ${isActive ? '<span class="text-[9px] bg-blue-600 text-white px-2 py-0.5 rounded-full font-bold animate-pulse">AKTIF</span>' : ''}
                             </div>
                             <h4 class="font-bold text-slate-800 text-lg leading-tight truncate">${item.title}</h4>
-                            <p class="text-xs text-slate-400 font-medium mt-1">${item.rawDate}</p>
+                            <div class="flex justify-between items-center mt-1">
+                                <p class="text-xs text-slate-400 font-medium">${item.rawDate}</p>
+                                <span class="text-[9px] font-bold text-slate-300">${item.duration}</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -240,9 +223,7 @@
         }).join('');
     }
 
-    window.onload = () => {
-        autoFetchPDF();
-    };
+    window.onload = fetchAcademicData;
 </script>
 </body>
 </html>
