@@ -59,9 +59,6 @@
             <button onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-th-large"></i> Dashboard
             </button>
-            <button onclick="loadPage('semester.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
-                <i class="fas fa-graduation-cap"></i> Status Akademik
-            </button>
             <button onclick="loadPage('kalendar.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-calendar-alt"></i> Kalendar Pintar
             </button>
@@ -78,12 +75,11 @@
     </aside>
 
     <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
-        </main>
+    </main>
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // Timer Auto-Logout
         let logoutTimer;
         const TIMEOUT_DURATION = 30 * 60 * 1000; 
 
@@ -115,18 +111,15 @@
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        // FUNGSI UTAMA LOAD PAGE
         async function loadPage(page, element) {
             try {
                 const appRoot = document.getElementById('app-root');
-                appRoot.style.opacity = '0.5'; // Visual feedback loading
+                appRoot.style.opacity = '0.5'; 
                 
                 const response = await fetch(page);
                 if (!response.ok) throw new Error("Fail tidak dijumpai");
                 
                 const html = await response.text();
-                
-                // Masukkan kandungan (tanpa head/body tags jika ada dalam fail sumber)
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 const content = doc.body ? doc.body.innerHTML : html;
@@ -134,7 +127,10 @@
                 appRoot.innerHTML = content;
                 appRoot.style.opacity = '1';
                 
-                // Update UI Sidebar
+                // Kemaskini URL tanpa menambah path /dashboard
+                // Ini memastikan URL kekal sebagai siswaklik.pages.dev
+                window.history.replaceState({}, '', window.location.pathname);
+                
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) {
                     element.classList.add('nav-active');
@@ -145,7 +141,6 @@
                 
                 toggleSidebar(false);
                 
-                // PENTING: Jalankan semula script dalam page yang di-load
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -158,12 +153,7 @@
                 window.scrollTo(0, 0);
             } catch (err) {
                 console.error("Gagal memuatkan halaman:", err);
-                document.getElementById('app-root').innerHTML = `
-                    <div class="text-center py-20">
-                        <i class="fas fa-exclamation-triangle text-4xl text-amber-500 mb-4"></i>
-                        <p class="text-red-500 font-bold">Ralat: Fail <b>${page}</b> tidak ditemui.</p>
-                        <p class="text-slate-400 text-sm">Sila pastikan fail tersebut wujud dalam direktori yang sama.</p>
-                    </div>`;
+                document.getElementById('app-root').innerHTML = `<div class="text-center py-20">Ralat: Fail tidak ditemui.</div>`;
             }
         }
 
@@ -172,7 +162,6 @@
             window.location.href = 'login.html';
         }
 
-        // Inisialisasi
         window.onload = () => {
             updateDate();
             const user = JSON.parse(localStorage.getItem('siswaklik_user'));
@@ -180,13 +169,11 @@
             if (!user) {
                 window.location.href = 'login.html';
             } else {
-                // Update maklumat profil di header
                 document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
                 document.getElementById('userNameTop').innerText = user.name.split(' ')[0];
                 
-                // Load dashboard secara default
-                const dashBtn = document.querySelector('button[onclick*="dashboard.html"]');
-                loadPage('dashboard.html', dashBtn);
+                // Memuatkan dashboard secara senyap tanpa menukar URL
+                loadPage('dashboard.html', document.querySelector('button[onclick*="dashboard.html"]'));
                 
                 setupActivityListeners();
                 resetTimer();
