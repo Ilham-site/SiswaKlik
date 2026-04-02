@@ -18,7 +18,6 @@
         .animate-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
         
-        /* Gaya tambahan dari kalendar.html */
         .user-profile-glow {
             box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
         }
@@ -162,7 +161,6 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // --- Logik Pemasa Auto Log Keluar ---
         let timeout;
         function resetTimer() {
             clearTimeout(timeout);
@@ -174,7 +172,6 @@
         window.onkeydown = resetTimer;
         window.ontouchstart = resetTimer;
 
-        // --- Logik Sidebar ---
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('drawerOverlay');
         function toggleSidebar(show) {
@@ -185,7 +182,6 @@
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        // --- Logik Navigasi & Load Halaman ---
         const originalDashboardHTML = document.getElementById('app-root').innerHTML;
 
         function loadDashboard() {
@@ -225,11 +221,10 @@
             }
         }
 
-        // --- Logik Dashboard ---
         function initDashboard() {
             const userData = JSON.parse(localStorage.getItem('siswaklik_user'));
             if(userData) {
-                // Update UI Profil berdasarkan kalendar.html
+                // Update UI Profil di Header
                 document.getElementById('welcomeText').innerText = `Hai, ${userData.given_name || userData.name.split(' ')[0]}!`;
                 document.getElementById('userSubtext').innerText = userData.email;
                 if(document.getElementById('userNameDisplay')) {
