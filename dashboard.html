@@ -21,7 +21,7 @@
         
         <header class="flex justify-between items-start">
             <div>
-                <h1 class="text-3xl font-extrabold text-slate-900">Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Pelajar</span>!</h1>
+                <h1 class="text-3xl font-extrabold text-slate-900">Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Nur</span>!</h1>
                 <p class="text-slate-500 font-medium mt-1">Hari ini adalah hari yang hebat untuk belajar sesuatu yang baru.</p>
             </div>
         </header>
@@ -53,21 +53,14 @@
                 
                 <div class="bg-gradient-to-br from-blue-600 to-indigo-700 p-8 rounded-[3rem] text-white shadow-xl relative overflow-hidden">
                     <i class="fas fa-university absolute -right-4 -bottom-4 text-white/10 text-9xl"></i>
-                    <h3 class="text-lg font-bold mb-4 relative z-10">Ringkasan Akademik</h3>
+                    <h3 class="text-lg font-bold mb-4">Ringkasan Akademik</h3>
                     <div class="space-y-4 relative z-10">
                         <div>
-                            <p id="weekStatus" class="text-xs opacity-70 uppercase tracking-widest font-bold mb-1">Status Semasa</p>
-                            <p id="semesterStatus" class="text-xl font-black leading-tight">Memproses...</p>
+                            <p class="text-[10px] opacity-70 uppercase tracking-widest font-bold mb-1">Status Aktiviti Semasa</p>
+                            <p id="semesterStatus" class="text-xl font-black leading-tight">Memproses data...</p>
                         </div>
-                        
                         <div class="pt-2">
-                            <div class="flex justify-between items-end mb-2">
-                                <span id="sessionTag" class="text-[10px] font-bold bg-white/20 px-3 py-1.5 rounded-full border border-white/10 uppercase">Sesi 2025/2026</span>
-                                <p class="text-lg font-black" id="progressText">0%</p>
-                            </div>
-                            <div class="w-full h-2 bg-black/20 rounded-full overflow-hidden">
-                                <div id="progressBar" class="h-full bg-emerald-400 rounded-full transition-all duration-1000" style="width: 0%"></div>
-                            </div>
+                            <span id="sessionTag" class="text-[10px] font-bold bg-white/20 px-3 py-1.5 rounded-full border border-white/10 uppercase">Sesi 2025/2026</span>
                         </div>
                     </div>
                 </div>
@@ -78,8 +71,8 @@
                     </h3>
                     <div id="upcomingEvents" class="space-y-4">
                         <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
-                            <p id="nextActivityTitle" class="font-bold text-slate-700 text-sm">Sila kemaskini kalendar</p>
-                            <p id="nextActivityDate" class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">Tiada Data</p>
+                            <p id="nextActivityTitle" class="font-bold text-slate-700 text-sm">Memuatkan data...</p>
+                            <p id="nextActivityDate" class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">-</p>
                         </div>
                     </div>
                     <button onclick="window.location.href='semester.html'" class="mt-4 w-full text-center py-4 bg-blue-50 text-blue-600 rounded-[1.5rem] text-xs font-black hover:bg-blue-100 transition-all border border-blue-100 uppercase tracking-wide">
@@ -94,21 +87,23 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // Setup paparan nama
-        const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Pelajar' };
+        // 1. Logik Nama Pengguna
+        const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Nur' };
         document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
 
-        // Fungsi parsing tarikh (Sama seperti semester.html)
+        // 2. Logik Kalendar Akademik (Sama seperti semester.html)
         function parseDate(dateStr) {
             const parts = dateStr.split(/[-–]/);
             const startPart = parts[0].trim();
             const endPart = parts[parts.length - 1].trim();
             const yearMatch = dateStr.match(/\d{4}/);
             const year = yearMatch ? yearMatch[0] : new Date().getFullYear();
+
             const monthMap = { 
                 'Jan': 'Jan', 'Feb': 'Feb', 'Mac': 'Mar', 'Apr': 'Apr', 'Mei': 'May', 'Jun': 'Jun',
                 'Jul': 'Jul', 'Ogos': 'Aug', 'Sept': 'Sep', 'Okt': 'Oct', 'Nov': 'Nov', 'Dis': 'Dec'
             };
+
             let processedStart = startPart;
             for (const [ms, en] of Object.entries(monthMap)) {
                 if (processedStart.includes(ms)) {
@@ -116,35 +111,33 @@
                     break;
                 }
             }
+            
             if (!Object.keys(monthMap).some(m => startPart.includes(m))) {
-                const monthFromEndMatch = endPart.match(/[A-Za-z]+/);
-                const monthFromEnd = monthFromEndMatch ? monthFromEndMatch[0] : 'Jan';
+                const monthMatch = endPart.match(/[A-Za-z]+/);
+                const monthFromEnd = monthMatch ? monthMatch[0] : '';
                 processedStart += ` ${monthMap[monthFromEnd] || monthFromEnd}`;
             }
+
             return new Date(`${processedStart} ${year}`);
         }
 
         async function updateAcademicStats() {
             try {
-                // Cuba ambil data dari localStorage atau fetch semula jika tiada
-                let academicData = JSON.parse(localStorage.getItem('siswa_academic_calendar_raw'));
+                const response = await fetch('kalendar_akademik.json');
+                if (!response.ok) throw new Error("Gagal load JSON");
+                const data = await response.json();
                 
-                if (!academicData) {
-                    const response = await fetch('kalendar_akademik.json');
-                    academicData = await response.json();
-                    localStorage.setItem('siswa_academic_calendar_raw', JSON.stringify(academicData));
-                }
+                document.getElementById('sessionTag').innerText = `Sesi ${data.sesi}`;
 
                 const allEvents = [];
                 const semesters = ['semester_1', 'semester_2', 'semester_3'];
-                
+
                 semesters.forEach(semKey => {
-                    const semLabel = semKey.replace('_', ' ').toUpperCase();
-                    academicData.aktiviti_akademik[semKey].forEach(item => {
+                    data.aktiviti_akademik[semKey].forEach(item => {
                         allEvents.push({
                             title: item.perkara,
                             rawDate: item.tarikh,
-                            semester: semLabel,
+                            semester: semKey.replace('_', ' ').toUpperCase(),
                             startDate: parseDate(item.tarikh)
                         });
                     });
@@ -152,34 +145,25 @@
 
                 const now = new Date();
                 let activeEvent = allEvents[0];
-                let passedCount = 0;
 
                 allEvents.forEach(ev => {
-                    if (now >= ev.startDate) {
-                        activeEvent = ev;
-                        passedCount++;
-                    }
+                    if (now >= ev.startDate) activeEvent = ev;
                 });
 
-                // Update UI Ringkasan (Kotak Biru)
+                // Paparkan di Ringkasan Akademik (Kotak Biru)
                 document.getElementById('semesterStatus').innerHTML = `${activeEvent.title}`;
-                document.getElementById('weekStatus').innerText = `${activeEvent.semester} • SEDANG BERLANGSUNG`;
-                document.getElementById('sessionTag').innerText = `Sesi ${academicData.sesi}`;
                 
-                const progress = Math.round((passedCount / allEvents.length) * 100);
-                document.getElementById('progressText').innerText = progress + "%";
-                document.getElementById('progressBar').style.width = progress + "%";
-
-                // Update Aktiviti Terdekat
+                // Paparkan di Aktiviti Terdekat
                 document.getElementById('nextActivityTitle').innerText = activeEvent.title;
-                document.getElementById('nextActivityDate').innerText = activeEvent.rawDate;
+                document.getElementById('nextActivityDate').innerText = `${activeEvent.rawDate} (${activeEvent.semester})`;
 
             } catch (e) {
-                console.error("Gagal memproses data akademik:", e);
-                document.getElementById('semesterStatus').innerText = "Data Tidak Tersedia";
+                console.error("Ralat Kalendar:", e);
+                document.getElementById('semesterStatus').innerText = "Data tidak tersedia";
             }
         }
 
+        // 3. Logik Peperiksaan (KMJP)
         function renderExams() {
             const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
             const container = document.getElementById('examContainer');
