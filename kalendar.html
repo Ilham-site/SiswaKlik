@@ -25,8 +25,8 @@
             box-shadow: 0 10px 30px rgba(0,0,0,0.05);
         }
 
-        .user-profile-glow {
-            box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
+        .section-card {
+            transition: transform 0.2s ease;
         }
     </style>
 </head>
@@ -34,18 +34,9 @@
 
     <div class="max-w-5xl mx-auto space-y-10">
         
-        <header class="flex flex-col md:flex-row justify-between items-center bg-white/80 p-6 rounded-[2.5rem] border border-white backdrop-blur-md shadow-sm">
-            <div class="flex items-center gap-4">
-                <div id="userImageContainer" class="relative">
-                    <div class="bg-blue-600 p-4 rounded-3xl shadow-lg shadow-blue-200" id="defaultIcon">
-                        <i class="fas fa-user text-white text-2xl"></i>
-                    
-                </div>
-                
-                </button>
-            </div>
-        </header>
-
+        <div class="section-card space-y-4">
+            <div class="flex items-center gap-2 px-4">
+                <div class="h-6 w-1 bg-blue-600 rounded-full"></div>
                 <h2 class="font-extrabold text-slate-700 uppercase tracking-tighter">Perancangan Aktiviti & Akademik</h2>
             </div>
             
@@ -73,62 +64,55 @@
     </div>
 
     <script>
-        // 1. Ambil data profil dari LocalStorage (Data dari login.html)
+        // 1. Semakan sesi pengguna (Data dari login.html)
         document.addEventListener('DOMContentLoaded', function() {
             const userData = JSON.parse(localStorage.getItem('siswaklik_user'));
             
-            if (userData) {
-                document.getElementById('welcomeText').innerText = `Hai, ${userData.given_name || userData.name}!`;
-                document.getElementById('userSubtext').innerText = userData.email;
-                
-                if (userData.picture) {
-                    const avatar = document.getElementById('userAvatar');
-                    avatar.src = userData.picture;
-                    avatar.classList.remove('hidden');
-                    document.getElementById('defaultIcon').classList.add('hidden');
-                }
-            } else {
-                // Jika tiada data, redirect balik ke login
+            if (!userData) {
+                // Jika tiada data profil, halakan pengguna ke halaman login
                 window.location.href = 'login.html';
             }
         });
 
+        // 2. Fungsi Penyelarasan Google Calendar
         function syncGoogleCalendar() {
             const token = localStorage.getItem('siswaklik_access_token');
             if (token) {
-                document.getElementById('eventFrame').contentWindow.postMessage({ 
-                    type: 'GOOGLE_AUTH_TOKEN', 
-                    token: token 
-                }, '*');
-                document.getElementById('eventFrame').contentWindow.postMessage({ action: 'SYNC_CALENDAR' }, '*');
+                const eventFrame = document.getElementById('eventFrame');
+                if (eventFrame.contentWindow) {
+                    eventFrame.contentWindow.postMessage({ 
+                        type: 'GOOGLE_AUTH_TOKEN', 
+                        token: token 
+                    }, '*');
+                    eventFrame.contentWindow.postMessage({ action: 'SYNC_CALENDAR' }, '*');
+                }
             } else {
                 alert("Sila log masuk semula untuk penyelarasan Google Calendar.");
                 window.location.href = 'login.html';
             }
         }
 
-        // 2. Pelarasan Ketinggian Iframe (Dipbaiki: Tidak lagi memanjang tanpa henti)
+        // 3. Pelarasan Ketinggian Iframe secara dinamik
         function adjustHeight(iframe) {
             try {
-                if (iframe.contentWindow && iframe.contentWindow.document.body) {
-                    // Gunakan offsetHeight untuk mendapatkan ketinggian tepat tanpa tambahan berulang
+                if (iframe.contentWindow && iframe.contentWindow.document.documentElement) {
                     const newHeight = iframe.contentWindow.document.documentElement.scrollHeight;
                     if (newHeight > 0) {
                         iframe.style.height = newHeight + 'px';
                     }
                 }
             } catch (err) {
-                // Abaikan ralat cross-origin jika dijalankan secara lokal
+                // Cross-origin error handling
             }
         }
 
-        // Jalankan pelarasan apabila saiz window berubah
+        // Jalankan pelarasan apabila saiz tetingkap berubah
         window.addEventListener('resize', () => {
             adjustHeight(document.getElementById('eventFrame'));
             adjustHeight(document.getElementById('solatFrame'));
         });
 
-        // Gunakan pemerhatian yang lebih cekap berbanding setInterval yang agresif
+        // Pemerhatian berkala untuk kandungan dinamik dalam iframe
         setInterval(() => {
             adjustHeight(document.getElementById('eventFrame'));
             adjustHeight(document.getElementById('solatFrame'));
