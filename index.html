@@ -17,10 +17,6 @@
         .nav-item:hover { transform: translateX(5px); }
         .animate-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-        
-        /* Custom Scrollbar for Sidebar */
-        aside::-webkit-scrollbar { width: 4px; }
-        aside::-webkit-scrollbar-thumb { background: #e2e8f0; border-radius: 10px; }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -30,7 +26,7 @@
             <button id="menuBtn" class="p-2 hover:bg-blue-50 rounded-xl text-blue-600 transition-colors">
                 <i class="fas fa-bars text-xl"></i>
             </button>
-            <div class="flex items-center gap-2 cursor-pointer" onclick="loadPage('dashboard.html')">
+            <div class="flex items-center gap-2">
                 <div class="bg-blue-600 p-2 rounded-lg text-white">
                     <i class="fas fa-graduation-cap"></i>
                 </div>
@@ -59,15 +55,15 @@
             <button id="closeBtn" class="hover:rotate-90 transition-transform"><i class="fas fa-times text-xl"></i></button>
         </div>
         
-        <nav class="p-4 space-y-2 flex-1 mt-4 overflow-y-auto">
+        <nav class="p-4 space-y-2 flex-1 mt-4">
             <button onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
-                <i class="fas fa-th-large w-5"></i> Dashboard
+                <i class="fas fa-th-large"></i> Dashboard
             </button>
             <button onclick="loadPage('kalendar.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
-                <i class="fas fa-calendar-alt w-5"></i> Kalendar Pintar
+                <i class="fas fa-calendar-alt"></i> Kalendar Pintar
             </button>
             <button onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
-                <i class="fas fa-file-invoice w-5"></i> Fail Peribadi
+                <i class="fas fa-folder-open"></i> Fail Peribadi
             </button>
         </nav>
 
@@ -79,20 +75,36 @@
     </aside>
 
     <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
-        <div class="flex justify-center items-center h-64">
-            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
+        <div class="flex items-center justify-center min-h-[50vh]">
+            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
         </div>
     </main>
 
     <script>
-        // Configuration
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
-        const sidebar = document.getElementById('sidebar');
-        const overlay = document.getElementById('drawerOverlay');
+
         let logoutTimer;
         const TIMEOUT_DURATION = 30 * 60 * 1000; 
 
-        // 1. Sidebar Logic
+        function resetTimer() {
+            clearTimeout(logoutTimer);
+            logoutTimer = setTimeout(logout, TIMEOUT_DURATION);
+        }
+
+        function setupActivityListeners() {
+            ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
+                document.addEventListener(evt, resetTimer, true);
+            });
+        }
+
+        function updateDate() {
+            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
+            document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
+        }
+
+        const sidebar = document.getElementById('sidebar');
+        const overlay = document.getElementById('drawerOverlay');
+
         function toggleSidebar(show) {
             sidebar.classList.toggle('-translate-x-full', !show);
             overlay.classList.toggle('hidden', !show);
@@ -102,42 +114,39 @@
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        // 2. Dynamic Page Loader (SPA Logic)
         async function loadPage(page, element) {
             try {
                 const appRoot = document.getElementById('app-root');
+                appRoot.style.opacity = '0.5'; 
                 
-                // Fetch content
                 const response = await fetch(page);
-                if (!response.ok) throw new Error("Halaman tidak dijumpai");
+                if (!response.ok) throw new Error("Fail tidak dijumpai");
                 
                 const html = await response.text();
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 
-                // Ambil body content sahaja untuk elakkan duplikasi <html> atau <body>
+                // Mengambil kandungan dalam body fail yang dimuatkan
                 const content = doc.body ? doc.body.innerHTML : html;
                 
-                // Update DOM
                 appRoot.innerHTML = content;
+                appRoot.style.opacity = '1';
                 
-                // Sembunyikan sidebar selepas klik (mobile friendly)
-                toggleSidebar(false);
-
-                // Kemaskini Visual Navigasi
+                // Kekalkan URL utama
+                window.history.replaceState({}, '', window.location.pathname);
+                
+                // Menguruskan status aktif pada menu sidebar
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) {
                     element.classList.add('nav-active');
                 } else {
-                    // Jika load automatik, cari butang yang sepadan
                     const sideBtn = document.querySelector(`button[onclick*="${page}"]`);
                     if(sideBtn) sideBtn.classList.add('nav-active');
                 }
-
-                // SULIT: Kekalkan URL siswaklik.pages.dev tanpa sub-path
-                window.history.replaceState({}, '', window.location.origin + window.location.pathname);
                 
-                // Re-run scripts dalam content yang di-load
+                toggleSidebar(false);
+                
+                // Menjalankan semula script yang ada dalam fail yang dimuatkan
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -146,45 +155,19 @@
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
                 
-                window.scrollTo(0, 0);
                 resetTimer();
-
+                window.scrollTo(0, 0);
             } catch (err) {
                 console.error("Gagal memuatkan halaman:", err);
-                appRoot.innerHTML = `
-                    <div class="text-center py-20 bg-white rounded-3xl border border-slate-100 shadow-sm">
-                        <i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i>
-                        <h3 class="text-xl font-bold text-slate-800">Ralat Memuat Fail</h3>
-                        <p class="text-slate-500 mt-2">Fail <b>${page}</b> tidak dijumpai dalam direktori.</p>
-                        <button onclick="loadPage('dashboard.html')" class="mt-6 px-6 py-2 bg-blue-600 text-white rounded-xl font-bold">Kembali ke Dashboard</button>
-                    </div>`;
+                document.getElementById('app-root').innerHTML = `<div class="text-center py-20 text-slate-400">Ralat: Gagal memuatkan kandungan.</div>`;
             }
         }
 
-        // 3. Session & User Logic
-        function updateDate() {
-            const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
-        }
-
-        function resetTimer() {
-            clearTimeout(logoutTimer);
-            logoutTimer = setTimeout(logout, TIMEOUT_DURATION);
-        }
-
         function logout() {
-            localStorage.removeItem('siswaklik_user');
-            Swal.fire({
-                title: 'Log Keluar',
-                text: 'Sesi anda telah tamat atau anda memilih untuk log keluar.',
-                icon: 'info',
-                confirmButtonText: 'OK'
-            }).then(() => {
-                window.location.href = 'login.html';
-            });
+            localStorage.clear();
+            window.location.href = 'login.html';
         }
 
-        // 4. Initial Load
         window.onload = () => {
             updateDate();
             const user = JSON.parse(localStorage.getItem('siswaklik_user'));
@@ -192,17 +175,15 @@
             if (!user) {
                 window.location.href = 'login.html';
             } else {
-                // Set Profile UI
-                document.getElementById('userAvatar').src = user.picture || 'https://ui-avatars.com/api/?name=' + user.name;
+                document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
                 document.getElementById('userNameTop').innerText = user.name.split(' ')[0];
                 
-                // LOAD DASHBOARD SECARA DEFAULT
-                loadPage('dashboard.html');
+                // Memuatkan dashboard.html secara automatik ke dalam kotak merah
+                const dashboardBtn = document.querySelector('button[onclick*="dashboard.html"]');
+                loadPage('dashboard.html', dashboardBtn);
                 
-                // Activity Listeners
-                ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
-                    document.addEventListener(evt, resetTimer, true);
-                });
+                setupActivityListeners();
+                resetTimer();
             }
         };
     </script>
