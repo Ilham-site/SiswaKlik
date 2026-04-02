@@ -56,13 +56,13 @@
         </div>
         
         <nav class="p-4 space-y-2 flex-1 mt-4">
-            <button onclick="loadPage('dashboard.html', this, 'dashboard')" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button id="nav-dashboard" onclick="loadPage('dashboard.html', this, 'dashboard')" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-th-large"></i> Dashboard
             </button>
-            <button onclick="loadPage('semester.html', this, 'kalendar')" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button id="nav-semester" onclick="loadPage('semester.html', this, 'kalendar')" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-calendar-alt"></i> Kalendar Pintar
             </button>
-            <button onclick="loadPage('kmjp.html', this, 'fail')" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button id="nav-kmjp" onclick="loadPage('kmjp.html', this, 'fail')" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-folder-open"></i> Fail Peribadi
             </button>
         </nav>
@@ -111,12 +111,7 @@
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        /**
-         * Fungsi utama memuatkan halaman
-         * @param {string} page - Nama fail .html (e.g., 'dashboard.html')
-         * @param {HTMLElement} element - Butang yang diklik
-         * @param {string} urlPath - Nama laluan palsu untuk URL (e.g., 'dashboard')
-         */
+        // Fungsi Load Page yang ditambah baik
         async function loadPage(page, element, urlPath = '') {
             try {
                 const appRoot = document.getElementById('app-root');
@@ -133,25 +128,25 @@
                 appRoot.innerHTML = content;
                 appRoot.style.opacity = '1';
                 
-                // KEMASKINI URL: Menggunakan pushState untuk mengubah bar alamat
-                // Contoh: siswaklik.pages.dev -> siswaklik.pages.dev/dashboard
+                // Manipulasi URL
                 if (urlPath) {
                     const newUrl = window.location.origin + '/' + urlPath;
                     window.history.pushState({ page, urlPath }, '', newUrl);
                 }
                 
-                // Menguruskan kelas aktif pada navigasi
+                // Urus kelas aktif pada butang navigasi
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
-                if(element) {
+                if (element) {
                     element.classList.add('nav-active');
                 } else {
-                    const sideBtn = document.querySelector(`button[onclick*="${page}"]`);
-                    if(sideBtn) sideBtn.classList.add('nav-active');
+                    // Jika elemen tidak dihantar (e.g. semasa startup), cari butang ikut nama fail
+                    const targetBtn = document.querySelector(`button[onclick*="${page}"]`);
+                    if (targetBtn) targetBtn.classList.add('nav-active');
                 }
                 
                 toggleSidebar(false);
                 
-                // Menjalankan semula skrip daripada fail yang dimuatkan
+                // Re-run scripts dalam fail yang dimuatkan
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -163,15 +158,15 @@
                 resetTimer();
                 window.scrollTo(0, 0);
             } catch (err) {
-                console.error("Gagal memuatkan halaman:", err);
-                document.getElementById('app-root').innerHTML = `<div class="text-center py-20">Ralat: Fail tidak ditemui.</div>`;
+                console.error("Ralat:", err);
+                document.getElementById('app-root').innerHTML = `<div class="text-center py-20">Ralat memuatkan halaman.</div>`;
             }
         }
 
-        // Mengendalikan butang 'Back' pada pelayar
+        // Untuk butang back pelayar
         window.onpopstate = function(event) {
             if (event.state && event.state.page) {
-                loadPage(event.state.page, null, null); // Muat semula tanpa pushState baru
+                loadPage(event.state.page, null, null);
             }
         };
 
@@ -190,8 +185,9 @@
                 document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
                 document.getElementById('userNameTop').innerText = user.name.split(' ')[0];
                 
-                // Memuatkan dashboard secara automatik pada permulaan
-                loadPage('dashboard.html', document.querySelector('button[onclick*="dashboard.html"]'), 'dashboard');
+                // PERBAIKAN: Panggil loadPage dengan 'dashboard' path supaya URL & UI selari
+                const dashBtn = document.getElementById('nav-dashboard');
+                loadPage('dashboard.html', dashBtn, 'dashboard');
                 
                 setupActivityListeners();
                 resetTimer();
