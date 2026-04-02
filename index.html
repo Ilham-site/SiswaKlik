@@ -17,6 +17,11 @@
         .nav-item:hover { transform: translateX(5px); }
         .animate-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+        
+        /* Gaya tambahan dari kalendar.html */
+        .user-profile-glow {
+            box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -37,9 +42,18 @@
         <div class="flex items-center gap-4">
             <div id="systemDate" class="hidden md:block text-xs font-bold text-gray-400 uppercase tracking-widest"></div>
             <div class="h-8 w-[1px] bg-gray-200 mx-2 hidden md:block"></div>
-            <div class="flex items-center gap-3">
-                <span id="userNameTop" class="text-sm font-bold text-slate-700 hidden sm:block">Pelajar</span>
-                <img id="userAvatar" src="https://via.placeholder.com/40" class="w-10 h-10 rounded-2xl border-2 border-white shadow-md object-cover">
+            
+            <div class="flex items-center gap-4 text-right">
+                <div class="hidden sm:block">
+                    <h1 class="text-sm font-black text-slate-800 tracking-tight" id="welcomeText">Selamat Datang!</h1>
+                    <p class="text-[10px] font-bold text-blue-600 uppercase tracking-widest" id="userSubtext">Memuatkan...</p>
+                </div>
+                <div id="userImageContainer" class="relative">
+                    <div id="defaultIcon" class="bg-blue-600 p-2.5 rounded-2xl shadow-lg shadow-blue-100">
+                        <i class="fas fa-user text-white text-sm"></i>
+                    </div>
+                    <img id="userAvatar" src="" class="hidden w-10 h-10 rounded-xl object-cover border-2 border-blue-500 p-0.5 user-profile-glow" alt="Profile">
+                </div>
             </div>
         </div>
     </nav>
@@ -148,15 +162,12 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
-        // --- Logik Pemasa Auto Log Keluar (5 Minit) ---
+        // --- Logik Pemasa Auto Log Keluar ---
         let timeout;
         function resetTimer() {
             clearTimeout(timeout);
-            // 5 minit = 300,000 milisaat
             timeout = setTimeout(logout, 300000);
         }
-
-        // Kesan sebarang aktiviti pengguna
         window.onmousemove = resetTimer;
         window.onmousedown = resetTimer;
         window.onclick = resetTimer;
@@ -192,19 +203,14 @@
             try {
                 const appRoot = document.getElementById('app-root');
                 appRoot.style.opacity = '0.5'; 
-                
                 const response = await fetch(page);
                 if (!response.ok) throw new Error("Fail tidak dijumpai");
-                
                 const html = await response.text();
                 appRoot.innerHTML = html;
                 appRoot.style.opacity = '1';
-                
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) element.classList.add('nav-active');
-                
                 toggleSidebar(false);
-                
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -212,10 +218,8 @@
                     newScript.appendChild(document.createTextNode(oldScript.innerHTML));
                     oldScript.parentNode.replaceChild(newScript, oldScript);
                 });
-                
                 window.scrollTo(0, 0);
             } catch (err) {
-                console.error("Gagal memuatkan halaman:", err);
                 appRoot.innerHTML = `<div class="text-center py-20">Ralat: Fail tidak ditemui.</div>`;
                 appRoot.style.opacity = '1';
             }
@@ -223,9 +227,21 @@
 
         // --- Logik Dashboard ---
         function initDashboard() {
-            const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Pelajar' };
-            if(document.getElementById('userNameDisplay')) {
-                document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
+            const userData = JSON.parse(localStorage.getItem('siswaklik_user'));
+            if(userData) {
+                // Update UI Profil berdasarkan kalendar.html
+                document.getElementById('welcomeText').innerText = `Hai, ${userData.given_name || userData.name.split(' ')[0]}!`;
+                document.getElementById('userSubtext').innerText = userData.email;
+                if(document.getElementById('userNameDisplay')) {
+                    document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
+                }
+                
+                if (userData.picture) {
+                    const avatar = document.getElementById('userAvatar');
+                    avatar.src = userData.picture;
+                    avatar.classList.remove('hidden');
+                    document.getElementById('defaultIcon').classList.add('hidden');
+                }
             }
             updateAcademicStats();
             renderExams();
@@ -342,7 +358,6 @@
             renderExams();
         }
 
-        // --- Logik Sistem (Auth & Tarikh) ---
         function updateDate() {
             const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
             const el = document.getElementById('systemDate');
@@ -356,13 +371,11 @@
 
         window.onload = () => {
             updateDate();
-            resetTimer(); // Mulakan timer auto log out
+            resetTimer();
             const user = JSON.parse(localStorage.getItem('siswaklik_user'));
             if (!user) {
                 window.location.href = 'login.html';
             } else {
-                document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
-                document.getElementById('userNameTop').innerText = user.name.split(' ')[0];
                 initDashboard();
             }
         };
