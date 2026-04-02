@@ -56,17 +56,17 @@
                     <h3 class="text-lg font-bold mb-4">Ringkasan Akademik</h3>
                     <div class="space-y-4 relative z-10">
                         <div>
-                            <p class="text-[10px] opacity-70 uppercase tracking-widest font-bold mb-1" id="weekStatus">Sila Tunggu...</p>
-                            <p id="semesterStatus" class="text-xl font-black leading-tight mb-1">Memproses Kalendar...</p>
+                            <p class="text-[10px] opacity-70 uppercase tracking-widest font-bold mb-1" id="weekStatus">Memproses...</p>
+                            <h2 id="semesterStatus" class="text-2xl md:text-3xl font-black leading-tight mb-1">Memuatkan Data...</h2>
                             <p id="dateRange" class="text-xs text-blue-100 font-medium">-</p>
                         </div>
                         
-                        <div class="pt-2">
+                        <div class="pt-4 border-t border-white/10">
                             <div class="flex justify-between items-end mb-2">
-                                <span class="text-[10px] font-bold bg-white/20 px-3 py-1.5 rounded-full border border-white/10 uppercase" id="sessionTag">Memuatkan...</span>
+                                <span class="text-[10px] font-bold bg-white/20 px-3 py-1.5 rounded-full border border-white/10 uppercase" id="sessionTag">Sesi 2025/2026</span>
                                 <p class="text-lg font-black" id="progressText">0%</p>
                             </div>
-                            <div class="w-full h-2 bg-black/20 rounded-full overflow-hidden">
+                            <div class="w-full h-2.5 bg-black/20 rounded-full overflow-hidden">
                                 <div id="progressBar" class="h-full bg-emerald-400 rounded-full transition-all duration-1000" style="width: 0%"></div>
                             </div>
                         </div>
@@ -95,16 +95,19 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
+        // Setup paparan nama
         const userData = JSON.parse(localStorage.getItem('siswaklik_user')) || { name: 'Pelajar' };
         document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
 
-        // Logik Parsing Tarikh (Diselaraskan dengan semester.html)
+        // Fungsi parsing tarikh (Diselaraskan dengan semester.html)
         function parseDate(dateStr) {
             const parts = dateStr.split(/[-–]/);
             const startPart = parts[0].trim();
             const endPart = parts[parts.length - 1].trim();
+            
             const yearMatch = dateStr.match(/\d{4}/);
             const year = yearMatch ? yearMatch[0] : new Date().getFullYear();
+
             const monthMap = { 
                 'Jan': 'Jan', 'Feb': 'Feb', 'Mac': 'Mar', 'Apr': 'Apr', 'Mei': 'May', 'Jun': 'Jun',
                 'Jul': 'Jul', 'Ogos': 'Aug', 'Sept': 'Sep', 'Okt': 'Oct', 'Nov': 'Nov', 'Dis': 'Dec'
@@ -117,18 +120,20 @@
                     break;
                 }
             }
+            
             if (!Object.keys(monthMap).some(m => startPart.includes(m))) {
                 const monthMatch = endPart.match(/[A-Za-z]+/);
-                const monthFromEnd = monthMatch ? monthMatch[0] : 'Jan';
+                const monthFromEnd = monthMatch ? monthMatch[0] : "";
                 processedStart += ` ${monthMap[monthFromEnd] || monthFromEnd}`;
             }
+
             return new Date(`${processedStart} ${year}`);
         }
 
         async function updateAcademicStats() {
             try {
                 const response = await fetch('kalendar_akademik.json');
-                if (!response.ok) throw new Error("Gagal fail");
+                if (!response.ok) throw new Error("Gagal memuat fail JSON");
                 const data = await response.json();
                 
                 const allEvents = [];
@@ -150,7 +155,7 @@
                 let activeEvent = allEvents[0];
                 let passedCount = 0;
 
-                // Cari event semasa
+                // Logik pencarian aktiviti semasa berdasarkan tarikh hari ini
                 allEvents.forEach(ev => {
                     if (now >= ev.startDate) {
                         activeEvent = ev;
@@ -158,23 +163,24 @@
                     }
                 });
 
-                // Update UI Ringkasan (Kotak Biru)
+                // Kemaskini paparan UI Kotak Biru (Ringkasan Akademik)
                 document.getElementById('semesterStatus').innerText = activeEvent.title;
                 document.getElementById('dateRange').innerText = `${activeEvent.rawDate} (${activeEvent.semester})`;
                 document.getElementById('weekStatus').innerText = `${activeEvent.semester} • SEDANG BERLANGSUNG`;
                 document.getElementById('sessionTag').innerText = `Sesi ${data.sesi}`;
                 
+                // Kemaskini Progress Bar
                 const progress = Math.round((passedCount / allEvents.length) * 100);
                 document.getElementById('progressText').innerText = progress + "%";
                 document.getElementById('progressBar').style.width = progress + "%";
 
-                // Update UI Aktiviti Terdekat (Kotak Putih)
+                // Kemaskini Kotak Aktiviti Terdekat
                 document.getElementById('nextActivityTitle').innerText = activeEvent.title;
                 document.getElementById('nextActivityDate').innerText = activeEvent.rawDate;
 
             } catch (e) {
-                console.error("Gagal memuatkan statistik akademik:", e);
-                document.getElementById('semesterStatus').innerText = "Ralat Data Kalendar";
+                console.error("Ralat statistik akademik:", e);
+                document.getElementById('semesterStatus').innerText = "Ralat Memuatkan Data";
             }
         }
 
@@ -207,6 +213,7 @@
         async function processKMJP(input) {
             const file = input.files[0];
             if (!file) return;
+
             try {
                 Swal.fire({ title: 'Memproses...', text: 'Mengekstrak jadual peperiksaan', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
                 const reader = new FileReader();
