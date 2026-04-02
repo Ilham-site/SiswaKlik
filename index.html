@@ -148,6 +148,21 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
 
+        // --- Logik Pemasa Auto Log Keluar (5 Minit) ---
+        let timeout;
+        function resetTimer() {
+            clearTimeout(timeout);
+            // 5 minit = 300,000 milisaat
+            timeout = setTimeout(logout, 300000);
+        }
+
+        // Kesan sebarang aktiviti pengguna
+        window.onmousemove = resetTimer;
+        window.onmousedown = resetTimer;
+        window.onclick = resetTimer;
+        window.onkeydown = resetTimer;
+        window.ontouchstart = resetTimer;
+
         // --- Logik Sidebar ---
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('drawerOverlay');
@@ -168,19 +183,12 @@
             document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
             document.getElementById('dashBtn').classList.add('nav-active');
             
-            // Re-initialize Dashboard Functions
             initDashboard();
             toggleSidebar(false);
             window.scrollTo(0, 0);
         }
 
         async function loadPage(page, element) {
-            // Jika halaman yang ingin dibuka ialah semester.html, redirect ke URL luar
-            if (page === 'semester.html' || page === 'kalendar.html') {
-                window.location.href = 'https://siswaklik.pages.dev/semester';
-                return;
-            }
-
             try {
                 const appRoot = document.getElementById('app-root');
                 appRoot.style.opacity = '0.5'; 
@@ -334,9 +342,11 @@
             renderExams();
         }
 
+        // --- Logik Sistem (Auth & Tarikh) ---
         function updateDate() {
             const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
-            document.getElementById('systemDate').innerText = new Date().toLocaleDateString('ms-MY', options);
+            const el = document.getElementById('systemDate');
+            if(el) el.innerText = new Date().toLocaleDateString('ms-MY', options);
         }
 
         function logout() {
@@ -346,6 +356,7 @@
 
         window.onload = () => {
             updateDate();
+            resetTimer(); // Mulakan timer auto log out
             const user = JSON.parse(localStorage.getItem('siswaklik_user'));
             if (!user) {
                 window.location.href = 'login.html';
