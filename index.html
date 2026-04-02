@@ -56,13 +56,13 @@
         </div>
         
         <nav class="p-4 space-y-2 flex-1 mt-4">
-            <button id="nav-dashboard" onclick="loadPage('dashboard.html', this, 'dashboard')" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-th-large"></i> Dashboard
             </button>
-            <button id="nav-semester" onclick="loadPage('semester.html', this, 'kalendar')" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button onclick="loadPage('kalendar.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-calendar-alt"></i> Kalendar Pintar
             </button>
-            <button id="nav-kmjp" onclick="loadPage('kmjp.html', this, 'fail')" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button onclick="loadPage('fail.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-folder-open"></i> Fail Peribadi
             </button>
         </nav>
@@ -111,8 +111,7 @@
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        // Fungsi Load Page yang ditambah baik
-        async function loadPage(page, element, urlPath = '') {
+        async function loadPage(page, element) {
             try {
                 const appRoot = document.getElementById('app-root');
                 appRoot.style.opacity = '0.5'; 
@@ -128,25 +127,20 @@
                 appRoot.innerHTML = content;
                 appRoot.style.opacity = '1';
                 
-                // Manipulasi URL
-                if (urlPath) {
-                    const newUrl = window.location.origin + '/' + urlPath;
-                    window.history.pushState({ page, urlPath }, '', newUrl);
-                }
+                // Kemaskini URL tanpa menambah path /dashboard
+                // Ini memastikan URL kekal sebagai siswaklik.pages.dev
+                window.history.replaceState({}, '', window.location.pathname);
                 
-                // Urus kelas aktif pada butang navigasi
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
-                if (element) {
+                if(element) {
                     element.classList.add('nav-active');
                 } else {
-                    // Jika elemen tidak dihantar (e.g. semasa startup), cari butang ikut nama fail
-                    const targetBtn = document.querySelector(`button[onclick*="${page}"]`);
-                    if (targetBtn) targetBtn.classList.add('nav-active');
+                    const sideBtn = document.querySelector(`button[onclick*="${page}"]`);
+                    if(sideBtn) sideBtn.classList.add('nav-active');
                 }
                 
                 toggleSidebar(false);
                 
-                // Re-run scripts dalam fail yang dimuatkan
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -158,17 +152,10 @@
                 resetTimer();
                 window.scrollTo(0, 0);
             } catch (err) {
-                console.error("Ralat:", err);
-                document.getElementById('app-root').innerHTML = `<div class="text-center py-20">Ralat memuatkan halaman.</div>`;
+                console.error("Gagal memuatkan halaman:", err);
+                document.getElementById('app-root').innerHTML = `<div class="text-center py-20">Ralat: Fail tidak ditemui.</div>`;
             }
         }
-
-        // Untuk butang back pelayar
-        window.onpopstate = function(event) {
-            if (event.state && event.state.page) {
-                loadPage(event.state.page, null, null);
-            }
-        };
 
         function logout() {
             localStorage.clear();
@@ -185,9 +172,8 @@
                 document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
                 document.getElementById('userNameTop').innerText = user.name.split(' ')[0];
                 
-                // PERBAIKAN: Panggil loadPage dengan 'dashboard' path supaya URL & UI selari
-                const dashBtn = document.getElementById('nav-dashboard');
-                loadPage('dashboard.html', dashBtn, 'dashboard');
+                // Memuatkan dashboard secara senyap tanpa menukar URL
+                loadPage('dashboard.html', document.querySelector('button[onclick*="dashboard.html"]'));
                 
                 setupActivityListeners();
                 resetTimer();
