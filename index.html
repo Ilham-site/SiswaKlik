@@ -17,6 +17,9 @@
         .nav-item:hover { transform: translateX(5px); }
         .animate-fade { animation: fadeIn 0.4s ease-out; }
         @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        /* Memastikan kawasan kandungan (kotak merah) sentiasa kemas */
+        #app-root { min-height: calc(100vh - 80px); }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -74,9 +77,9 @@
         </div>
     </aside>
 
-    <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
-        <div class="flex items-center justify-center min-h-[50vh]">
-            <div class="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-600"></div>
+    <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto animate-fade">
+        <div class="flex items-center justify-center py-20">
+            <div class="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600"></div>
         </div>
     </main>
 
@@ -126,7 +129,7 @@
                 const parser = new DOMParser();
                 const doc = parser.parseFromString(html, 'text/html');
                 
-                // Mengambil kandungan dalam body fail yang dimuatkan
+                // Mengambil isi kandungan body sahaja supaya gaya CSS index.html tidak rosak
                 const content = doc.body ? doc.body.innerHTML : html;
                 
                 appRoot.innerHTML = content;
@@ -135,7 +138,7 @@
                 // Kekalkan URL utama
                 window.history.replaceState({}, '', window.location.pathname);
                 
-                // Menguruskan status aktif pada menu sidebar
+                // Menguruskan keadaan butang aktif di sidebar
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) {
                     element.classList.add('nav-active');
@@ -159,7 +162,11 @@
                 window.scrollTo(0, 0);
             } catch (err) {
                 console.error("Gagal memuatkan halaman:", err);
-                document.getElementById('app-root').innerHTML = `<div class="text-center py-20 text-slate-400">Ralat: Gagal memuatkan kandungan.</div>`;
+                document.getElementById('app-root').innerHTML = `
+                    <div class="text-center py-20">
+                        <i class="fas fa-exclamation-circle text-red-500 text-5xl mb-4"></i>
+                        <p class="text-slate-600 font-bold">Ralat: Fail ${page} tidak ditemui.</p>
+                    </div>`;
             }
         }
 
@@ -178,9 +185,8 @@
                 document.getElementById('userAvatar').src = user.picture || 'https://via.placeholder.com/40';
                 document.getElementById('userNameTop').innerText = user.name.split(' ')[0];
                 
-                // Memuatkan dashboard.html secara automatik ke dalam kotak merah
-                const dashboardBtn = document.querySelector('button[onclick*="dashboard.html"]');
-                loadPage('dashboard.html', dashboardBtn);
+                // Secara automatik memuatkan dashboard ke dalam kotak merah
+                loadPage('dashboard.html', document.querySelector('button[onclick*="dashboard.html"]'));
                 
                 setupActivityListeners();
                 resetTimer();
