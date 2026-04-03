@@ -23,8 +23,7 @@
     <span id="current-path"></span>
 </div>
 
-<div id="fileList" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6">
-    </div>
+<div id="fileList" class="grid grid-cols-1 md:grid-cols-3 lg:grid-cols-4 gap-6"></div>
 
 <div id="folderModal" class="hidden fixed inset-0 bg-slate-900/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
     <div class="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl scale-in-center">
@@ -47,12 +46,11 @@
 </style>
 
 <script>
-    // Gunakan IIFE untuk mengelakkan pencemaran skop global dan memastikan pemulaan automatik
     (function() {
         let rootFolderId = localStorage.getItem('siswaklik_drive_folder_id') || 'root';
         let currentFolderId = localStorage.getItem('siswaklik_current_folder_id') || rootFolderId;
 
-        async function renderFiles() {
+        window.renderFiles = async function() {
             const container = document.getElementById('fileList');
             const pathLabel = document.getElementById('current-path');
             const accessToken = localStorage.getItem('siswaklik_access_token');
@@ -63,7 +61,6 @@
             container.innerHTML = `<div class="col-span-full text-center py-10 text-slate-400 animate-pulse"><i class="fas fa-sync fa-spin mr-2"></i>Menyemak kandungan...</div>`;
 
             let driveItems = [];
-            
             if (accessToken) {
                 try {
                     const q = `'${currentFolderId}' in parents and trashed = false`;
@@ -85,7 +82,7 @@
 
             container.innerHTML = '';
 
-            // Render Folder
+            // Folder
             driveItems.filter(i => i.mimeType === 'application/vnd.google-apps.folder').forEach(folder => {
                 container.innerHTML += `
                     <div onclick="enterFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}')" class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group">
@@ -95,7 +92,7 @@
                     </div>`;
             });
 
-            // Render Fail PDF
+            // PDF (Drive & Local)
             const drivePdfs = driveItems.filter(i => i.mimeType === 'application/pdf');
             drivePdfs.forEach(file => {
                 container.innerHTML += renderFileCard(file.id, file.name, true);
@@ -104,7 +101,7 @@
             localFiles.filter(lf => lf.status === 'pending_sync').forEach(file => {
                 container.innerHTML += renderFileCard(file.id, file.name, false);
             });
-        }
+        };
 
         function renderFileCard(id, name, isSynced) {
             return `
@@ -174,7 +171,7 @@
                     name: file.name,
                     content: e.target.result,
                     status: 'pending_sync',
-                    parentId: currentFolderId,
+                    parentId: currentFolderId, // Simpan ID folder semasa
                     date: new Date().toISOString()
                 };
                 localFiles.push(newFile);
@@ -192,7 +189,6 @@
             if (typeof loadView === 'function') loadView('pdf.html');
         };
 
-        // Panggil render secara automatik sebaik sahaja script dimuatkan
         renderFiles();
     })();
 </script>
