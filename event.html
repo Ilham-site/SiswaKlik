@@ -179,22 +179,29 @@
                     const props = info.event.extendedProps;
                     const isHoliday = props.type === 'holiday';
                     
-                    Swal.fire({
+                     Swal.fire({
                         title: info.event.title,
-                        html: `<div class="text-left text-sm space-y-2 border-t pt-4">
-                                <p><strong>Mula:</strong> ${info.event.start.toLocaleString('ms-MY')}</p>
-                                <p><strong>Lokasi:</strong> ${props.location || 'N/A'}</p>
-                                <p><strong>Nota:</strong> ${props.description || '-'}</p>
-                               </div>`,
-                        showCancelButton: !isHoliday,
+                        html: `
+                            <div class="text-left text-sm space-y-2 border-t pt-4">
+                                <p><strong><i class="fas fa-clock mr-2"></i>Mula:</strong> ${info.event.start.toLocaleString('ms-MY')}</p>
+                                <p><strong><i class="fas fa-flag-checkered mr-2"></i>Tamat:</strong> ${info.event.end ? info.event.end.toLocaleString('ms-MY') : 'Satu Hari'}</p>
+                                <p><strong><i class="fas fa-map-marker-alt mr-2"></i>Lokasi:</strong> ${props.location || 'N/A'}</p>
+                                <p><strong><i class="fas fa-info-circle mr-2"></i>Nota:</strong> ${props.description || 'Tiada nota tambahan.'}</p>
+                                ${props.type ? `<p class='mt-2'><span class='px-2 py-1 bg-slate-100 rounded-md text-[10px] uppercase font-bold text-slate-500'>${props.type}</span></p>` : ''}
+                            </div>
+                        `,
+                        showCancelButton: true,
                         confirmButtonText: 'Tutup',
                         cancelButtonText: 'Padam Aktiviti',
-                        confirmButtonColor: '#2563eb',
                         cancelButtonColor: '#ef4444',
-                        reverseButtons: true
+                        confirmButtonColor: '#2563eb'
                     }).then((result) => {
                         if (result.dismiss === Swal.DismissReason.cancel) {
-                            confirmDelete(info.event);
+                            if(props.type === 'holiday' || props.type === 'school') {
+                                Swal.fire('Info', 'Cuti rasmi tidak boleh dipadam.', 'info');
+                            } else {
+                                info.event.remove();
+                                events = events.filter(e => e.id !== info.event.id);
                         }
                     });
                 }
