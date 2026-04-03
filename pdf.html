@@ -28,7 +28,7 @@
         <div id="loading-overlay" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/90 backdrop-blur-sm">
             <div class="relative">
                 <div class="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
-                <i class="fas fa-file-pdf absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-blue-600"></i>
+                <i class="fas fa-file-pdf absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-red-500 text-xl"></i>
             </div>
             <p id="loading-text" class="text-slate-500 font-bold mt-4 tracking-tight">Menyediakan paparan mudah alih...</p>
         </div>
@@ -59,36 +59,58 @@
 
         async function initViewer() {
             const loader = document.getElementById('loading-overlay');
-            const wrapper = document.getElementById('pdf-render-wrapper');
+            const statusLabel = document.getElementById('sync-status');
+            const dot = document.getElementById('sync-dot');
             
             try {
                 let pdfData;
                 const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-                const fileData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
+                // Cari fail dalam storage local dahulu
+                const localData = localFiles.find(f => f.id === editingId || f.driveId === editingId);
 
-                if (fileData && fileData.content) {
-                    if (!fileData.driveId) document.getElementById('upload-drive-btn').classList.remove('hidden');
-                    pdfData = dataURLtoUint8Array(fileData.content);
+                // KES 1: Fail ada dalam Local Storage (Belum Sync atau Cache)
+                if (localData && localData.content) {
+                    if (!localData.driveId) {
+                        document.getElementById('upload-drive-btn').classList.remove('hidden');
+                        statusLabel.innerText = "Mod Luar Talian (Offline)";
+                        dot.classList.replace('bg-green-500', 'bg-amber-500');
+                    }
+                    pdfData = dataURLtoUint8Array(localData.content);
                 } 
+                // KES 2: Fail sedia ada dalam Google Drive (Detect terus dari Drive)
                 else if (accessToken && editingId && !editingId.startsWith('local-')) {
+                    statusLabel.innerText = "Menghubungkan ke Drive...";
+                    
                     const response = await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}?alt=media`, {
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
-                    if (!response.ok) throw new Error("Akses Google Drive ditolak.");
+
+                    if (!response.ok) {
+                        if (response.status === 404) throw new Error("Fail tidak ditemui di Google Drive.");
+                        throw new Error("Akses Google Drive ditolak.");
+                    }
+
                     const arrayBuffer = await response.arrayBuffer();
                     pdfData = new Uint8Array(arrayBuffer);
                     
-                    document.getElementById('sync-status').innerText = "Cloud Sync Aktif";
-                    document.getElementById('sync-dot').classList.replace('bg-green-500', 'bg-blue-500');
+                    statusLabel.innerText = "Paparan Cloud Google Drive";
+                    dot.classList.replace('bg-green-500', 'bg-blue-500');
                 } else {
-                    throw new Error("Fail tidak dijumpai.");
+                    throw new Error("ID Fail tidak sah atau data hilang.");
                 }
 
-                renderPdf(pdfData);
+                if (pdfData) {
+                    renderPdf(pdfData);
+                }
 
             } catch (err) {
-                console.error(err);
-                loader.innerHTML = `<div class="text-center p-6"><i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-2"></i><p>${err.message}</p></div>`;
+                console.error("Viewer Error:", err);
+                loader.innerHTML = `
+                    <div class="text-center p-6">
+                        <i class="fas fa-exclamation-triangle text-red-500 text-3xl mb-2"></i>
+                        <p class="font-bold text-slate-800">${err.message}</p>
+                        <button onclick="goBack()" class="mt-4 text-blue-600 font-bold">Kembali</button>
+                    </div>`;
             }
         }
 
@@ -98,12 +120,11 @@
             
             try {
                 const pdf = await pdfjsLib.getDocument({data: data}).promise;
-                wrapper.innerHTML = ''; // Clear previous pages
+                wrapper.innerHTML = ''; 
 
-                // Render semua muka surat untuk scrolling yang natural pada phone
                 for (let i = 1; i <= pdf.numPages; i++) {
                     const page = await pdf.getPage(i);
-                    const viewport = page.getViewport({ scale: 1.5 }); // Zoom level 1.5 sesuai untuk phone
+                    const viewport = page.getViewport({ scale: 1.5 });
                     
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d');
@@ -121,7 +142,7 @@
                 loader.classList.add('hidden');
             } catch (e) {
                 console.error("Render error:", e);
-                loader.innerHTML = `<p class="text-red-500">Gagal memproses PDF.</p>`;
+                loader.innerHTML = `<p class="text-red-500 font-bold">Gagal memproses struktur PDF.</p>`;
             }
         }
 
@@ -132,10 +153,10 @@
             return u8arr;
         }
 
-        // Fungsi Simpan dan Padam dikekalkan (Logik asal anda)
         window.confirmDelete = async function() {
             const result = await Swal.fire({
                 title: 'Padam Fail?',
+                text: "Tindakan ini tidak boleh diundur!",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
@@ -143,15 +164,18 @@
             });
 
             if (result.isConfirmed) {
+                // Padam dari local storage
                 let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
                 localStorage.setItem('siswa_local_files', JSON.stringify(localFiles.filter(f => f.id !== editingId && f.driveId !== editingId)));
+                
+                // Padam dari Google Drive jika ada ID Drive
                 if (accessToken && editingId && !editingId.startsWith('local-')) {
                     try {
                         await fetch(`https://www.googleapis.com/drive/v3/files/${editingId}`, {
                             method: 'DELETE',
                             headers: { 'Authorization': `Bearer ${accessToken}` }
                         });
-                    } catch(e) {}
+                    } catch(e) { console.error("Drive delete error", e); }
                 }
                 goBack();
             }
@@ -160,13 +184,23 @@
         window.uploadToDrive = async function() {
             const btn = document.getElementById('upload-drive-btn');
             btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i>';
+
             try {
                 const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
                 const file = localFiles.find(f => f.id === editingId);
-                const metadata = { name: file.name, mimeType: 'application/pdf', parents: [currentFolderId] };
+                
+                if (!file) throw new Error("Data fail tidak ditemui.");
+
+                const metadata = { 
+                    name: file.name, 
+                    mimeType: 'application/pdf', 
+                    parents: [currentFolderId] 
+                };
+
                 const formData = new FormData();
                 formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                formData.append('file', dataURLtoUint8ArrayToBlob(file.content));
+                formData.append('file', new Blob([dataURLtoUint8Array(file.content)], { type: 'application/pdf' }));
 
                 const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
                     method: 'POST',
@@ -179,19 +213,20 @@
                     file.driveId = driveData.id;
                     file.status = 'synced';
                     localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-                    Swal.fire('Berjaya', 'Tersimpan di Drive', 'success');
+                    
+                    Swal.fire('Berjaya', 'Fail telah diselaraskan ke Google Drive', 'success');
                     btn.classList.add('hidden');
+                    initViewer(); // Refresh status
+                } else {
+                    throw new Error("Gagal memuat naik.");
                 }
-            } catch (err) { Swal.fire('Ralat', 'Gagal simpan', 'error'); }
-            finally { btn.disabled = false; }
+            } catch (err) { 
+                Swal.fire('Ralat', err.message, 'error'); 
+            } finally { 
+                btn.disabled = false; 
+                btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> <span>SIMPAN</span>';
+            }
         };
-
-        function dataURLtoUint8ArrayToBlob(dataurl) {
-            var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
-                bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
-            while(n--) u8arr[n] = bstr.charCodeAt(n);
-            return new Blob([u8arr], {type:mime});
-        }
 
         initViewer();
     })();
