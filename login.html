@@ -12,7 +12,7 @@
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
         .glass-card { background: rgba(255, 255, 255, 0.95); backdrop-filter: blur(10px); }
         @keyframes float { 0% { transform: translateY(0px); } 50% { transform: translateY(-10px); } 100% { transform: translateY(0px); } }
-        .animate-float { animation: float 3s ease-in-out infinite; }
+        .animate-float { animation: float 3s ease-out infinite; }
         
         .btn-google {
             background: white;
@@ -50,10 +50,17 @@
                     </p>
                 </div>
 
-                <button onclick="handleAuthClick()" class="btn-google w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-bold text-lg shadow-sm">
-                    <img src="https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" class="w-6 h-6" alt="Google">
-                    Teruskan dengan Google
-                </button>
+                <div class="space-y-4">
+                    <button onclick="handleAuthClick()" class="btn-google w-full flex items-center justify-center gap-3 py-4 px-6 rounded-2xl font-bold text-lg shadow-sm">
+                        <img src="https://www.gstatic.com/images/branding/googleg/1x/googleg_standard_color_128dp.png" class="w-6 h-6" alt="Google">
+                        Teruskan dengan Google
+                    </button>
+                    
+                    <div class="flex justify-center items-center gap-2 text-xs font-semibold text-slate-400 hover:text-blue-600 transition-colors duration-200">
+                        <i class="fas fa-shield-alt"></i>
+                        <a href="Privasi Polisi.pdf" target="_blank" class="hover:underline">Polisi Privasi SiswaKlik</a>
+                    </div>
+                </div>
             </div>
 
             <div class="mt-10 pt-8 border-t border-slate-100">
@@ -76,7 +83,6 @@
             localStorage.removeItem('siswaklik_drive_folder_id');
             localStorage.removeItem('last_activity');
             console.log("Sesi tamat. Pengguna telah log keluar.");
-            // Kekal di login.html atau redirect jika perlu
         }
 
         // Fungsi kemaskini masa aktiviti terakhir
@@ -100,15 +106,12 @@
         }
 
         window.onload = function () {
-            // Semak status sesi sedia ada
             checkInactivity();
 
-            // Pasang pendengar acara (event listeners) untuk aktiviti pengguna
             ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'].forEach(evt => {
                 document.addEventListener(evt, updateActivity, true);
             });
 
-            // Semak secara berkala setiap 10 saat jika tab terbuka
             setInterval(checkInactivity, 10000);
 
             tokenClient = google.accounts.oauth2.initTokenClient({
@@ -121,7 +124,7 @@
                     
                     localStorage.setItem('siswaklik_access_token', response.access_token);
                     localStorage.setItem('siswaklik_login_time', Date.now());
-                    updateActivity(); // Set aktiviti pertama kali selepas login
+                    updateActivity();
 
                     await setupSiswaKlikEnvironment(response.access_token);
                 },
