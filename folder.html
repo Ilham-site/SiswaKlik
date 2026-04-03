@@ -43,6 +43,8 @@
 <style>
     .scale-in-center { animation: scale-in-center 0.2s cubic-bezier(0.250, 0.460, 0.450, 0.940) both; }
     @keyframes scale-in-center { 0% { transform: scale(0.9); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    .file-card { transition: all 0.3s ease; }
+    .file-card:hover { transform: translateY(-5px); }
 </style>
 
 <script>
@@ -63,19 +65,24 @@
             let driveItems = [];
             if (accessToken) {
                 try {
-                    // Query dilaraskan untuk mengambil folder dan PDF (termasuk yang diupload secara manual ke Drive)
+                    // Penambahan pageSize 1000 untuk pastikan semua fail keluar
                     const q = `'${currentFolderId}' in parents and trashed = false and (mimeType = 'application/vnd.google-apps.folder' or mimeType = 'application/pdf')`;
-                    const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, mimeType)&orderBy=name`, {
+                    const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, mimeType)&orderBy=folder,name&pageSize=1000`, {
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
+                    
+                    if (!response.ok) throw new Error("Gagal akses Drive API");
+                    
                     const data = await response.json();
                     driveItems = data.files || [];
                 } catch (e) { 
-                    console.error("Drive fetch error", e); 
+                    console.error("Drive fetch error", e);
+                    container.innerHTML = `<div class="col-span-full text-center py-10 text-red-500">Ralat: Gagal memuatkan fail dari Drive. Sila log masuk semula.</div>`;
+                    return;
                 }
             }
 
-            // Ambil fail local yang belum di-sync
+            // Ambil fail local (Pending Sync)
             const allLocal = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
             const localFiles = allLocal.filter(f => f.parentId === currentFolderId && f.status === 'pending_sync');
 
@@ -86,10 +93,10 @@
 
             container.innerHTML = '';
 
-            // 1. Paparkan Folder dari Drive
+            // 1. Paparkan Folder
             driveItems.filter(i => i.mimeType === 'application/vnd.google-apps.folder').forEach(folder => {
                 container.innerHTML += `
-                    <div onclick="enterFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}')" class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative">
+                    <div onclick="enterFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}')" class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative file-card">
                         <div class="flex justify-between items-start">
                             <div class="text-amber-400 text-3xl mb-4 group-hover:scale-110 transition-transform"><i class="fas fa-folder"></i></div>
                             <button onclick="deleteFolder(event, '${folder.id}', '${folder.name.replace(/'/g, "\\'")}')" class="text-slate-300 hover:text-red-500 p-2 transition-colors">
@@ -101,16 +108,16 @@
                     </div>`;
             });
 
-            // 2. Paparkan PDF dari Drive (Directly Uploaded & Synced)
+            // 2. Paparkan PDF (Cloud)
             const drivePdfs = driveItems.filter(i => i.mimeType === 'application/pdf');
             drivePdfs.forEach(file => {
                 container.innerHTML += renderFileCard(file.id, file.name, true);
             });
 
-            // 3. Paparkan PDF Local (Pending Sync)
+            // 3. Paparkan PDF (Local Pending) - Elak duplikasi
             localFiles.forEach(file => {
-                // Elak paparan pendua jika fail sudah ada dalam list Drive
-                if (!drivePdfs.some(df => df.name === file.name)) {
+                const existsInDrive = drivePdfs.some(df => df.name === file.name);
+                if (!existsInDrive) {
                     container.innerHTML += renderFileCard(file.id, file.name, false);
                 }
             });
@@ -118,7 +125,7 @@
 
         function renderFileCard(id, name, isSynced) {
             return `
-                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all">
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all file-card">
                     <div class="text-blue-600 text-3xl mb-4"><i class="fas fa-file-pdf"></i></div>
                     <h4 class="font-bold text-slate-800 truncate" title="${name}">${name}</h4>
                     <div class="flex items-center justify-between mt-4">
@@ -137,22 +144,6 @@
             renderFiles();
         };
 
-        window.deleteFolder = async function(event, folderId, folderName) {
-            event.stopPropagation();
-            if (!confirm(`Adakah anda pasti ingin memadam folder "${folderName}" secara kekal?`)) return;
-
-            const accessToken = localStorage.getItem('siswaklik_access_token');
-            if (!accessToken) return;
-
-            try {
-                const response = await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-                if (response.ok) renderFiles();
-            } catch (err) { alert("Ralat memadam folder."); }
-        };
-
         window.navigateToRoot = function() {
             currentFolderId = rootFolderId;
             localStorage.setItem('siswaklik_current_folder_id', rootFolderId);
@@ -160,11 +151,16 @@
             renderFiles();
         };
 
-        window.openFolderModal = () => document.getElementById('folderModal').classList.remove('hidden');
+        window.openFolderModal = () => {
+            document.getElementById('folderModal').classList.remove('hidden');
+            document.getElementById('folderNameInput').focus();
+        };
+        
         window.closeFolderModal = () => document.getElementById('folderModal').classList.add('hidden');
 
         window.createNewFolder = async function() {
-            const name = document.getElementById('folderNameInput').value;
+            const nameInput = document.getElementById('folderNameInput');
+            const name = nameInput.value;
             const accessToken = localStorage.getItem('siswaklik_access_token');
             const btn = document.getElementById('confirmFolderBtn');
 
@@ -176,10 +172,14 @@
                 const response = await fetch('https://www.googleapis.com/drive/v3/files', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name, mimeType: 'application/vnd.google-apps.folder', parents: [currentFolderId] })
+                    body: JSON.stringify({ 
+                        name: name, 
+                        mimeType: 'application/vnd.google-apps.folder', 
+                        parents: [currentFolderId] 
+                    })
                 });
                 if (response.ok) {
-                    document.getElementById('folderNameInput').value = '';
+                    nameInput.value = '';
                     closeFolderModal();
                     renderFiles();
                 }
@@ -206,7 +206,8 @@
                 localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
                 input.value = "";
                 renderFiles();
-                if(typeof backgroundSync === 'function') backgroundSync();
+                // Panggil sync background jika fungsi wujud
+                if(window.backgroundSync) window.backgroundSync();
             };
             reader.readAsDataURL(file);
         };
@@ -217,6 +218,30 @@
             if (typeof loadView === 'function') loadView('pdf.html');
         };
 
+        window.deleteFolder = async function(event, folderId, folderName) {
+            event.stopPropagation();
+            const result = await Swal.fire({
+                title: 'Padam Folder?',
+                text: `Padam "${folderName}" dan semua kandungannya?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Padam'
+            });
+
+            if (result.isConfirmed) {
+                const accessToken = localStorage.getItem('siswaklik_access_token');
+                try {
+                    await fetch(`https://www.googleapis.com/drive/v3/files/${folderId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    renderFiles();
+                } catch (err) { Swal.fire('Ralat', 'Gagal memadam folder', 'error'); }
+            }
+        };
+
+        // Jalankan render semasa mula
         renderFiles();
     })();
 </script>
