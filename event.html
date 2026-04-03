@@ -174,7 +174,6 @@
                 eventClick: function(info) {
                     const props = info.event.extendedProps;
                     
-                    // Gabungan UI Butiran (Imej Kanan)
                     Swal.fire({
                         title: info.event.title,
                         html: `
@@ -192,14 +191,12 @@
                         cancelButtonColor: '#ef4444',
                         confirmButtonColor: '#2563eb'
                     }).then((result) => {
-                        // Logik Sekatan Pemadaman (Imej Kanan)
                         if (result.dismiss === Swal.DismissReason.cancel) {
                             if(props.type === 'holiday' || props.type === 'school') {
                                 Swal.fire('Info', 'Cuti rasmi tidak boleh dipadam.', 'info');
                             } else {
-                                info.event.remove();
-                                // Di sini anda boleh tambah logik padam dari Google Sheets jika perlu
-                                Swal.fire('Dipadam', 'Aktiviti telah dibuang.', 'success');
+                                // Panggil fungsi padam dari Google Sheets
+                                deleteEventFromCloud(props.rowId, info.event);
                             }
                         }
                     });
@@ -255,23 +252,38 @@
 
         async function syncWithCloud() {
             if (!spreadsheetId) return;
+            document.getElementById('syncStatus').innerText = "Menyegerak...";
             try {
-                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A2:I100`, {
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A2:I500`, {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 }).then(r => r.json());
+                
                 if (response.values) {
+                    // Padam semua event sedia ada kecuali cuti
                     calendar.getEvents().forEach(ev => { if (ev.extendedProps.type !== 'holiday') ev.remove(); });
-                    response.values.forEach(row => {
+                    
+                    response.values.forEach((row, index) => {
+                        // Simpan 'rowId' sebagai index baris (Baris A2 = index 1 di sini kerana kita start baca dari A2)
+                        // Sheets API delete menggunakan 0-based index bagi baris
                         calendar.addEvent({
                             title: row[0],
                             backgroundColor: row[1],
                             start: row[4] ? `${row[2]}T${row[4]}` : row[2],
                             end: row[5] ? `${row[3]}T${row[5]}` : row[3],
-                            extendedProps: { location: row[6], repeat: row[7], description: row[8] }
+                            extendedProps: { 
+                                location: row[6], 
+                                repeat: row[7], 
+                                description: row[8],
+                                rowId: index + 1 // Simpan kedudukan baris (+1 kerana data mula baris 2)
+                            }
                         });
                     });
                 }
-            } catch (e) { console.error(e); }
+                document.getElementById('syncStatus').innerText = "Cloud Terkini";
+            } catch (e) { 
+                console.error(e);
+                document.getElementById('syncStatus').innerText = "Ralat Cloud";
+            }
         }
 
         async function saveEvent() {
@@ -279,6 +291,7 @@
             const start = document.getElementById('startDate').value;
             if (!title || !start) return Swal.fire('Ralat', 'Tajuk & Tarikh wajib diisi', 'error');
             const eventData = [title, selectedColor, start, document.getElementById('endDate').value || start, document.getElementById('startTime').value, document.getElementById('endTime').value, document.getElementById('location').value, document.getElementById('repeatType').value, document.getElementById('description').value];
+            
             Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
             try {
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/A2:append?valueInputOption=USER_ENTERED`, {
@@ -288,8 +301,49 @@
                 });
                 await syncWithCloud();
                 closeModal();
-                Swal.fire('Berjaya', 'Data disimpan ke Google Sheets!', 'success');
+                Swal.fire('Berjaya', 'Aktiviti disimpan!', 'success');
             } catch (err) { Swal.fire('Gagal', 'Sila log masuk semula', 'error'); }
+        }
+
+        // --- FUNGSI BARU: PADAM DARI GOOGLE SHEETS ---
+        async function deleteEventFromCloud(rowIdx, eventInstance) {
+            if (!rowIdx) return Swal.fire('Ralat', 'ID Aktiviti tidak ditemui.', 'error');
+            
+            Swal.fire({ title: 'Memadam...', didOpen: () => Swal.showLoading() });
+
+            const requestBody = {
+                requests: [
+                    {
+                        deleteDimension: {
+                            range: {
+                                sheetId: 0, // Default sheet pertama
+                                dimension: "ROWS",
+                                startIndex: rowIdx, // rowIdx dah mewakili baris yang betul
+                                endIndex: rowIdx + 1
+                            }
+                        }
+                    }
+                ]
+            };
+
+            try {
+                const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify(requestBody)
+                });
+
+                if (response.ok) {
+                    eventInstance.remove(); // Buang dari UI
+                    Swal.fire('Dipadam', 'Aktiviti telah dibuang secara kekal.', 'success');
+                    // Refresh data untuk kemaskini rowId aktiviti lain
+                    setTimeout(syncWithCloud, 1000);
+                } else {
+                    throw new Error("Gagal padam di Cloud");
+                }
+            } catch (err) {
+                Swal.fire('Ralat', 'Gagal memadam data dari Google Sheets.', 'error');
+            }
         }
 
         // --- DATA LUARAN & UI ---
@@ -313,7 +367,12 @@
             } catch (err) { console.warn("Fail 2026.json tidak dijumpai."); }
         }
 
-        function openModal() { document.getElementById('eventModal').classList.remove('hidden'); }
+        function openModal() { 
+            // Reset form
+            document.getElementById('title').value = "";
+            document.getElementById('startDate').value = "";
+            document.getElementById('eventModal').classList.remove('hidden'); 
+        }
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
         function selectColor(color, el) {
             selectedColor = color;
