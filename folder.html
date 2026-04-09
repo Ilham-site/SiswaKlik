@@ -3,7 +3,7 @@
         <h2 class="text-3xl font-bold text-gray-900">Fail Peribadi</h2>
         <div class="flex items-center gap-2 mt-1">
             <span id="sync-indicator" class="flex h-2 w-2 rounded-full bg-green-500"></span>
-            <p class="text-gray-500 font-medium text-sm text-blue-600 font-bold italic">Penyederas Drive Aktif</p>
+            <p class="text-gray-500 font-medium text-sm text-blue-600 font-bold italic">Penyimpanan Cloud Aktif (Drive)</p>
         </div>
     </div>
     <div class="flex gap-3 w-full md:w-auto">
@@ -13,101 +13,130 @@
         
         <label class="flex-1 bg-blue-600 text-white px-6 py-3 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition cursor-pointer text-center md:flex-none">
             <i class="fas fa-file-upload mr-2"></i> Muat Naik Fail
-            <input type="file" id="localUpload" class="hidden" onchange="handleLocalUpload(this)">
+            <input type="file" id="localUpload" class="hidden" onchange="handleFileUpload(this)">
         </label>
     </div>
 </div>
 
-<div id="files-container" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
+<div id="file-grid" class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-6">
     </div>
 
 <script>
     (function() {
-        const filesContainer = document.getElementById('files-container');
-        let currentFolderId = localStorage.getItem('current_folder_id') || localStorage.getItem('siswaklik_drive_folder_id');
+        const fileGrid = document.getElementById('file-grid');
+        const parentFolderId = localStorage.getItem('siswaklik_drive_folder_id');
+        const accessToken = localStorage.getItem('siswaklik_access_token');
 
-        window.renderFiles = async function() {
-            filesContainer.innerHTML = `
-                <div class="col-span-full text-center py-20">
-                    <i class="fas fa-circle-notch animate-spin text-4xl text-blue-600 mb-4"></i>
-                    <p class="text-slate-400">Menyegarkan senarai fail...</p>
+        // Fungsi Utama: Ambil data terus dari Drive
+        async function renderFiles() {
+            if (!accessToken || !parentFolderId) {
+                fileGrid.innerHTML = '<p class="col-span-full text-center py-10 text-gray-500">Sila log masuk semula.</p>';
+                return;
+            }
+
+            fileGrid.innerHTML = `
+                <div class="col-span-full text-center py-10">
+                    <i class="fas fa-circle-notch animate-spin text-3xl text-blue-600"></i>
+                    <p class="mt-2 text-gray-500">Menyemak Drive...</p>
                 </div>
             `;
 
-            const accessToken = localStorage.getItem('siswaklik_access_token');
-            if (!accessToken) return;
-
             try {
-                // PENYELESAIAN: Query dibersihkan daripada sekatan mimeType
-                const q = `'${currentFolderId}' in parents and trashed = false`;
-                const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, mimeType, iconLink, webViewLink)`, {
+                // Query untuk mendapatkan folder dan fail dalam SiswaKlik (tidak termasuk yang dalam sampah)
+                const q = `'${parentFolderId}' in parents and trashed = false`;
+                const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, mimeType, iconLink, webViewLink)&orderBy=folder,name`, {
                     headers: { 'Authorization': `Bearer ${accessToken}` }
                 });
                 const data = await response.json();
 
-                filesContainer.innerHTML = '';
+                if (!data.files || data.files.length === 0) {
+                    fileGrid.innerHTML = '<p class="col-span-full text-center py-10 text-gray-400">Tiada fail atau folder ditemui.</p>';
+                    return;
+                }
 
-                if (data.files && data.files.length > 0) {
-                    data.files.forEach(file => {
-                        const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
-                        const iconClass = isFolder ? 'fa-folder text-amber-400' : 'fa-file-pdf text-red-500';
-                        
-                        // Jika bukan folder, kita anggap ia boleh dibuka (PDF/Imej dsb)
-                        const clickAction = isFolder 
-                            ? `window.enterFolder('${file.id}', '${file.name}')` 
-                            : `window.openEditor('${file.id}', '${file.name}')`;
+                fileGrid.innerHTML = '';
+                data.files.forEach(file => {
+                    const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+                    const icon = getFileIcon(file.mimeType);
+                    
+                    const card = document.createElement('div');
+                    card.className = "group bg-white p-4 rounded-3xl border border-slate-100 hover:border-blue-200 hover:shadow-xl hover:shadow-blue-500/10 transition-all cursor-pointer relative";
+                    card.onclick = () => isFolder ? enterFolder(file.id) : openFile(file);
 
-                        const card = document.createElement('div');
-                        card.className = "group bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all duration-300 cursor-pointer relative";
-                        card.onclick = () => eval(clickAction);
-                        
-                        card.innerHTML = `
-                            <div class="flex flex-col items-center text-center">
-                                <div class="w-16 h-16 bg-slate-50 rounded-2xl flex items-center justify-center mb-4 group-hover:bg-blue-50 transition-colors">
-                                    <i class="fas ${iconClass} text-3xl"></i>
-                                </div>
-                                <h3 class="text-sm font-bold text-slate-700 truncate w-full px-2">${file.name}</h3>
-                                <p class="text-[10px] text-slate-400 mt-1 uppercase tracking-widest font-black">
-                                    ${isFolder ? 'Folder' : 'Dokumen'}
-                                </p>
+                    card.innerHTML = `
+                        <div class="flex flex-col items-center text-center">
+                            <div class="w-16 h-16 mb-4 flex items-center justify-center rounded-2xl ${isFolder ? 'bg-amber-50 text-amber-500' : 'bg-blue-50 text-blue-500'} group-hover:scale-110 transition-transform">
+                                <i class="${icon} text-3xl"></i>
                             </div>
-                            <button onclick="window.deleteFile(event, '${file.id}', '${file.name}')" class="absolute top-4 right-4 opacity-0 group-hover:opacity-100 p-2 text-slate-300 hover:text-red-500 transition-all">
-                                <i class="fas fa-trash-alt text-xs"></i>
-                            </button>
-                        `;
-                        filesContainer.appendChild(card);
-                    });
-                } else {
-                    filesContainer.innerHTML = `
-                        <div class="col-span-full text-center py-20 bg-slate-50 rounded-[3rem] border-2 border-dashed border-slate-200">
-                            <i class="fas fa-folder-open text-slate-300 text-5xl mb-4"></i>
-                            <p class="text-slate-500 font-bold">Folder ini kosong</p>
-                            <p class="text-slate-400 text-sm">Muat naik fail atau buat folder baru</p>
+                            <span class="font-bold text-slate-700 text-sm truncate w-full px-2" title="${file.name}">${file.name}</span>
                         </div>
+                        <button onclick="deleteItem(event, '${file.id}', '${file.name}')" class="absolute top-2 right-2 p-2 text-slate-300 hover:text-red-500 opacity-0 group-hover:opacity-100 transition-opacity">
+                            <i class="fas fa-times-circle"></i>
+                        </button>
                     `;
+                    fileGrid.appendChild(card);
+                });
+
+            } catch (err) {
+                console.error("Gagal memuatkan fail:", err);
+                fileGrid.innerHTML = '<p class="col-span-full text-center text-red-500">Ralat sambungan ke Google Drive.</p>';
+            }
+        }
+
+        function getFileIcon(mimeType) {
+            if (mimeType === 'application/vnd.google-apps.folder') return 'fas fa-folder';
+            if (mimeType === 'application/pdf') return 'fas fa-file-pdf';
+            if (mimeType.includes('image')) return 'fas fa-file-image';
+            if (mimeType.includes('word')) return 'fas fa-file-word';
+            if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'fas fa-file-excel';
+            return 'fas fa-file-alt';
+        }
+
+        // Fungsi Muat Naik Fail ke Drive
+        window.handleFileUpload = async function(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            Swal.fire({ title: 'Memuat naik...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+
+            const metadata = {
+                name: file.name,
+                parents: [parentFolderId]
+            };
+
+            const formData = new FormData();
+            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+            formData.append('file', file);
+
+            try {
+                const response = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: formData
+                });
+
+                if (response.ok) {
+                    Swal.fire('Berjaya', 'Fail telah dimuat naik ke Drive', 'success');
+                    renderFiles();
+                } else {
+                    throw new Error("Gagal muat naik");
                 }
             } catch (err) {
-                console.error("Ralat render:", err);
-                filesContainer.innerHTML = `<p class="text-red-500 col-span-full text-center">Gagal memuatkan fail. Sila log masuk semula.</p>`;
+                Swal.fire('Ralat', 'Gagal memuat naik fail', 'error');
             }
+            input.value = '';
         };
 
-        window.enterFolder = function(id, name) {
-            localStorage.setItem('current_folder_id', id);
-            renderFiles();
-        };
-
+        // Fungsi Buat Folder Baru
         window.openFolderModal = async function() {
             const { value: folderName } = await Swal.fire({
-                title: 'Nama Folder Baru',
+                title: 'Folder Baru',
                 input: 'text',
-                inputPlaceholder: 'Masukkan nama folder...',
-                showCancelButton: true,
-                confirmButtonColor: '#2563eb'
+                inputPlaceholder: 'Nama folder...',
+                showCancelButton: true
             });
 
             if (folderName) {
-                const accessToken = localStorage.getItem('siswaklik_access_token');
                 try {
                     await fetch('https://www.googleapis.com/drive/v3/files', {
                         method: 'POST',
@@ -118,7 +147,7 @@
                         body: JSON.stringify({
                             name: folderName,
                             mimeType: 'application/vnd.google-apps.folder',
-                            parents: [currentFolderId]
+                            parents: [parentFolderId]
                         })
                     });
                     renderFiles();
@@ -128,41 +157,21 @@
             }
         };
 
-        window.handleLocalUpload = async function(input) {
-            const file = input.files[0];
-            if (!file) return;
-
-            const reader = new FileReader();
-            reader.onload = async (e) => {
-                // Simpan ke local sementara untuk kelajuan UI (Hybrid)
-                const localFiles = JSON.parse(localStorage.getItem('siswa_local_files') || '[]');
-                const fileData = {
-                    id: 'temp-' + Date.now(),
-                    name: file.name,
-                    content: e.target.result,
-                    status: 'pending_sync',
-                    parent: currentFolderId
-                };
-                localFiles.push(fileData);
-                localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
-                
-                renderFiles();
-                if(window.backgroundSync) window.backgroundSync();
-            };
-            reader.readAsDataURL(file);
+        window.openFile = function(file) {
+            if (file.mimeType === 'application/pdf') {
+                localStorage.setItem('editing_file_id', file.id);
+                localStorage.setItem('editing_file_name', file.name);
+                if (typeof loadView === 'function') loadView('pdf.html');
+            } else {
+                window.open(file.webViewLink, '_blank');
+            }
         };
 
-        window.openEditor = function(fileId, fileName) {
-            localStorage.setItem('editing_file_id', fileId);
-            localStorage.setItem('editing_file_name', fileName);
-            if (typeof loadView === 'function') loadView('pdf.html');
-        };
-
-        window.deleteFile = async function(event, fileId, fileName) {
+        window.deleteItem = async function(event, id, name) {
             event.stopPropagation();
             const result = await Swal.fire({
-                title: 'Padam Item?',
-                text: `Padam "${fileName}" secara kekal?`,
+                title: 'Padam?',
+                text: `Padam "${name}"?`,
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
@@ -170,15 +179,14 @@
             });
 
             if (result.isConfirmed) {
-                const accessToken = localStorage.getItem('siswaklik_access_token');
                 try {
-                    await fetch(`https://www.googleapis.com/drive/v3/files/${fileId}`, {
+                    await fetch(`https://www.googleapis.com/drive/v3/files/${id}`, {
                         method: 'DELETE',
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     renderFiles();
-                } catch (err) { 
-                    Swal.fire('Ralat', 'Gagal memadam item', 'error'); 
+                } catch (err) {
+                    Swal.fire('Ralat', 'Gagal memadam item', 'error');
                 }
             }
         };
