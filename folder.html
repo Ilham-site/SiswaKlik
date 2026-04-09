@@ -1,0 +1,294 @@
+<div class="flex flex-col md:flex-row justify-between items-start md:items-center gap-6 mb-10">
+    <div>
+        <h2 class="text-4xl font-extrabold text-slate-900 tracking-tight">Fail Peribadi</h2>
+        <div class="flex items-center gap-2 mt-2">
+            <div class="relative flex h-3 w-3">
+                <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span id="sync-indicator" class="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+            </div>
+            <p class="text-slate-500 font-bold text-sm italic">Penyimpanan Hybrid Aktif (Drive Cloud)</p>
+        </div>
+    </div>
+    
+    <div class="flex gap-3 w-full md:w-auto">
+        <button onclick="openFolderModal()" class="group flex-1 md:flex-none bg-white text-blue-600 border-2 border-blue-100 px-6 py-3.5 rounded-2xl font-bold shadow-sm hover:border-blue-600 hover:bg-blue-50 transition-all flex items-center justify-center">
+            <i class="fas fa-folder-plus mr-2 group-hover:scale-110 transition-transform"></i> Folder Baru
+        </button>
+        
+        <label class="flex-1 md:flex-none bg-blue-600 text-white px-8 py-3.5 rounded-2xl font-bold shadow-lg shadow-blue-200 hover:bg-blue-700 hover:shadow-blue-300 transition-all cursor-pointer text-center flex items-center justify-center">
+            <i class="fas fa-cloud-upload-alt mr-2"></i> Muat Naik Fail
+            <input type="file" id="localUpload" class="hidden" onchange="handleLocalUpload(this)">
+        </label>
+    </div>
+</div>
+
+<nav id="breadcrumb" class="mb-8 flex items-center flex-wrap gap-2 text-sm font-bold bg-slate-50 p-4 rounded-2xl border border-slate-100">
+    <div onclick="navigateToRoot()" class="flex items-center gap-2 cursor-pointer text-slate-400 hover:text-blue-600 transition-colors">
+        <i class="fas fa-home"></i>
+        <span>SiswaKlik</span>
+    </div>
+    <div id="current-path" class="flex items-center gap-2"></div>
+</nav>
+
+<div id="fileList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6"></div>
+
+<div id="folderModal" class="hidden fixed inset-0 bg-slate-900/60 backdrop-blur-md z-50 flex items-center justify-center p-4">
+    <div class="bg-white rounded-[2.5rem] p-10 w-full max-w-md shadow-2xl scale-in-center">
+        <div class="w-16 h-16 bg-blue-50 text-blue-600 rounded-2xl flex items-center justify-center text-2xl mb-6">
+            <i class="fas fa-folder-plus"></i>
+        </div>
+        <h3 class="text-2xl font-black text-slate-800 mb-2">Cipta Folder Baru</h3>
+        <p class="text-slate-500 mb-8">Folder ini akan diselaraskan secara automatik ke akaun Google Drive anda.</p>
+        
+        <input type="text" id="folderNameInput" placeholder="Contoh: Nota Kuliah" 
+            class="w-full px-6 py-4 bg-slate-100 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none font-bold mb-8 transition-all">
+        
+        <div class="flex gap-4">
+            <button onclick="closeFolderModal()" class="flex-1 py-4 font-bold text-slate-400 hover:text-slate-600 transition">Batal</button>
+            <button onclick="createNewFolder()" id="confirmFolderBtn" class="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl hover:bg-blue-700 transition-transform active:scale-95">Cipta</button>
+        </div>
+    </div>
+</div>
+
+<style>
+    .scale-in-center { animation: scale-in-center 0.25s cubic-bezier(0.250, 0.460, 0.450, 0.940) both; }
+    @keyframes scale-in-center { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
+    
+    .file-card { 
+        transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        border: 1px solid rgba(241, 245, 249, 1);
+    }
+    .file-card:hover { 
+        transform: translateY(-8px);
+        box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
+        border-color: rgba(37, 99, 235, 0.1);
+    }
+</style>
+
+<script>
+    (function() {
+        let rootFolderId = localStorage.getItem('siswaklik_drive_folder_id') || 'root';
+        let currentFolderId = localStorage.getItem('siswaklik_current_folder_id') || rootFolderId;
+
+        // Fungsi pembantu untuk ikon mengikut jenis fail
+        function getFileIcon(mimeType) {
+            if (mimeType === 'application/vnd.google-apps.folder') return 'fas fa-folder text-amber-400';
+            if (mimeType === 'application/pdf') return 'fas fa-file-pdf text-red-500';
+            if (mimeType.includes('image')) return 'fas fa-file-image text-emerald-500';
+            if (mimeType.includes('word')) return 'fas fa-file-word text-blue-500';
+            if (mimeType.includes('spreadsheet')) return 'fas fa-file-excel text-green-600';
+            return 'fas fa-file-alt text-slate-400';
+        }
+
+        window.renderFiles = async function() {
+            const container = document.getElementById('fileList');
+            const pathLabel = document.getElementById('current-path');
+            const accessToken = localStorage.getItem('siswaklik_access_token');
+            
+            const currentName = localStorage.getItem('siswaklik_current_folder_name') || '';
+            pathLabel.innerHTML = currentName ? `<i class="fas fa-chevron-right text-[10px] text-slate-300"></i> <span class="text-blue-600">${currentName}</span>` : '';
+
+            container.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
+                    <i class="fas fa-circle-notch fa-spin text-3xl mb-4 text-blue-600"></i>
+                    <p class="font-bold animate-pulse">Menghubungi Cloud Storage...</p>
+                </div>`;
+
+            let driveItems = [];
+            if (accessToken) {
+                try {
+                    // Query untuk ambil SEMUA jenis fail dalam folder semasa
+                    const q = `'${currentFolderId}' in parents and trashed = false`;
+                    const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, mimeType, size, webViewLink)&orderBy=folder,name&pageSize=1000`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    
+                    if (!response.ok) throw new Error("Akses Drive Ditolak");
+                    
+                    const data = await response.json();
+                    driveItems = data.files || [];
+                } catch (e) { 
+                    container.innerHTML = `<div class="col-span-full text-center py-10 text-red-500 font-bold bg-red-50 rounded-2xl">Sesi tamat atau ralat sambungan. Sila log masuk semula.</div>`;
+                    return;
+                }
+            }
+
+            const allLocal = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+            const localFiles = allLocal.filter(f => f.parentId === currentFolderId && f.status === 'pending_sync');
+
+            if (driveItems.length === 0 && localFiles.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-300">
+                        <i class="fas fa-folder-open text-6xl mb-4"></i>
+                        <p class="text-lg font-bold">Folder ini masih kosong</p>
+                    </div>`;
+                return;
+            }
+
+            container.innerHTML = '';
+
+            // Paparkan Kandungan
+            driveItems.forEach(item => {
+                const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
+                const iconClass = getFileIcon(item.mimeType);
+
+                if (isFolder) {
+                    container.innerHTML += `
+                        <div onclick="enterFolder('${item.id}', '${item.name.replace(/'/g, "\\'")}')" class="bg-white p-6 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all cursor-pointer group file-card relative">
+                            <div class="flex justify-between items-start mb-4">
+                                <div class="text-4xl group-hover:scale-110 transition-transform"><i class="${iconClass}"></i></div>
+                                <button onclick="deleteItem(event, '${item.id}', '${item.name.replace(/'/g, "\\'")}')" class="text-slate-200 hover:text-red-500 p-2 transition-colors">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
+                            </div>
+                            <h4 class="font-bold text-slate-800 truncate" title="${item.name}">${item.name}</h4>
+                            <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-2">Folder</p>
+                        </div>`;
+                } else {
+                    container.innerHTML += renderFileCard(item, true);
+                }
+            });
+
+            // Paparkan fail lokal yang belum sync (Pending)
+            localFiles.forEach(file => {
+                const existsInDrive = driveItems.some(di => di.name === file.name);
+                if (!existsInDrive) {
+                    container.innerHTML += renderFileCard({ id: file.id, name: file.name, mimeType: 'application/pdf' }, false);
+                }
+            });
+        };
+
+        function renderFileCard(file, isSynced) {
+            const iconClass = getFileIcon(file.mimeType || '');
+            return `
+                <div class="bg-white p-6 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all file-card">
+                    <div class="flex justify-between items-start mb-4">
+                        <div class="text-4xl"><i class="${iconClass}"></i></div>
+                        ${isSynced ? `<button onclick="deleteItem(event, '${file.id}', '${file.name.replace(/'/g, "\\'")}')" class="text-slate-200 hover:text-red-500 p-2 transition-colors"><i class="fas fa-trash-alt"></i></button>` : ''}
+                    </div>
+                    <h4 class="font-bold text-slate-800 truncate" title="${file.name}">${file.name}</h4>
+                    <div class="flex items-center justify-between mt-5">
+                        <span class="text-[9px] px-3 py-1 rounded-full font-black uppercase tracking-tighter ${isSynced ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600 animate-pulse'}">
+                            ${isSynced ? '● Cloud' : '● Memproses'}
+                        </span>
+                        <button onclick="handleFileAction('${file.id}', '${file.name.replace(/'/g, "\\'")}', '${file.mimeType}')" class="text-blue-600 font-black text-sm hover:text-blue-800 transition-colors">Lihat</button>
+                    </div>
+                </div>`;
+        }
+
+        window.handleFileAction = function(id, name, mimeType) {
+            if (mimeType === 'application/pdf') {
+                localStorage.setItem('editing_file_id', id);
+                localStorage.setItem('editing_file_name', name);
+                if (typeof loadView === 'function') loadView('pdf.html');
+            } else {
+                // Untuk fail lain, buka di Google Drive preview
+                const accessToken = localStorage.getItem('siswaklik_access_token');
+                window.open(`https://drive.google.com/file/d/${id}/view`, '_blank');
+            }
+        };
+
+        window.enterFolder = function(id, name) {
+            currentFolderId = id;
+            localStorage.setItem('siswaklik_current_folder_id', id);
+            localStorage.setItem('siswaklik_current_folder_name', name);
+            renderFiles();
+        };
+
+        window.navigateToRoot = function() {
+            currentFolderId = rootFolderId;
+            localStorage.setItem('siswaklik_current_folder_id', rootFolderId);
+            localStorage.removeItem('siswaklik_current_folder_name');
+            renderFiles();
+        };
+
+        window.openFolderModal = () => {
+            document.getElementById('folderModal').classList.remove('hidden');
+            document.getElementById('folderNameInput').focus();
+        };
+        
+        window.closeFolderModal = () => document.getElementById('folderModal').classList.add('hidden');
+
+        window.createNewFolder = async function() {
+            const nameInput = document.getElementById('folderNameInput');
+            const name = nameInput.value;
+            const accessToken = localStorage.getItem('siswaklik_access_token');
+            const btn = document.getElementById('confirmFolderBtn');
+
+            if (!name || !accessToken) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch animate-spin"></i>';
+
+            try {
+                const response = await fetch('https://www.googleapis.com/drive/v3/files', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ 
+                        name: name, 
+                        mimeType: 'application/vnd.google-apps.folder', 
+                        parents: [currentFolderId] 
+                    })
+                });
+                if (response.ok) {
+                    nameInput.value = '';
+                    closeFolderModal();
+                    renderFiles();
+                }
+            } catch (err) { alert("Gagal mencipta folder."); }
+            finally { btn.disabled = false; btn.innerHTML = 'Cipta'; }
+        };
+
+        window.handleLocalUpload = function(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                const newFile = {
+                    id: 'local-' + Date.now(),
+                    name: file.name,
+                    content: e.target.result,
+                    status: 'pending_sync',
+                    parentId: currentFolderId, 
+                    date: new Date().toISOString()
+                };
+                localFiles.push(newFile);
+                localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
+                input.value = "";
+                renderFiles();
+                if(window.backgroundSync) window.backgroundSync();
+            };
+            reader.readAsDataURL(file);
+        };
+
+        window.deleteItem = async function(event, id, name) {
+            event.stopPropagation();
+            const result = await Swal.fire({
+                title: 'Padam Fail/Folder?',
+                text: `Adakah anda pasti untuk memadam "${name}"?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Padam',
+                cancelButtonText: 'Batal',
+                border: 'none',
+                borderRadius: '2rem'
+            });
+
+            if (result.isConfirmed) {
+                const accessToken = localStorage.getItem('siswaklik_access_token');
+                try {
+                    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    if(res.ok) renderFiles();
+                    else throw new Error();
+                } catch (err) { Swal.fire('Ralat', 'Gagal memadam. Pastikan anda mempunyai akses.', 'error'); }
+            }
+        };
+
+        renderFiles();
+    })();
+</script>
