@@ -94,7 +94,6 @@
             container.innerHTML = '';
 
             // 1. Paparkan Folder
-            driveItems.filter(i => i.mimeType === 'application/vnd.google-apps.folder').forEach(folder => {
                 container.innerHTML += `
                     <div onclick="enterFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}')" class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative file-card">
                         <div class="flex justify-between items-start">
@@ -109,7 +108,6 @@
             });
 
             // 2. Paparkan PDF (Cloud)
-            const drivePdfs = driveItems.filter(i => i.mimeType === 'application/pdf');
             drivePdfs.forEach(file => {
                 container.innerHTML += renderFileCard(file.id, file.name, true);
             });
