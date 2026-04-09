@@ -67,16 +67,20 @@
 
 <script>
     (function() {
-        // Ambil ID folder SiswaKlik yang disimpan semasa login, jika tiada baru guna root
         let rootFolderId = localStorage.getItem('siswaklik_drive_folder_id') || 'root';
         let currentFolderId = localStorage.getItem('siswaklik_current_folder_id') || rootFolderId;
 
+        // Fungsi pembantu untuk ikon mengikut jenis fail
         function getFileIcon(mimeType) {
             if (mimeType === 'application/vnd.google-apps.folder') return 'fas fa-folder text-amber-400';
             if (mimeType === 'application/pdf') return 'fas fa-file-pdf text-red-500';
             if (mimeType.includes('image')) return 'fas fa-file-image text-emerald-500';
-            if (mimeType.includes('word') || mimeType.includes('document')) return 'fas fa-file-word text-blue-500';
-            if (mimeType.includes('spreadsheet') || mimeType.includes('excel')) return 'fas fa-file-excel text-green-600';
+            if (mimeType.includes('vnd.openxmlformats-officedocument.wordprocessingml') || mimeType.includes('msword')) return 'fas fa-file-word text-blue-500';
+            if (mimeType.includes('vnd.openxmlformats-officedocument.spreadsheetml') || mimeType.includes('excel')) return 'fas fa-file-excel text-green-600';
+            if (mimeType.includes('vnd.openxmlformats-officedocument.presentationml') || mimeType.includes('powerpoint')) return 'fas fa-file-powerpoint text-orange-500';
+            if (mimeType.includes('video')) return 'fas fa-file-video text-purple-500';
+            if (mimeType.includes('audio')) return 'fas fa-file-audio text-pink-500';
+            if (mimeType.includes('zip') || mimeType.includes('rar')) return 'fas fa-file-archive text-yellow-600';
             return 'fas fa-file-alt text-slate-400';
         }
 
@@ -97,11 +101,9 @@
             let driveItems = [];
             if (accessToken) {
                 try {
-                    // Penambahbaikan Query: Memastikan ia menarik SEMUA fail/folder dalam currentFolderId
+                    // Query untuk ambil SEMUA jenis fail dalam folder semasa
                     const q = `'${currentFolderId}' in parents and trashed = false`;
-                    const url = `https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, mimeType, size, webViewLink)&orderBy=folder,name&pageSize=1000`;
-                    
-                    const response = await fetch(url, {
+                    const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, mimeType, size, webViewLink)&orderBy=folder,name&pageSize=1000`, {
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
                     
@@ -129,7 +131,7 @@
 
             container.innerHTML = '';
 
-            // Render Folder dan Fail dari Drive
+            // Paparkan Kandungan Drive
             driveItems.forEach(item => {
                 const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
                 const iconClass = getFileIcon(item.mimeType);
@@ -151,7 +153,7 @@
                 }
             });
 
-            // Render fail yang belum sync
+            // Paparkan fail lokal yang belum sync
             localFiles.forEach(file => {
                 const existsInDrive = driveItems.some(di => di.name === file.name);
                 if (!existsInDrive) {
@@ -162,30 +164,37 @@
 
         function renderFileCard(file, isSynced) {
             const iconClass = getFileIcon(file.mimeType || '');
-            const safeName = file.name.replace(/'/g, "\\'");
+            const typeLabel = (file.mimeType || '').split('/').pop().toUpperCase().replace('VND.GOOGLE-APPS.', '');
+            
             return `
                 <div class="bg-white p-6 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all file-card">
                     <div class="flex justify-between items-start mb-4">
                         <div class="text-4xl"><i class="${iconClass}"></i></div>
-                        ${isSynced ? `<button onclick="deleteItem(event, '${file.id}', '${safeName}')" class="text-slate-200 hover:text-red-500 p-2 transition-colors"><i class="fas fa-trash-alt"></i></button>` : ''}
+                        ${isSynced ? `<button onclick="deleteItem(event, '${file.id}', '${file.name.replace(/'/g, "\\'")}')" class="text-slate-200 hover:text-red-500 p-2 transition-colors"><i class="fas fa-trash-alt"></i></button>` : ''}
                     </div>
                     <h4 class="font-bold text-slate-800 truncate" title="${file.name}">${file.name}</h4>
+                    <p class="text-[9px] text-slate-400 font-bold truncate mt-1">${typeLabel}</p>
                     <div class="flex items-center justify-between mt-5">
                         <span class="text-[9px] px-3 py-1 rounded-full font-black uppercase tracking-tighter ${isSynced ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600 animate-pulse'}">
                             ${isSynced ? '● Cloud' : '● Memproses'}
                         </span>
-                        <button onclick="handleFileAction('${file.id}', '${safeName}', '${file.mimeType}')" class="text-blue-600 font-black text-sm hover:text-blue-800 transition-colors">Lihat</button>
+                        <button onclick="handleFileAction('${file.id}', '${file.name.replace(/'/g, "\\'")}', '${file.mimeType}', '${file.webViewLink || ''}')" class="text-blue-600 font-black text-sm hover:text-blue-800 transition-colors">Lihat</button>
                     </div>
                 </div>`;
         }
 
-        window.handleFileAction = function(id, name, mimeType) {
+        window.handleFileAction = function(id, name, mimeType, webViewLink) {
             if (mimeType === 'application/pdf') {
                 localStorage.setItem('editing_file_id', id);
                 localStorage.setItem('editing_file_name', name);
                 if (typeof loadView === 'function') loadView('pdf.html');
             } else {
-                window.open(`https://drive.google.com/file/d/${id}/view`, '_blank');
+                // Untuk fail lain (Imej, Word, dsb), buka di tab baru menggunakan Google Drive preview
+                if (webViewLink) {
+                    window.open(webViewLink, '_blank');
+                } else {
+                    window.open(`https://drive.google.com/file/d/${id}/view`, '_blank');
+                }
             }
         };
 
@@ -266,7 +275,7 @@
         window.deleteItem = async function(event, id, name) {
             event.stopPropagation();
             const result = await Swal.fire({
-                title: 'Padam Fail/Folder?',
+                title: 'Padam?',
                 text: `Adakah anda pasti untuk memadam "${name}"?`,
                 icon: 'warning',
                 showCancelButton: true,
@@ -284,7 +293,7 @@
                     });
                     if(res.ok) renderFiles();
                     else throw new Error();
-                } catch (err) { Swal.fire('Ralat', 'Gagal memadam. Pastikan anda mempunyai akses.', 'error'); }
+                } catch (err) { Swal.fire('Ralat', 'Gagal memadam.', 'error'); }
             }
         };
 
