@@ -8,7 +8,7 @@
 </section>
 
 <script>
-    // 1. PENGURUSAN VIEW
+    // 1. PENGURUSAN VIEW (Memuatkan folder.html atau pdf.html ke dalam fail.html)
     async function loadView(fileName, callback) {
         try {
             const response = await fetch(fileName);
@@ -16,6 +16,7 @@
             const container = document.getElementById('file-system-content');
             container.innerHTML = html;
 
+            // Menjalankan semula script yang ada dalam file yang di-fetch
             const scripts = container.querySelectorAll("script");
             scripts.forEach(oldScript => {
                 const newScript = document.createElement("script");
@@ -27,10 +28,16 @@
             if (callback) callback();
         } catch (error) {
             console.error("Ralat memuatkan pandangan:", error);
+            document.getElementById('file-system-content').innerHTML = `
+                <div class="text-center py-20 text-red-500">
+                    <i class="fas fa-exclamation-triangle text-4xl mb-4"></i>
+                    <p class="font-bold">Gagal memuatkan sistem fail. Sila cuba lagi.</p>
+                </div>`;
         }
     }
 
-    // 2. LOGIK AUTO-SYNC BACKGROUND (PEMBETULAN DI SINI)
+    // 2. LOGIK AUTO-SYNC BACKGROUND
+    // Fungsi ini memastikan fail yang dimuat naik secara 'offline' dihantar ke Drive secara automatik
     async function backgroundSync() {
         const accessToken = localStorage.getItem('siswaklik_access_token');
         if (!accessToken) return;
@@ -38,13 +45,16 @@
         let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
         const pendingFiles = localFiles.filter(f => f.status === 'pending_sync');
 
+        if (pendingFiles.length === 0) return;
+
         for (const file of pendingFiles) {
             try {
-                // GUNAKAN file.parentId supaya fail masuk ke folder yang betul
+                // Gunakan parentId fail tersebut, jika tiada hantar ke root Drive SiswaKlik
                 const targetFolderId = file.parentId || localStorage.getItem('siswaklik_drive_folder_id') || 'root';
 
                 const metadata = {
                     name: file.name,
+                    mimeType: 'application/pdf',
                     parents: [targetFolderId]
                 };
 
@@ -60,12 +70,20 @@
 
                 if (response.ok) {
                     const driveFile = await response.json();
-                    file.status = 'synced';
-                    file.driveId = driveFile.id;
-                    localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
                     
-                    // Trigger refresh jika sedang berada dalam folder tersebut
-                    if (typeof renderFiles === 'function') renderFiles();
+                    // Kemaskini status fail dalam local storage
+                    let currentFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                    const fileIndex = currentFiles.findIndex(f => f.id === file.id);
+                    if (fileIndex !== -1) {
+                        currentFiles[fileIndex].status = 'synced';
+                        currentFiles[fileIndex].driveId = driveFile.id;
+                        localStorage.setItem('siswa_local_files', JSON.stringify(currentFiles));
+                    }
+                    
+                    // Jika pengguna sedang melihat folder yang sama, refresh senarai fail
+                    if (typeof renderFiles === 'function') {
+                        renderFiles();
+                    }
                 }
             } catch (err) {
                 console.error("Sync gagal untuk:", file.name, err);
@@ -73,6 +91,7 @@
         }
     }
 
+    // Penukaran data URL ke Blob untuk penghantaran API
     function dataURLtoBlob(dataurl) {
         var arr = dataurl.split(','), mime = arr[0].match(/:(.*?);/)[1],
             bstr = atob(arr[1]), n = bstr.length, u8arr = new Uint8Array(n);
@@ -80,6 +99,11 @@
         return new Blob([u8arr], {type:mime});
     }
 
-    setInterval(backgroundSync, 15000); // Sync lebih kerap (15 saat)
+    // Jalankan sync setiap 15 saat
+    if (!window.syncInterval) {
+        window.syncInterval = setInterval(backgroundSync, 15000);
+    }
+
+    // Mula-mula, muat naik folder.html (UI senarai fail)
     loadView('folder.html');
 </script>
