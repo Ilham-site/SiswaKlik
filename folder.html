@@ -93,24 +93,14 @@
 
             container.innerHTML = '';
 
-            // 1. Paparkan Folder
-                container.innerHTML += `
-                    <div onclick="enterFolder('${folder.id}', '${folder.name.replace(/'/g, "\\'")}')" class="bg-white p-6 rounded-[2rem] border border-slate-100 shadow-sm hover:shadow-md transition-all cursor-pointer group relative file-card">
-                        <div class="flex justify-between items-start">
-                            <div class="text-amber-400 text-3xl mb-4 group-hover:scale-110 transition-transform"><i class="fas fa-folder"></i></div>
-                            <button onclick="deleteFolder(event, '${folder.id}', '${folder.name.replace(/'/g, "\\'")}')" class="text-slate-300 hover:text-red-500 p-2 transition-colors">
-                                <i class="fas fa-trash-alt"></i>
-                            </button>
-                        </div>
-                        <h4 class="font-bold text-slate-800 truncate">${folder.name}</h4>
-                        <p class="text-[10px] text-slate-400 font-bold uppercase mt-2">Folder</p>
-                    </div>`;
-            });
+// Contoh logik paparan yang selamat
+const isFolder = file.mimeType === 'application/vnd.google-apps.folder';
+const icon = isFolder ? 'fa-folder text-yellow-500' : 'fa-file-pdf text-red-500';
+const onClick = isFolder 
+    ? `window.enterFolder('${file.id}', '${file.name}')` 
+    : `window.openEditor('${file.id}', '${file.name}')`;
 
-            // 2. Paparkan PDF (Cloud)
-            drivePdfs.forEach(file => {
-                container.innerHTML += renderFileCard(file.id, file.name, true);
-            });
+// Guna data dari 'file' (Google Drive) terus, bukan cuma dari localFiles
 
             // 3. Paparkan PDF (Local Pending) - Elak duplikasi
             localFiles.forEach(file => {
