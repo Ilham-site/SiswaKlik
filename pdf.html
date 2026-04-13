@@ -34,7 +34,7 @@
             <p id="page-progress" class="text-blue-600 text-xs font-bold mt-2"></p>
         </div>
         
-        <div id="pdf-render-wrapper" class="flex flex-col items-center gap-6 w-full"></div>
+        <div id="pdf-render-wrapper" class="w-full flex flex-col items-center gap-6"></div>
     </div>
 </div>
 
@@ -104,7 +104,7 @@
                     <div class="text-center p-6">
                         <i class="fas fa-exclamation-circle text-red-500 text-4xl mb-4"></i>
                         <p class="font-bold text-slate-800">${err.message}</p>
-                        <p class="text-sm text-slate-500 mt-2">Mungkin fail terlalu besar atau masalah sesi log masuk.</p>
+                        <p class="text-sm text-slate-500 mt-2">Masalah memuatkan fail.</p>
                         <button onclick="goBack()" class="mt-6 bg-slate-100 px-6 py-2 rounded-xl font-bold">Kembali</button>
                     </div>`;
             }
@@ -114,7 +114,6 @@
             const wrapper = document.getElementById('pdf-render-wrapper');
             const loader = document.getElementById('loading-overlay');
             const progText = document.getElementById('page-progress');
-            const container = document.getElementById('pdf-scroll-container');
             
             try {
                 const loadingTask = pdfjsLib.getDocument({
@@ -131,36 +130,41 @@
                     
                     const page = await pdf.getPage(i);
                     
-                    // AUTO SCALE LOGIC:
-                    // Ambil lebar container (pancingan margin/padding)
-                    const containerWidth = container.clientWidth - (window.innerWidth < 768 ? 20 : 60);
+                    // AUTO RESIZE LOGIC:
+                    // Kita ambil lebar container (pdf-scroll-container) untuk tentukan scale
+                    const containerWidth = document.getElementById('pdf-scroll-container').clientWidth - 48; // tolak padding
                     const unscaledViewport = page.getViewport({ scale: 1 });
                     
-                    // Kira scale supaya muat mengikut lebar skrin secara dinamik
+                    // Kira scale supaya lebar page muat dengan lebar skrin secara auto
                     const dynamicScale = containerWidth / unscaledViewport.width;
                     
-                    // Limit scale supaya tidak terlalu pecah (min 1.0, max 2.0 untuk kualiti)
-                    const finalScale = Math.min(Math.max(dynamicScale, 1.0), 2.0);
-                    
-                    const viewport = page.getViewport({ scale: finalScale });
-                    
+                    // Guna pixel ratio untuk kualiti lebih tajam pada skrin Retina/HD
+                    const outputScale = window.devicePixelRatio || 1;
+                    const viewport = page.getViewport({ scale: dynamicScale });
+
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d', { alpha: false });
                     
-                    canvas.className = "shadow-2xl mb-4 max-w-full h-auto rounded-lg border border-slate-300 block";
+                    // Style CSS memastikan canvas sentiasa responsive mengikut lebar wrapper
+                    canvas.style.display = "block";
+                    canvas.style.width = "100%";
+                    canvas.style.height = "auto";
+                    canvas.className = "shadow-2xl mb-4 rounded-lg border border-slate-300 transition-all";
                     
-                    // Set canvas resolution ikut scale yang dikira
-                    canvas.height = viewport.height;
-                    canvas.width = viewport.width;
+                    // Set resolusi dalaman canvas
+                    canvas.width = Math.floor(viewport.width * outputScale);
+                    canvas.height = Math.floor(viewport.height * outputScale);
 
                     wrapper.appendChild(canvas);
 
-                    await page.render({
+                    const renderContext = {
                         canvasContext: context,
                         viewport: viewport,
+                        transform: [outputScale, 0, 0, outputScale, 0, 0], // Scale kualiti
                         intent: 'display'
-                    }).promise;
+                    };
 
+                    await page.render(renderContext).promise;
                     page.cleanup();
                 }
                 
@@ -188,7 +192,7 @@
         window.confirmDelete = async function() {
             const result = await Swal.fire({
                 title: 'Padam Fail?',
-                text: "Tindakan ini akan membuang fail dari simpanan peranti dan Drive.",
+                text: "Fail akan dibuang dari peranti dan Drive.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
@@ -230,7 +234,6 @@
 
                 const formData = new FormData();
                 formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-                
                 const pdfBlob = new Blob([dataURLtoUint8Array(file.content)], { type: 'application/pdf' });
                 formData.append('file', pdfBlob);
 
@@ -246,11 +249,11 @@
                     file.status = 'synced';
                     localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
                     
-                    Swal.fire('Berjaya', 'Fail telah disimpan ke Google Drive', 'success');
+                    Swal.fire('Berjaya', 'Telah disimpan ke Drive', 'success');
                     btn.classList.add('hidden');
                     initViewer();
                 } else {
-                    throw new Error("Gagal memuat naik ke Google Drive.");
+                    throw new Error("Gagal memuat naik.");
                 }
             } catch (err) { 
                 Swal.fire('Ralat', err.message, 'error'); 
@@ -267,16 +270,16 @@
 <style>
     canvas {
         max-width: 100% !important;
-        height: auto !important;
+        /* Tinggi auto mengikut nisbah PDF */
+        height: auto !important; 
         background: white;
         display: block;
     }
     #pdf-scroll-container {
         scroll-behavior: smooth;
-        -webkit-overflow-scrolling: touch;
     }
     #pdf-scroll-container::-webkit-scrollbar {
-        width: 6px;
+        width: 8px;
     }
     #pdf-scroll-container::-webkit-scrollbar-thumb {
         background: #cbd5e1;
