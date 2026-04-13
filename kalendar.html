@@ -51,7 +51,7 @@
         <h2 class="font-extrabold text-slate-700 uppercase tracking-tighter">Jadual Waktu Kelas</h2>
     </div>
     <div class="content-embed overflow-hidden">
-        <iframe src="kelas.html" id="kelasFrame" scrolling="no" onload="adjustHeight(this)" class="w-full border-0 min-h-[500px]"></iframe>
+        <iframe src="kelas.html" id="kelasFrame" scrolling="yes" onload="adjustHeight(this)" class="w-full border-0 min-h-[500px]"></iframe>
     </div>
 
         <div class="section-card space-y-4">
@@ -113,6 +113,8 @@
                     token: token,
                     spreadsheetId: sheetId
                 }, '*');
+           
+            
             }
         }
 
