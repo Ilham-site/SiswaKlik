@@ -10,40 +10,68 @@
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: transparent; }
+        
         /* Grid 5 kolum untuk Isnin - Jumaat */
-        .timetable-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
-        .class-card { cursor: pointer; transition: all 0.2s; position: relative; overflow: hidden; }
-        .class-card:hover { transform: translateY(-2px); filter: brightness(1.05); shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1); }
-        .color-dot { width: 24px; height: 24px; border-radius: 50%; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; }
-        .color-dot.active { border-color: #1e293b; transform: scale(1.2); }
+        .timetable-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 16px; }
+        
+        .class-card { 
+            cursor: pointer; 
+            transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1); 
+            position: relative; 
+            overflow: hidden;
+            border: 1px solid rgba(255,255,255,0.1);
+        }
+        
+        .class-card:hover { 
+            transform: translateY(-5px) scale(1.02); 
+            filter: brightness(1.1); 
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+        }
+
+        .color-dot { width: 32px; height: 32px; border-radius: 10px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; }
+        .color-dot.active { border-color: #1e293b; transform: scale(1.1) rotate(5deg); }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+        
+        .modal-glass {
+            background: rgba(255, 255, 255, 0.9);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+        }
     </style>
 </head>
-<body class="p-2">
+<body class="p-4">
 
-    <div class="max-w-full bg-white rounded-[2rem] shadow-sm border border-slate-100">
-        <div class="p-6 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-4">
-            <div class="flex items-center gap-3">
-                <div class="bg-blue-600 p-2 rounded-lg text-white">
-                    <i class="fas fa-graduation-cap"></i>
+    <div class="max-w-full bg-white rounded-[2.5rem] shadow-xl border border-slate-100 overflow-hidden">
+        <div class="p-8 border-b border-slate-50 flex flex-col md:flex-row justify-between items-center gap-6 bg-gradient-to-r from-white to-slate-50">
+            <div class="flex items-center gap-4">
+                <div class="bg-blue-600 p-3 rounded-2xl text-white shadow-lg shadow-blue-200">
+                    <i class="fas fa-calendar-alt text-xl"></i>
                 </div>
                 <div>
-                    <h2 class="text-xl font-extrabold text-slate-800">Jadual Kuliah</h2>
-                    <p id="syncStatus" class="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Menyambung ke Cloud...</p>
+                    <h2 class="text-2xl font-extrabold text-slate-800 tracking-tight">Jadual Kuliah</h2>
+                    <div class="flex items-center gap-2">
+                        <span id="syncDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
+                        <p id="syncStatus" class="text-[10px] text-slate-400 font-bold uppercase tracking-widest">Menyambung ke Cloud...</p>
+                    </div>
                 </div>
             </div>
-            <button onclick="toggleModal()" class="w-full md:w-auto bg-blue-600 text-white px-6 py-2.5 rounded-xl font-bold text-sm hover:bg-blue-700 transition-all flex items-center justify-center gap-2">
-                <i class="fas fa-plus"></i> Tambah Kelas
+            <button onclick="toggleModal()" class="w-full md:w-auto bg-slate-900 text-white px-8 py-3.5 rounded-2xl font-bold text-sm hover:bg-blue-600 transition-all duration-300 flex items-center justify-center gap-3 shadow-lg hover:shadow-blue-200">
+                <i class="fas fa-plus-circle"></i> Tambah Kelas
             </button>
         </div>
 
-        <div class="p-4 overflow-x-auto">
-            <div class="min-w-[1000px]">
-                <div class="timetable-grid mb-6">
-                    <div class="text-center font-bold text-slate-700 p-3 bg-slate-50 rounded-xl border border-slate-100">ISNIN</div>
-                    <div class="text-center font-bold text-slate-700 p-3 bg-slate-50 rounded-xl border border-slate-100">SELASA</div>
-                    <div class="text-center font-bold text-slate-700 p-3 bg-slate-50 rounded-xl border border-slate-100">RABU</div>
-                    <div class="text-center font-bold text-slate-700 p-3 bg-slate-50 rounded-xl border border-slate-100">KHAMIS</div>
-                    <div class="text-center font-bold text-slate-700 p-3 bg-slate-50 rounded-xl border border-slate-100">JUMAAT</div>
+        <div class="p-6 overflow-x-auto">
+            <div class="min-w-[1100px]">
+                <div class="timetable-grid mb-8">
+                    <div class="text-center font-extrabold text-slate-500 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs tracking-widest uppercase">Isnin</div>
+                    <div class="text-center font-extrabold text-slate-500 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs tracking-widest uppercase">Selasa</div>
+                    <div class="text-center font-extrabold text-slate-500 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs tracking-widest uppercase">Rabu</div>
+                    <div class="text-center font-extrabold text-slate-500 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs tracking-widest uppercase">Khamis</div>
+                    <div class="text-center font-extrabold text-slate-500 p-4 bg-slate-50 rounded-2xl border border-slate-100 text-xs tracking-widest uppercase">Jumaat</div>
                 </div>
                 
                 <div id="timetableContent" class="timetable-grid items-start">
@@ -52,37 +80,42 @@
         </div>
     </div>
 
-    <div id="classModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4">
-        <div class="bg-white p-8 rounded-[2.5rem] w-full max-w-lg shadow-2xl max-h-[90vh] overflow-y-auto">
-            <h3 class="text-xl font-extrabold text-slate-800 mb-6">Maklumat Kelas Baru</h3>
+    <div id="classModal" class="fixed inset-0 bg-slate-900/60 backdrop-blur-md hidden flex items-center justify-center z-50 p-4">
+        <div class="bg-white p-8 rounded-[3rem] w-full max-w-lg shadow-2xl max-h-[95vh] overflow-y-auto border border-white/20">
+            <div class="flex justify-between items-center mb-8">
+                <h3 class="text-2xl font-extrabold text-slate-800 tracking-tight">Maklumat Kelas</h3>
+                <button onclick="toggleModal()" class="text-slate-400 hover:text-red-500 transition-colors">
+                    <i class="fas fa-times-circle text-2xl"></i>
+                </button>
+            </div>
             
-            <div class="space-y-4">
-                <div class="grid grid-cols-3 gap-3">
+            <div class="space-y-5">
+                <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Kod</label>
-                        <input type="text" id="subjectCode" placeholder="KKKK1234" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:border-blue-500">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 ml-1">Kod</label>
+                        <input type="text" id="subjectCode" placeholder="LMCW" class="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-blue-500 focus:bg-white transition-all">
                     </div>
                     <div class="col-span-2">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nama Subjek</label>
-                        <input type="text" id="subjectName" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:border-blue-500">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 ml-1">Nama Subjek</label>
+                        <input type="text" id="subjectName" class="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-blue-500 focus:bg-white transition-all">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-3 gap-3">
+                <div class="grid grid-cols-3 gap-4">
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Set</label>
-                        <input type="text" id="classSet" placeholder="Set 1" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:border-blue-500">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 ml-1">Set</label>
+                        <input type="text" id="classSet" placeholder="1" class="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-blue-500 focus:bg-white transition-all">
                     </div>
                     <div class="col-span-2">
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Nama Pensyarah</label>
-                        <input type="text" id="lecturer" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:border-blue-500">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 ml-1">Nama Pensyarah</label>
+                        <input type="text" id="lecturer" class="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-blue-500 focus:bg-white transition-all">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Hari</label>
-                        <select id="classDay" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-100 outline-none">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 ml-1">Hari</label>
+                        <select id="classDay" class="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-blue-500">
                             <option value="1">Isnin</option>
                             <option value="2">Selasa</option>
                             <option value="3">Rabu</option>
@@ -91,38 +124,38 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Tempat</label>
-                        <input type="text" id="location" placeholder="DK / Makmal" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-100 outline-none focus:border-blue-500">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 ml-1">Tempat</label>
+                        <input type="text" id="location" placeholder="DK / Zoom" class="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-blue-500">
                     </div>
                 </div>
 
-                <div class="grid grid-cols-2 gap-3">
+                <div class="grid grid-cols-2 gap-4">
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Masa Mula</label>
-                        <input type="time" id="startTime" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-100 outline-none">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 ml-1">Masa Mula</label>
+                        <input type="time" id="startTime" class="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-blue-500">
                     </div>
                     <div>
-                        <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1">Masa Tamat</label>
-                        <input type="time" id="endTime" class="w-full p-3 bg-slate-50 rounded-xl border border-slate-100 outline-none">
+                        <label class="block text-[11px] font-bold text-slate-400 uppercase mb-2 ml-1">Masa Tamat</label>
+                        <input type="time" id="endTime" class="w-full p-3.5 bg-slate-50 rounded-2xl border border-slate-100 outline-none focus:border-blue-500">
                     </div>
                 </div>
 
                 <div>
-                    <label class="block text-[10px] font-bold text-slate-400 uppercase mb-1 ml-1 text-center">Pilihan Warna Pelangi</label>
-                    <div class="flex justify-between p-3 bg-slate-50 rounded-2xl" id="colorPicker">
-                        <div class="color-dot bg-red-500" data-color="#ef4444" onclick="selectColor(this)"></div>
-                        <div class="color-dot bg-orange-500" data-color="#f97316" onclick="selectColor(this)"></div>
-                        <div class="color-dot bg-yellow-400" data-color="#facc15" onclick="selectColor(this)"></div>
-                        <div class="color-dot bg-green-500" data-color="#22c55e" onclick="selectColor(this)"></div>
-                        <div class="color-dot bg-blue-500 active" data-color="#3b82f6" onclick="selectColor(this)"></div>
-                        <div class="color-dot bg-indigo-500" data-color="#6366f1" onclick="selectColor(this)"></div>
-                        <div class="color-dot bg-purple-500" data-color="#a855f7" onclick="selectColor(this)"></div>
+                    <label class="block text-[11px] font-bold text-slate-400 uppercase mb-3 text-center tracking-widest">Tema Warna</label>
+                    <div class="flex justify-between p-4 bg-slate-50 rounded-[2rem] border border-slate-100" id="colorPicker">
+                        <div class="color-dot bg-red-500 shadow-lg shadow-red-200" data-color="#ef4444" onclick="selectColor(this)"></div>
+                        <div class="color-dot bg-orange-500 shadow-lg shadow-orange-200" data-color="#f97316" onclick="selectColor(this)"></div>
+                        <div class="color-dot bg-amber-400 shadow-lg shadow-amber-200" data-color="#fbbf24" onclick="selectColor(this)"></div>
+                        <div class="color-dot bg-emerald-500 shadow-lg shadow-emerald-200" data-color="#10b981" onclick="selectColor(this)"></div>
+                        <div class="color-dot bg-blue-500 active shadow-lg shadow-blue-200" data-color="#3b82f6" onclick="selectColor(this)"></div>
+                        <div class="color-dot bg-indigo-500 shadow-lg shadow-indigo-200" data-color="#6366f1" onclick="selectColor(this)"></div>
+                        <div class="color-dot bg-purple-500 shadow-lg shadow-purple-200" data-color="#a855f7" onclick="selectColor(this)"></div>
                     </div>
                 </div>
 
-                <div class="flex gap-3 pt-4">
-                    <button onclick="toggleModal()" class="flex-1 py-3 text-slate-400 font-bold hover:text-slate-600">Batal</button>
-                    <button onclick="saveClass()" class="flex-[2] bg-blue-600 text-white py-3 rounded-2xl font-bold shadow-lg shadow-blue-100 hover:bg-blue-700 transition-all">Simpan Jadual</button>
+                <div class="flex gap-4 pt-6">
+                    <button onclick="toggleModal()" class="flex-1 py-4 text-slate-400 font-bold hover:text-slate-600 transition-colors">Batal</button>
+                    <button onclick="saveClass()" class="flex-[2] bg-blue-600 text-white py-4 rounded-[1.5rem] font-bold shadow-xl shadow-blue-100 hover:bg-blue-700 transition-all active:scale-95">Simpan Jadual</button>
                 </div>
             </div>
         </div>
@@ -130,16 +163,25 @@
 
     <script>
         let selectedColor = '#3b82f6';
-        const spreadsheetId = localStorage.getItem('siswaklik_spreadsheet_id');
-        const accessToken = localStorage.getItem('siswaklik_access_token');
+        let spreadsheetId = localStorage.getItem('siswaklik_spreadsheet_id');
+        let accessToken = localStorage.getItem('siswaklik_access_token');
 
+        // Automatik baca token dari login.html
         document.addEventListener('DOMContentLoaded', () => {
             if (accessToken && spreadsheetId) {
                 initSheet2();
             } else {
-                document.getElementById('syncStatus').innerText = "Ralat: Tiada Akses";
+                updateStatus("Ralat: Sila Log Masuk Semula", "bg-red-500");
+                // Optional: window.location.href = 'login.html';
             }
         });
+
+        function updateStatus(text, colorClass = "bg-blue-500") {
+            const status = document.getElementById('syncStatus');
+            const dot = document.getElementById('syncDot');
+            status.innerText = text;
+            dot.className = `w-2 h-2 rounded-full animate-pulse ${colorClass}`;
+        }
 
         function toggleModal() {
             document.getElementById('classModal').classList.toggle('hidden');
@@ -174,7 +216,10 @@
                     });
                 }
                 loadTimetable();
-            } catch (err) { console.error(err); }
+            } catch (err) { 
+                console.error(err);
+                updateStatus("Ralat Akses Cloud", "bg-red-500");
+            }
         }
 
         async function saveClass() {
@@ -201,59 +246,59 @@
                     body: JSON.stringify({ values: [data] })
                 });
                 toggleModal();
-                Swal.fire('Berjaya', 'Jadual dikemaskini!', 'success');
+                Swal.fire({ icon: 'success', title: 'Berjaya', text: 'Jadual telah dikemaskini!', showConfirmButton: false, timer: 1500 });
                 loadTimetable();
             } catch (err) { Swal.fire('Gagal', 'Masalah cloud storage', 'error'); }
         }
 
         async function loadTimetable() {
-            document.getElementById('syncStatus').innerText = "Menyegerak...";
+            updateStatus("Menyegerak...");
             try {
                 const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet2!A2:I100`, {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 }).then(r => r.json());
 
                 renderTimetable(res.values || []);
-                document.getElementById('syncStatus').innerText = "Jadual Terkini";
-            } catch (err) { document.getElementById('syncStatus').innerText = "Ralat Cloud"; }
+                updateStatus("Jadual Terkini", "bg-emerald-500");
+            } catch (err) { updateStatus("Ralat Cloud", "bg-red-500"); }
         }
 
         function renderTimetable(data) {
             const container = document.getElementById('timetableContent');
             container.innerHTML = '';
-
-            // Wujudkan 5 kolum (Isnin-Jumaat)
             const dayColumns = { 1: [], 2: [], 3: [], 4: [], 5: [] };
 
-            data.forEach(row => {
+            // Inject index untuk memudahkan proses padam
+            data.forEach((row, index) => {
                 const day = parseInt(row[4]);
-                if(dayColumns[day]) dayColumns[day].push(row);
+                if(dayColumns[day]) dayColumns[day].push({...row, rowIndex: index + 2}); 
             });
 
-            // Susun setiap kolum mengikut masa mula
             Object.keys(dayColumns).forEach(d => {
                 dayColumns[d].sort((a, b) => a[5].localeCompare(b[5]));
             });
 
             for (let i = 1; i <= 5; i++) {
-                let columnHtml = `<div class="flex flex-col gap-3">`;
+                let columnHtml = `<div class="flex flex-col gap-4">`;
                 
                 if (dayColumns[i].length === 0) {
-                    columnHtml += `<div class="border border-dashed border-slate-100 rounded-3xl h-32 flex items-center justify-center text-[10px] text-slate-200 font-bold uppercase">Tiada Kelas</div>`;
+                    columnHtml += `<div class="border-2 border-dashed border-slate-100 rounded-[2rem] h-32 flex items-center justify-center text-[10px] text-slate-300 font-bold uppercase tracking-widest">Kosong</div>`;
                 } else {
                     dayColumns[i].forEach(row => {
                         columnHtml += `
                             <div onclick="showDetail(${JSON.stringify(row).replace(/"/g, '&quot;')})" 
-                                 class="class-card p-4 rounded-3xl text-white shadow-lg" 
-                                 style="background-color: ${row[8]}">
-                                <p class="text-[10px] font-black opacity-80 uppercase mb-1">${row[0]} • SET ${row[2]}</p>
-                                <p class="text-sm font-extrabold mb-3 leading-tight">${row[1]}</p>
-                                <div class="flex flex-col gap-1 opacity-90">
+                                 class="class-card p-5 rounded-[2rem] text-white shadow-lg" 
+                                 style="background: linear-gradient(135deg, ${row[8]}, ${row[8]}dd)">
+                                <div class="flex justify-between items-start mb-2">
+                                    <p class="text-[9px] font-black bg-white/20 px-2 py-1 rounded-lg uppercase">${row[0]} • S${row[2]}</p>
+                                </div>
+                                <p class="text-[15px] font-extrabold mb-4 leading-tight h-10 overflow-hidden line-clamp-2">${row[1]}</p>
+                                <div class="space-y-1.5 border-t border-white/10 pt-3">
                                     <div class="flex items-center gap-2 text-[10px] font-bold">
-                                        <i class="fas fa-clock"></i> ${row[5]} - ${row[6]}
+                                        <i class="far fa-clock opacity-70"></i> ${row[5]} - ${row[6]}
                                     </div>
                                     <div class="flex items-center gap-2 text-[10px] font-bold">
-                                        <i class="fas fa-location-dot"></i> ${row[7]}
+                                        <i class="fas fa-map-marker-alt opacity-70"></i> ${row[7]}
                                     </div>
                                 </div>
                             </div>
@@ -265,40 +310,77 @@
             }
         }
 
+        async function deleteClass(rowIndex) {
+            const result = await Swal.fire({
+                title: 'Padam Kelas?',
+                text: "Tindakan ini tidak boleh diundur!",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                cancelButtonColor: '#94a3b8',
+                confirmButtonText: 'Ya, Padam!',
+                cancelButtonText: 'Batal'
+            });
+
+            if (result.isConfirmed) {
+                Swal.fire({ title: 'Memadam...', didOpen: () => Swal.showLoading() });
+                try {
+                    // Nota: Google Sheets API tidak menyokong DELETE row secara direct guna range.
+                    // Cara termudah: Clear values.
+                    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet2!A${rowIndex}:I${rowIndex}:clear`, {
+                        method: 'POST',
+                        headers: { Authorization: `Bearer ${accessToken}` }
+                    });
+                    
+                    Swal.fire('Dipadam!', 'Jadual telah dikemaskini.', 'success');
+                    loadTimetable();
+                } catch (err) {
+                    Swal.fire('Ralat', 'Gagal memadam data.', 'error');
+                }
+            }
+        }
+
         function showDetail(row) {
-            const [kod, subjek, set, pensyarah, hari, mula, tamat, tempat, warna] = row;
+            const {0: kod, 1: subjek, 2: set, 3: pensyarah, 4: hari, 5: mula, 6: tamat, 7: tempat, 8: warna, rowIndex} = row;
             const hariNama = ["", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat"][hari];
 
             Swal.fire({
-                title: `<span style="color: white">${kod}</span>`,
+                title: `<div class="flex justify-between items-center w-full pr-8">
+                            <span class="text-white text-sm font-black tracking-widest uppercase">${kod}</span>
+                            <button onclick="deleteClass(${rowIndex})" class="bg-white/20 hover:bg-white/40 p-2 rounded-xl text-white transition-all">
+                                <i class="fas fa-trash-alt text-sm"></i>
+                            </button>
+                        </div>`,
                 background: warna,
                 html: `
-                    <div class="bg-white rounded-3xl p-6 text-left shadow-inner">
-                        <h4 class="font-black text-slate-800 text-xl mb-1">${subjek}</h4>
-                        <p class="text-blue-600 font-bold mb-4">Set ${set}</p>
+                    <div class="bg-white/95 rounded-[2rem] p-8 text-left shadow-inner mt-4">
+                        <h4 class="font-black text-slate-800 text-2xl mb-1 leading-tight">${subjek}</h4>
+                        <p class="text-blue-600 font-bold mb-6 flex items-center gap-2">
+                           <span class="bg-blue-50 px-3 py-1 rounded-full text-xs">Kumpulan ${set}</span>
+                        </p>
                         
-                        <div class="space-y-3">
-                            <div class="flex items-start gap-3">
-                                <div class="bg-slate-50 p-2 rounded-lg text-slate-400"><i class="fas fa-user-tie w-4"></i></div>
+                        <div class="space-y-4">
+                            <div class="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div class="bg-white p-2.5 rounded-xl shadow-sm text-slate-400"><i class="fas fa-user-tie w-4"></i></div>
                                 <div>
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase">Pensyarah</p>
-                                    <p class="font-bold text-slate-700">${pensyarah}</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Pensyarah</p>
+                                    <p class="font-bold text-slate-700 text-sm">${pensyarah || 'Tiada Nama'}</p>
                                 </div>
                             </div>
 
-                            <div class="flex items-start gap-3">
-                                <div class="bg-slate-50 p-2 rounded-lg text-slate-400"><i class="fas fa-calendar-day w-4"></i></div>
+                            <div class="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div class="bg-white p-2.5 rounded-xl shadow-sm text-slate-400"><i class="fas fa-clock w-4"></i></div>
                                 <div>
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase">Hari & Masa</p>
-                                    <p class="font-bold text-slate-700">${hariNama} (${mula} - ${tamat})</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Hari & Masa</p>
+                                    <p class="font-bold text-slate-700 text-sm">${hariNama} (${mula} - ${tamat})</p>
                                 </div>
                             </div>
 
-                            <div class="flex items-start gap-3">
-                                <div class="bg-slate-50 p-2 rounded-lg text-slate-400"><i class="fas fa-map-marker-alt w-4"></i></div>
+                            <div class="flex items-center gap-4 p-3 rounded-2xl bg-slate-50 border border-slate-100">
+                                <div class="bg-white p-2.5 rounded-xl shadow-sm text-slate-400"><i class="fas fa-map-marker-alt w-4"></i></div>
                                 <div>
-                                    <p class="text-[10px] font-bold text-slate-400 uppercase">Tempat</p>
-                                    <p class="font-bold text-slate-700">${tempat}</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-tighter">Lokasi</p>
+                                    <p class="font-bold text-slate-700 text-sm">${tempat || 'Atas Talian'}</p>
                                 </div>
                             </div>
                         </div>
@@ -307,7 +389,7 @@
                 showConfirmButton: false,
                 showCloseButton: true,
                 customClass: {
-                    popup: 'rounded-[2.5rem] border-none',
+                    popup: 'rounded-[3rem] border-none overflow-hidden',
                     closeButton: 'text-white hover:text-slate-200'
                 }
             });
