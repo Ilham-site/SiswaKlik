@@ -98,8 +98,24 @@
             } else {
                 alert("Sila log masuk semula untuk penyelarasan Google Calendar.");
                 window.location.href = 'login.html';
+                
+        // Tambah kod ini dalam fungsi adjustHeight atau satu fungsi init baru
+        function hantarTokenKeIframe() {
+            const token = localStorage.getItem('siswaklik_access_token');
+            const sheetId = localStorage.getItem('siswaklik_spreadsheet_id');
+    
+            const kelasFrame = document.getElementById('kelasFrame'); // Pastikan ID ini betul
+            if (kelasFrame && kelasFrame.contentWindow) {
+                kelasFrame.contentWindow.postMessage({
+                    type: 'SISWAKLIK_AUTH',
+                    token: token,
+                    spreadsheetId: sheetId
+                }, '*');
             }
         }
+
+// Panggil fungsi ini selepas iframe dimuatkan
+// <iframe src="kelas.html" id="kelasFrame" onload="adjustHeight(this); hantarTokenKeIframe();" ...>
 
         // 3. Pelarasan Ketinggian Iframe secara dinamik
         function adjustHeight(iframe) {
