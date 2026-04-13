@@ -18,6 +18,10 @@
                 <i class="fas fa-cloud-upload-alt"></i> <span>SIMPAN KE DRIVE</span>
             </button>
 
+            <button id="edit-lumin-btn" onclick="openLuminPDF()" class="p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-2xl transition-all flex items-center gap-2 font-bold px-5 text-sm border border-blue-100">
+                <i class="fas fa-pencil-alt"></i> <span>EDIT PDF</span>
+            </button>
+
             <button onclick="confirmDelete()" class="p-3 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-2xl transition-all flex items-center gap-2 font-bold px-5 text-sm border border-red-100">
                 <i class="fas fa-trash-alt"></i>
             </button>
@@ -58,10 +62,27 @@
             if (typeof loadView === 'function') loadView('folder.html');
         };
 
+        // Fungsi Baharu: Buka Lumin PDF
+        window.openLuminPDF = function() {
+            if (!editingId || editingId.startsWith('local-')) {
+                Swal.fire({
+                    title: 'Fail Luar Talian',
+                    text: 'Sila simpan fail ke Drive terlebih dahulu sebelum menggunakan editor Lumin PDF.',
+                    icon: 'info',
+                    confirmButtonColor: '#2563eb'
+                });
+                return;
+            }
+            // URL integrasi Lumin PDF untuk Google Drive
+            const luminUrl = `https://www.luminpdf.com/viewer/${editingId}`;
+            window.open(luminUrl, '_blank');
+        };
+
         async function initViewer() {
             const loader = document.getElementById('loading-overlay');
             const statusLabel = document.getElementById('sync-status');
             const dot = document.getElementById('sync-dot');
+            const editBtn = document.getElementById('edit-lumin-btn');
             
             try {
                 let pdfData;
@@ -73,6 +94,8 @@
                         document.getElementById('upload-drive-btn').classList.remove('hidden');
                         statusLabel.innerText = "Mod Luar Talian (Offline)";
                         dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+                        // Sembunyikan butang edit jika fail offline (kerana Lumin perlu Drive ID)
+                        editBtn.classList.add('opacity-50');
                     }
                     pdfData = dataURLtoUint8Array(localData.content);
                 } 
@@ -90,6 +113,7 @@
                     
                     statusLabel.innerText = "Paparan Cloud Google Drive";
                     dot.className = "w-2 h-2 rounded-full bg-blue-500";
+                    editBtn.classList.remove('opacity-50');
                 } else {
                     throw new Error("Data fail tidak ditemui.");
                 }
@@ -129,29 +153,20 @@
                     progText.innerText = `Menjana helaian ${i} daripada ${pdf.numPages}...`;
                     
                     const page = await pdf.getPage(i);
-                    
-                    // AUTO RESIZE LOGIC:
-                    // Kita ambil lebar container (pdf-scroll-container) untuk tentukan scale
-                    const containerWidth = document.getElementById('pdf-scroll-container').clientWidth - 48; // tolak padding
+                    const containerWidth = document.getElementById('pdf-scroll-container').clientWidth - 48; 
                     const unscaledViewport = page.getViewport({ scale: 1 });
-                    
-                    // Kira scale supaya lebar page muat dengan lebar skrin secara auto
                     const dynamicScale = containerWidth / unscaledViewport.width;
-                    
-                    // Guna pixel ratio untuk kualiti lebih tajam pada skrin Retina/HD
                     const outputScale = window.devicePixelRatio || 1;
                     const viewport = page.getViewport({ scale: dynamicScale });
 
                     const canvas = document.createElement('canvas');
                     const context = canvas.getContext('2d', { alpha: false });
                     
-                    // Style CSS memastikan canvas sentiasa responsive mengikut lebar wrapper
                     canvas.style.display = "block";
                     canvas.style.width = "100%";
                     canvas.style.height = "auto";
                     canvas.className = "shadow-2xl mb-4 rounded-lg border border-slate-300 transition-all";
                     
-                    // Set resolusi dalaman canvas
                     canvas.width = Math.floor(viewport.width * outputScale);
                     canvas.height = Math.floor(viewport.height * outputScale);
 
@@ -160,7 +175,7 @@
                     const renderContext = {
                         canvasContext: context,
                         viewport: viewport,
-                        transform: [outputScale, 0, 0, outputScale, 0, 0], // Scale kualiti
+                        transform: [outputScale, 0, 0, outputScale, 0, 0],
                         intent: 'display'
                     };
 
@@ -270,7 +285,6 @@
 <style>
     canvas {
         max-width: 100% !important;
-        /* Tinggi auto mengikut nisbah PDF */
         height: auto !important; 
         background: white;
         display: block;
