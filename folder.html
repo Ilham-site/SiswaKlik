@@ -205,6 +205,10 @@
             const isPdf = mimeType === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
             const isVideo = mimeType.includes('video/') || 
                             ['mp4', 'mkv', 'webm', 'mov', 'avi'].some(ext => name.toLowerCase().endsWith('.' + ext));
+    
+            // TAMBAH LOGIK GAMBAR DI SINI
+            const isPhoto = mimeType.includes('image/') || 
+                            ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].some(ext => name.toLowerCase().endsWith('.' + ext));
 
             localStorage.setItem('editing_file_id', id);
             localStorage.setItem('editing_file_name', name);
@@ -215,10 +219,13 @@
             else if (isVideo) {
                 if (typeof loadView === 'function') loadView('video.html');
             } 
+            else if (isPhoto) {
+                // LINK KE PHOTO.HTML
+                if (typeof loadView === 'function') loadView('photo.html');
+            }
             else {
-                // Untuk format lain, buka di Google Drive Preview
                 if (id.startsWith('local-')) {
-                    Swal.fire('Fail Offline', 'Sila tunggu sehingga fail selesai diselaraskan ke Cloud untuk melihat format ini.', 'info');
+                    Swal.fire('Fail Offline', 'Sila tunggu sehingga fail diselaraskan.', 'info');
                 } else {
                     window.open(`https://drive.google.com/file/d/${id}/view`, '_blank');
                 }
