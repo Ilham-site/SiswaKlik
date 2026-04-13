@@ -1,0 +1,116 @@
+<div class="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[90vh] animate-in slide-in-from-bottom-6 border border-slate-100">
+    <div class="p-6 border-b border-slate-100 flex flex-wrap gap-4 items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
+        <div class="flex items-center gap-4">
+            <button onclick="goBack()" class="p-3 hover:bg-blue-50 rounded-full transition-all group border border-transparent hover:border-blue-100">
+                <i class="fas fa-arrow-left text-slate-400 group-hover:text-blue-600"></i>
+            </button>
+            <div>
+                <h3 class="font-black text-slate-800 text-lg md:text-xl truncate max-w-[500px]" id="video-filename">Memuatkan Video...</h3>
+                <div class="flex items-center gap-2">
+                    <span id="video-sync-dot" class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    <p id="video-sync-status" class="text-[10px] text-blue-600 font-black uppercase tracking-widest">SiswaKlik Video Player</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button id="video-upload-btn" class="hidden bg-blue-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-2 text-sm" onclick="uploadVideoToDrive()">
+                <i class="fas fa-cloud-upload-alt"></i> <span>SIMPAN KE DRIVE</span>
+            </button>
+            <button onclick="confirmDeleteVideo()" class="p-3 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-100">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-1 bg-black flex items-center justify-center relative overflow-hidden">
+        <div id="video-loader" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/90 backdrop-blur-sm">
+            <div class="w-16 h-16 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+            <p class="text-white font-bold mt-4">Menyiapkan video...</p>
+        </div>
+        
+        <video id="main-video-player" controls class="w-full max-h-full shadow-2xl" crossorigin="anonymous">
+            Your browser does not support the video tag.
+        </video>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const videoId = localStorage.getItem('editing_file_id');
+        const videoName = localStorage.getItem('editing_file_name');
+        const accessToken = localStorage.getItem('siswaklik_access_token');
+        const player = document.getElementById('main-video-player');
+        const loader = document.getElementById('video-loader');
+
+        document.getElementById('video-filename').innerText = videoName || "Paparan Video";
+
+        window.goBack = function() {
+            player.pause();
+            player.src = "";
+            if (typeof loadView === 'function') loadView('folder.html');
+        };
+
+        async function initVideo() {
+            const statusLabel = document.getElementById('video-sync-status');
+            const dot = document.getElementById('video-sync-dot');
+
+            try {
+                const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                const localData = localFiles.find(f => f.id === videoId || f.driveId === videoId);
+
+                if (localData && localData.content) {
+                    // Mod Offline
+                    if (!localData.driveId) {
+                        document.getElementById('video-upload-btn').classList.remove('hidden');
+                        statusLabel.innerText = "Mod Luar Talian (Offline)";
+                        dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+                    }
+                    player.src = localData.content;
+                } 
+                else if (accessToken && videoId && !videoId.startsWith('local-')) {
+                    // Mod Cloud
+                    statusLabel.innerText = "Menyambung ke Cloud...";
+                    const videoUrl = `https://www.googleapis.com/drive/v3/files/${videoId}?alt=media`;
+                    
+                    const response = await fetch(videoUrl, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+
+                    if (!response.ok) throw new Error("Akses video ditolak.");
+
+                    const blob = await response.blob();
+                    player.src = URL.createObjectURL(blob);
+                    
+                    statusLabel.innerText = "Paparan Cloud Google Drive";
+                    dot.className = "w-2 h-2 rounded-full bg-blue-500";
+                }
+
+                player.onloadeddata = () => loader.classList.add('hidden');
+                
+            } catch (err) {
+                loader.innerHTML = `<div class="text-center p-6"><i class="fas fa-exclamation-circle text-red-500 text-4xl mb-4"></i><p class="text-white font-bold">${err.message}</p></div>`;
+            }
+        }
+
+        // Fungsi padam dan muat naik sama seperti pdf.html tetapi disesuaikan untuk video
+        window.confirmDeleteVideo = async function() {
+            const result = await Swal.fire({
+                title: 'Padam Video?',
+                text: "Video akan dibuang dari sistem.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Padam'
+            });
+
+            if (result.isConfirmed) {
+                let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                localStorage.setItem('siswa_local_files', JSON.stringify(localFiles.filter(f => f.id !== videoId && f.driveId !== videoId)));
+                goBack();
+            }
+        };
+
+        initVideo();
+    })();
+</script>
