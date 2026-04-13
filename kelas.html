@@ -11,7 +11,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: transparent; }
         
-        /* Grid Penyesuaian Saiz Iframe */
         .timetable-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
         
         .class-card { 
@@ -20,7 +19,6 @@
             position: relative; 
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.1);
-            /* Memastikan kad tidak melimpah keluar dari grid */
             width: 100%;
             min-width: 0;
         }
@@ -38,16 +36,14 @@
             backdrop-filter: blur(12px);
         }
 
-        /* Custom style untuk SweetAlert supaya nampak shadow */
         .swal-popup-custom {
             padding: 0 !important;
             border-radius: 2rem !important;
-            overflow: visible !important; /* Tukar ke visible supaya shadow nampak */
+            overflow: visible !important;
             box-shadow: 0 25px 50px -12px var(--theme-shadow) !important;
             margin: 20px !important;
         }
 
-        /* Tulisan besar memenuhi ruang gambar dalam popup */
         .hero-title {
             font-size: 4rem;
             font-weight: 900;
@@ -61,7 +57,6 @@
             white-space: nowrap;
         }
 
-        /* Memastikan teks subjek dipotong jika terlalu panjang */
         .truncate-text {
             display: -webkit-box;
             -webkit-line-clamp: 2;
@@ -70,7 +65,6 @@
             word-break: break-word;
         }
 
-        /* CSS variable default */
         :root {
             --theme-shadow: rgba(0, 0, 0, 0.2);
         }
@@ -88,7 +82,7 @@
                     <h2 class="text-xl font-extrabold text-slate-800">Jadual Kuliah</h2>
                     <div class="flex items-center gap-2">
                         <span id="syncDot" class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span>
-                        <p id="syncStatus" class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Cloud Sync...</p>
+                        <p id="syncStatus" class="text-[9px] text-slate-400 font-bold uppercase tracking-widest">Memulakan...</p>
                     </div>
                 </div>
             </div>
@@ -108,7 +102,7 @@
                 </div>
                 
                 <div id="timetableContent" class="timetable-grid items-start">
-                    </div>
+                </div>
             </div>
         </div>
     </div>
@@ -196,10 +190,9 @@
 
     <script>
         let selectedColor = '#3b82f6';
-        let spreadsheetId = localStorage.getItem('siswaklik_spreadsheet_id');
         let accessToken = localStorage.getItem('siswaklik_access_token');
+        let spreadsheetId = localStorage.getItem('siswaklik_spreadsheet_id');
 
-        // Map warna ke fail .jpg
         const colorMap = {
             '#ef4444': 'merah.jpg',
             '#f97316': 'jingga.jpg',
@@ -210,11 +203,31 @@
             '#a855f7': 'ungu.jpg'
         };
 
+        // Mendengar data dari parent (kalendar.html)
+        window.addEventListener('message', function(event) {
+            if (event.data.type === 'SISWAKLIK_AUTH') {
+                accessToken = event.data.token;
+                spreadsheetId = event.data.spreadsheetId;
+                console.log("Token diterima dari Parent.");
+                if (accessToken && spreadsheetId) initSheet2();
+            }
+        });
+
         document.addEventListener('DOMContentLoaded', () => {
+            // Jika token sudah ada dalam localStorage (dari login.html), terus guna
             if (accessToken && spreadsheetId) {
                 initSheet2();
             } else {
-                updateStatus("Log Masuk Diperlukan", "bg-red-500");
+                updateStatus("Menunggu Akses...", "bg-amber-400");
+                // Cuba semak semula setiap 2 saat jika token baru masuk
+                const checkStorage = setInterval(() => {
+                    accessToken = localStorage.getItem('siswaklik_access_token');
+                    spreadsheetId = localStorage.getItem('siswaklik_spreadsheet_id');
+                    if(accessToken && spreadsheetId) {
+                        initSheet2();
+                        clearInterval(checkStorage);
+                    }
+                }, 2000);
             }
         });
 
@@ -236,6 +249,8 @@
         }
 
         async function initSheet2() {
+            if (!accessToken || !spreadsheetId) return;
+            
             try {
                 const meta = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
                     headers: { Authorization: `Bearer ${accessToken}` }
@@ -259,7 +274,8 @@
                 }
                 loadTimetable();
             } catch (err) { 
-                updateStatus("Ralat Akses Cloud", "bg-red-500");
+                updateStatus("Sesi Tamat/Ralat", "bg-red-500");
+                console.error("Auth Error:", err);
             }
         }
 
@@ -317,7 +333,7 @@
             });
 
             Object.keys(dayColumns).forEach(d => {
-                dayColumns[d].sort((a, b) => a[5].localeCompare(b[5]));
+                dayColumns[d].sort((a, b) => (a[5] || "").localeCompare(b[5] || ""));
             });
 
             for (let i = 1; i <= 5; i++) {
@@ -373,6 +389,7 @@
                             }]
                         })
                     });
+                    Swal.close();
                     Swal.fire('Berjaya', 'Kelas dipadam.', 'success');
                     loadTimetable();
                 } catch (err) { Swal.fire('Ralat', 'Gagal memadam.', 'error'); }
@@ -384,7 +401,6 @@
             const hariNama = ["", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat"][hari];
             const bgImg = colorMap[warna] || 'biru.jpg';
 
-            // Set warna shadow dinamik
             document.documentElement.style.setProperty('--theme-shadow', `${warna}66`);
 
             Swal.fire({
