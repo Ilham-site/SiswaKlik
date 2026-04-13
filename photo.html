@@ -1,0 +1,191 @@
+<div class="bg-white rounded-[2.5rem] shadow-2xl overflow-hidden flex flex-col h-[90vh] animate-in slide-in-from-bottom-6 border border-slate-100">
+    <div class="p-6 border-b border-slate-100 flex flex-wrap gap-4 items-center justify-between bg-white/80 backdrop-blur-md sticky top-0 z-10">
+        <div class="flex items-center gap-4">
+            <button onclick="goBack()" class="p-3 hover:bg-blue-50 rounded-full transition-all group border border-transparent hover:border-blue-100">
+                <i class="fas fa-arrow-left text-slate-400 group-hover:text-blue-600"></i>
+            </button>
+            <div>
+                <h3 class="font-black text-slate-800 text-lg md:text-xl truncate max-w-[300px] md:max-w-[500px]" id="photo-filename">Memuatkan Gambar...</h3>
+                <div class="flex items-center gap-2">
+                    <span id="photo-sync-dot" class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></span>
+                    <p id="photo-sync-status" class="text-[10px] text-blue-600 font-black uppercase tracking-widest">SiswaKlik Photo Viewer</p>
+                </div>
+            </div>
+        </div>
+        
+        <div class="flex items-center gap-3">
+            <button id="photo-upload-btn" class="hidden bg-blue-600 text-white px-5 py-2.5 rounded-2xl font-bold shadow-lg hover:bg-blue-700 transition-all active:scale-95 flex items-center gap-2 text-sm" onclick="uploadPhotoToDrive()">
+                <i class="fas fa-cloud-upload-alt"></i> <span>SIMPAN KE DRIVE</span>
+            </button>
+            
+            <a id="photo-download-link" download class="p-3 bg-slate-50 text-slate-600 hover:bg-blue-600 hover:text-white rounded-2xl transition-all border border-slate-100">
+                <i class="fas fa-download"></i>
+            </a>
+
+            <button onclick="confirmDeletePhoto()" class="p-3 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-2xl transition-all border border-red-100">
+                <i class="fas fa-trash-alt"></i>
+            </button>
+        </div>
+    </div>
+
+    <div class="flex-1 bg-slate-100 flex items-center justify-center relative overflow-hidden p-4 md:p-10">
+        <div id="photo-loader" class="absolute inset-0 z-50 flex flex-col items-center justify-center bg-white/80 backdrop-blur-sm">
+            <div class="w-12 h-12 border-4 border-blue-100 border-t-blue-600 rounded-full animate-spin"></div>
+        </div>
+        
+        <div class="relative group max-w-full max-h-full">
+            <img id="main-photo-display" src="" alt="Preview" 
+                class="max-w-full max-h-[70vh] rounded-xl shadow-2xl object-contain transition-transform duration-300 cursor-zoom-in"
+                onclick="toggleZoom(this)">
+        </div>
+    </div>
+</div>
+
+<script>
+    (function() {
+        const photoId = localStorage.getItem('editing_file_id');
+        const photoName = localStorage.getItem('editing_file_name');
+        const accessToken = localStorage.getItem('siswaklik_access_token');
+        const currentFolderId = localStorage.getItem('siswaklik_current_folder_id') || 'root';
+        const imgElement = document.getElementById('main-photo-display');
+        const loader = document.getElementById('photo-loader');
+        const downloadLink = document.getElementById('photo-download-link');
+
+        document.getElementById('photo-filename').innerText = photoName || "Paparan Gambar";
+
+        window.goBack = function() {
+            imgElement.src = "";
+            if (typeof loadView === 'function') loadView('folder.html');
+        };
+
+        window.toggleZoom = function(el) {
+            if (el.classList.contains('cursor-zoom-in')) {
+                el.classList.remove('cursor-zoom-in');
+                el.classList.add('cursor-zoom-out');
+                el.style.transform = "scale(1.5)";
+            } else {
+                el.classList.remove('cursor-zoom-out');
+                el.classList.add('cursor-zoom-in');
+                el.style.transform = "scale(1)";
+            }
+        };
+
+        async function initPhoto() {
+            const statusLabel = document.getElementById('photo-sync-status');
+            const dot = document.getElementById('photo-sync-dot');
+
+            try {
+                const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                const localData = localFiles.find(f => f.id === photoId || f.driveId === photoId);
+
+                if (localData && localData.content) {
+                    // Mod Offline / Local Storage
+                    if (!localData.driveId) {
+                        document.getElementById('photo-upload-btn').classList.remove('hidden');
+                        statusLabel.innerText = "Mod Luar Talian (Offline)";
+                        dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
+                    }
+                    imgElement.src = localData.content;
+                    downloadLink.href = localData.content;
+                } 
+                else if (accessToken && photoId && !photoId.startsWith('local-')) {
+                    // Mod Cloud (Google Drive)
+                    statusLabel.innerText = "Menyambung ke Cloud...";
+                    
+                    const response = await fetch(`https://www.googleapis.com/drive/v3/files/${photoId}?alt=media`, {
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+
+                    if (!response.ok) throw new Error("Akses gambar ditolak.");
+
+                    const blob = await response.blob();
+                    const objectUrl = URL.createObjectURL(blob);
+                    imgElement.src = objectUrl;
+                    downloadLink.href = objectUrl;
+                    
+                    statusLabel.innerText = "Paparan Cloud Google Drive";
+                    dot.className = "w-2 h-2 rounded-full bg-blue-500";
+                }
+
+                imgElement.onload = () => loader.classList.add('hidden');
+                
+            } catch (err) {
+                loader.innerHTML = `<div class="text-center p-6"><i class="fas fa-exclamation-circle text-red-500 text-4xl mb-4"></i><p class="text-slate-800 font-bold">${err.message}</p></div>`;
+            }
+        }
+
+        window.uploadPhotoToDrive = async function() {
+            const btn = document.getElementById('photo-upload-btn');
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-spinner animate-spin"></i>...';
+
+            try {
+                const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                const file = localFiles.find(f => f.id === photoId);
+                
+                if (!file) throw new Error("Data fail tidak ditemui.");
+
+                const metadata = { 
+                    name: file.name, 
+                    parents: [currentFolderId] 
+                };
+
+                const formData = new FormData();
+                formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
+                
+                // Convert base64 content back to blob
+                const responseBase64 = await fetch(file.content);
+                const blob = await responseBase64.blob();
+                formData.append('file', blob);
+
+                const res = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${accessToken}` },
+                    body: formData
+                });
+
+                if (res.ok) {
+                    const driveData = await res.json();
+                    file.driveId = driveData.id;
+                    file.status = 'synced';
+                    localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
+                    
+                    Swal.fire('Berjaya', 'Gambar disimpan ke Drive', 'success');
+                    btn.classList.add('hidden');
+                    initPhoto();
+                }
+            } catch (err) {
+                Swal.fire('Ralat', err.message, 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = '<i class="fas fa-cloud-upload-alt"></i> <span>SIMPAN KE DRIVE</span>';
+            }
+        };
+
+        window.confirmDeletePhoto = async function() {
+            const result = await Swal.fire({
+                title: 'Padam Gambar?',
+                text: "Fail akan dibuang dari sistem ini.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Padam'
+            });
+
+            if (result.isConfirmed) {
+                let localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+                localStorage.setItem('siswa_local_files', JSON.stringify(localFiles.filter(f => f.id !== photoId && f.driveId !== photoId)));
+                
+                if (accessToken && photoId && !photoId.startsWith('local-')) {
+                    fetch(`https://www.googleapis.com/drive/v3/files/${photoId}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    }).catch(e => console.error(e));
+                }
+                goBack();
+            }
+        };
+
+        initPhoto();
+    })();
+</script>
