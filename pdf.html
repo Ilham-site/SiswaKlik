@@ -34,7 +34,7 @@
             <p id="page-progress" class="text-blue-600 text-xs font-bold mt-2"></p>
         </div>
         
-        <div id="pdf-render-wrapper" class="flex flex-col items-center gap-6"></div>
+        <div id="pdf-render-wrapper" class="flex flex-col items-center gap-6 w-full"></div>
     </div>
 </div>
 
@@ -44,7 +44,6 @@
 <script>
     (function() {
         const pdfjsLib = window['pdfjs-dist/build/pdf'];
-        // Gunakan worker CDN yang stabil
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
         const editingId = localStorage.getItem('editing_file_id');
@@ -55,7 +54,6 @@
         document.getElementById('display-filename').innerText = editingName || "Fail PDF";
 
         window.goBack = function() {
-            // Bersihkan memori sebelum keluar
             document.getElementById('pdf-render-wrapper').innerHTML = '';
             if (typeof loadView === 'function') loadView('folder.html');
         };
@@ -76,7 +74,6 @@
                         statusLabel.innerText = "Mod Luar Talian (Offline)";
                         dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
                     }
-                    // Tukar Base64 ke Uint8Array dengan cara yang lebih selamat untuk fail besar
                     pdfData = dataURLtoUint8Array(localData.content);
                 } 
                 else if (accessToken && editingId && !editingId.startsWith('local-')) {
@@ -117,9 +114,9 @@
             const wrapper = document.getElementById('pdf-render-wrapper');
             const loader = document.getElementById('loading-overlay');
             const progText = document.getElementById('page-progress');
+            const container = document.getElementById('pdf-scroll-container');
             
             try {
-                // Gunakan disableAutoFetch dan disableStream untuk kestabilan fail besar
                 const loadingTask = pdfjsLib.getDocument({
                     data: data,
                     disableAutoFetch: true,
@@ -129,20 +126,30 @@
                 const pdf = await loadingTask.promise;
                 wrapper.innerHTML = ''; 
 
-                // Render secara berperingkat (sequential) untuk jimat RAM
                 for (let i = 1; i <= pdf.numPages; i++) {
                     progText.innerText = `Menjana helaian ${i} daripada ${pdf.numPages}...`;
                     
                     const page = await pdf.getPage(i);
-                    // Gunakan scale 1.2 untuk mobile, 1.5 untuk desktop
-                    const scale = window.innerWidth < 768 ? 1.3 : 1.8;
-                    const viewport = page.getViewport({ scale: scale });
+                    
+                    // AUTO SCALE LOGIC:
+                    // Ambil lebar container (pancingan margin/padding)
+                    const containerWidth = container.clientWidth - (window.innerWidth < 768 ? 20 : 60);
+                    const unscaledViewport = page.getViewport({ scale: 1 });
+                    
+                    // Kira scale supaya muat mengikut lebar skrin secara dinamik
+                    const dynamicScale = containerWidth / unscaledViewport.width;
+                    
+                    // Limit scale supaya tidak terlalu pecah (min 1.0, max 2.0 untuk kualiti)
+                    const finalScale = Math.min(Math.max(dynamicScale, 1.0), 2.0);
+                    
+                    const viewport = page.getViewport({ scale: finalScale });
                     
                     const canvas = document.createElement('canvas');
-                    const context = canvas.getContext('2d', { alpha: false }); // Optimasi: Matikan alpha
-                    canvas.className = "shadow-2xl mb-4 max-w-full h-auto rounded-lg border border-slate-300";
+                    const context = canvas.getContext('2d', { alpha: false });
                     
-                    // Set output size
+                    canvas.className = "shadow-2xl mb-4 max-w-full h-auto rounded-lg border border-slate-300 block";
+                    
+                    // Set canvas resolution ikut scale yang dikira
                     canvas.height = viewport.height;
                     canvas.width = viewport.width;
 
@@ -154,7 +161,6 @@
                         intent: 'display'
                     }).promise;
 
-                    // Bebaskan memori page selepas render
                     page.cleanup();
                 }
                 
@@ -168,7 +174,6 @@
             }
         }
 
-        // Fungsi penukaran yang lebih efisien untuk fail besar
         function dataURLtoUint8Array(dataurl) {
             const parts = dataurl.split(',');
             const bstr = atob(parts[1]);
@@ -226,7 +231,6 @@
                 const formData = new FormData();
                 formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
                 
-                // Gunakan Blob terus dari Uint8Array
                 const pdfBlob = new Blob([dataURLtoUint8Array(file.content)], { type: 'application/pdf' });
                 formData.append('file', pdfBlob);
 
@@ -265,12 +269,14 @@
         max-width: 100% !important;
         height: auto !important;
         background: white;
+        display: block;
     }
     #pdf-scroll-container {
         scroll-behavior: smooth;
+        -webkit-overflow-scrolling: touch;
     }
     #pdf-scroll-container::-webkit-scrollbar {
-        width: 8px;
+        width: 6px;
     }
     #pdf-scroll-container::-webkit-scrollbar-thumb {
         background: #cbd5e1;
