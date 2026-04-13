@@ -11,7 +11,6 @@
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
         body { font-family: 'Plus Jakarta Sans', sans-serif; background-color: transparent; }
         
-        /* Grid Penyesuaian Saiz Iframe */
         .timetable-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 12px; }
         
         .class-card { 
@@ -20,6 +19,9 @@
             position: relative; 
             overflow: hidden;
             border: 1px solid rgba(255,255,255,0.1);
+            word-wrap: break-word;
+            overflow-wrap: break-word;
+            hyphens: auto;
         }
         
         .class-card:hover { 
@@ -30,17 +32,28 @@
         .color-dot { width: 28px; height: 28px; border-radius: 8px; cursor: pointer; border: 3px solid transparent; transition: all 0.2s; }
         .color-dot.active { border-color: #1e293b; transform: scale(1.1); }
         
-        .modal-glass {
-            background: rgba(255, 255, 255, 0.9);
-            backdrop-filter: blur(12px);
-        }
-
-        /* Custom style untuk SweetAlert supaya muat gambar */
+        /* Custom style untuk SweetAlert */
         .swal-popup-custom {
             padding: 0 !important;
             border-radius: 2rem !important;
             overflow: hidden !important;
+            /* Tambah margin supaya shadow nampak */
+            margin: 30px !important;
             box-shadow: 0 25px 50px -12px var(--theme-shadow) !important;
+        }
+
+        .hero-title {
+            font-size: 5rem;
+            font-weight: 900;
+            text-transform: uppercase;
+            line-height: 0.7;
+            opacity: 0.2;
+            position: absolute;
+            bottom: -15px;
+            left: -10px;
+            pointer-events: none;
+            white-space: nowrap;
+            color: white;
         }
     </style>
 </head>
@@ -66,16 +79,15 @@
         </div>
 
         <div class="p-4 overflow-x-auto">
-            <div class="min-w-[900px]"> <div class="timetable-grid mb-4">
+            <div class="min-w-[900px]"> 
+                <div class="timetable-grid mb-4">
                     <div class="text-center font-extrabold text-slate-400 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] tracking-widest uppercase">Isnin</div>
                     <div class="text-center font-extrabold text-slate-400 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] tracking-widest uppercase">Selasa</div>
                     <div class="text-center font-extrabold text-slate-400 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] tracking-widest uppercase">Rabu</div>
                     <div class="text-center font-extrabold text-slate-400 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] tracking-widest uppercase">Khamis</div>
                     <div class="text-center font-extrabold text-slate-400 p-3 bg-slate-50 rounded-xl border border-slate-100 text-[10px] tracking-widest uppercase">Jumaat</div>
                 </div>
-                
-                <div id="timetableContent" class="timetable-grid items-start">
-                    </div>
+                <div id="timetableContent" class="timetable-grid items-start"></div>
             </div>
         </div>
     </div>
@@ -167,12 +179,14 @@
         let spreadsheetId = localStorage.getItem('siswaklik_spreadsheet_id');
         let accessToken = localStorage.getItem('siswaklik_access_token');
 
+        const colorMap = {
+            '#ef4444': 'merah.jpg', '#f97316': 'jingga.jpg', '#fbbf24': 'kuning.jpg',
+            '#10b981': 'hijau.jpg', '#3b82f6': 'biru.jpg', '#4f46e5': 'nila.jpg', '#a855f7': 'ungu.jpg'
+        };
+
         document.addEventListener('DOMContentLoaded', () => {
-            if (accessToken && spreadsheetId) {
-                initSheet2();
-            } else {
-                updateStatus("Log Masuk Diperlukan", "bg-red-500");
-            }
+            if (accessToken && spreadsheetId) { initSheet2(); } 
+            else { updateStatus("Log Masuk Diperlukan", "bg-red-500"); }
         });
 
         function updateStatus(text, colorClass = "bg-blue-500") {
@@ -182,9 +196,7 @@
             if(dot) dot.className = `w-2 h-2 rounded-full animate-pulse ${colorClass}`;
         }
 
-        function toggleModal() {
-            document.getElementById('classModal').classList.toggle('hidden');
-        }
+        function toggleModal() { document.getElementById('classModal').classList.toggle('hidden'); }
 
         function selectColor(el) {
             document.querySelectorAll('.color-dot').forEach(d => d.classList.remove('active'));
@@ -198,16 +210,12 @@
                 const meta = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 }).then(r => r.json());
-
                 const sheet2Exists = meta.sheets.some(s => s.properties.title === 'Sheet2');
-
                 if (!sheet2Exists) {
                     await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
                         method: 'POST',
                         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                        body: JSON.stringify({
-                            requests: [{ addSheet: { properties: { title: 'Sheet2' } } }]
-                        })
+                        body: JSON.stringify({ requests: [{ addSheet: { properties: { title: 'Sheet2' } } }] })
                     });
                     await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet2!A1:I1?valueInputOption=USER_ENTERED`, {
                         method: 'PUT',
@@ -216,9 +224,7 @@
                     });
                 }
                 loadTimetable();
-            } catch (err) { 
-                updateStatus("Ralat Akses Cloud", "bg-red-500");
-            }
+            } catch (err) { updateStatus("Ralat Akses Cloud", "bg-red-500"); }
         }
 
         async function saveClass() {
@@ -231,13 +237,10 @@
                 document.getElementById('startTime').value,
                 document.getElementById('endTime').value,
                 document.getElementById('location').value,
-                selectedColor // Kita simpan warna, imej akan di-derive masa render
+                selectedColor
             ];
-
             if(!data[0] || !data[1] || !data[5]) return Swal.fire('Ralat', 'Sila isi maklumat wajib', 'warning');
-
             Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
-
             try {
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet2!A2:append?valueInputOption=USER_ENTERED`, {
                     method: 'POST',
@@ -256,7 +259,6 @@
                 const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet2!A2:I100`, {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 }).then(r => r.json());
-
                 renderTimetable(res.values || []);
                 updateStatus("Terkini", "bg-emerald-500");
             } catch (err) { updateStatus("Ralat Cloud", "bg-red-500"); }
@@ -266,34 +268,28 @@
             const container = document.getElementById('timetableContent');
             container.innerHTML = '';
             const dayColumns = { 1: [], 2: [], 3: [], 4: [], 5: [] };
-
             data.forEach((row, index) => {
-                if(row[0]) { // Pastikan baris tak kosong
+                if(row[0]) {
                     const day = parseInt(row[4]);
                     if(dayColumns[day]) dayColumns[day].push({...row, rowIndex: index + 2}); 
                 }
             });
-
-            // Sort masa
-            Object.keys(dayColumns).forEach(d => {
-                dayColumns[d].sort((a, b) => a[5].localeCompare(b[5]));
-            });
+            Object.keys(dayColumns).forEach(d => dayColumns[d].sort((a, b) => a[5].localeCompare(b[5])));
 
             for (let i = 1; i <= 5; i++) {
-                let columnHtml = `<div class="flex flex-col gap-3">`;
-                
+                let columnHtml = `<div class="flex flex-col gap-3 w-full">`;
                 if (dayColumns[i].length === 0) {
                     columnHtml += `<div class="border border-dashed border-slate-200 rounded-3xl h-24 flex items-center justify-center text-[9px] text-slate-300 font-bold uppercase">Tiada Kelas</div>`;
                 } else {
                     dayColumns[i].forEach(row => {
                         columnHtml += `
                             <div onclick="showDetail(${JSON.stringify(row).replace(/"/g, '&quot;')})" 
-                                 class="class-card p-4 rounded-3xl text-white shadow-md" 
+                                 class="class-card p-4 rounded-3xl text-white shadow-md w-full" 
                                  style="background: linear-gradient(135deg, ${row[8]}, ${row[8]}cc)">
                                 <div class="mb-1">
-                                    <span class="text-[8px] font-black bg-white/20 px-2 py-0.5 rounded-md uppercase">${row[0]}</span>
+                                    <span class="text-[8px] font-black bg-white/20 px-2 py-0.5 rounded-md uppercase break-all">${row[0]}</span>
                                 </div>
-                                <p class="text-[13px] font-extrabold mb-3 leading-tight line-clamp-2 h-8">${row[1]}</p>
+                                <p class="text-[13px] font-extrabold mb-3 leading-tight line-clamp-2 h-8 break-words">${row[1]}</p>
                                 <div class="text-[9px] font-bold opacity-90">
                                     <p><i class="far fa-clock mr-1"></i> ${row[5]} - ${row[6]}</p>
                                     <p class="truncate"><i class="fas fa-map-marker-alt mr-1"></i> ${row[7] || 'N/A'}</p>
@@ -307,41 +303,22 @@
             }
         }
 
-        // Map warna ke fail .jpg
-        const colorMap = {
-            '#ef4444': 'merah.jpg',
-            '#f97316': 'jingga.jpg',
-            '#fbbf24': 'kuning.jpg',
-            '#10b981': 'hijau.jpg',
-            '#3b82f6': 'biru.jpg',
-            '#4f46e5': 'nila.jpg',
-            '#a855f7': 'ungu.jpg'
-        };
-
         async function deleteClass(rowIndex) {
             const result = await Swal.fire({
                 title: 'Padam Kelas?',
                 text: "Data akan dibuang dari Cloud.",
                 icon: 'warning',
                 showCancelButton: true,
-                confirmButtonColor: '#ef4444',
-                confirmButtonText: 'Ya, Padam',
-                cancelButtonText: 'Batal'
+                confirmButtonColor: '#ef4444', confirmButtonText: 'Ya, Padam', cancelButtonText: 'Batal'
             });
-
             if (result.isConfirmed) {
                 Swal.fire({ title: 'Memadam...', didOpen: () => Swal.showLoading() });
                 try {
-                    // Guna BatchUpdate untuk delete row sebenar
                     await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
                         method: 'POST',
                         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
-                            requests: [{
-                                deleteDimension: {
-                                    range: { sheetId: 0, dimension: "ROWS", startIndex: rowIndex - 1, endIndex: rowIndex }
-                                }
-                            }]
+                            requests: [{ deleteDimension: { range: { sheetId: 0, dimension: "ROWS", startIndex: rowIndex - 1, endIndex: rowIndex } } }]
                         })
                     });
                     Swal.fire('Berjaya', 'Kelas dipadam.', 'success');
@@ -355,46 +332,56 @@
             const hariNama = ["", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat"][hari];
             const bgImg = colorMap[warna] || 'biru.jpg';
 
+            document.documentElement.style.setProperty('--theme-shadow', `${warna}66`);
+
             Swal.fire({
                 width: '450px',
                 customClass: { popup: 'swal-popup-custom' },
                 html: `
-                    <div style="background-image: url('${bgImg}'); background-size: cover; background-position: center;" class="h-32 flex items-end p-6 relative">
-                        <div class="absolute top-4 right-4 flex gap-2">
-                             <button onclick="deleteClass(${rowIndex})" class="bg-white/20 hover:bg-red-500 w-8 h-8 rounded-full text-white backdrop-blur-md transition-all">
+                    <div style="background-image: url('${bgImg}'); background-size: cover; background-position: center;" 
+                         class="h-40 flex items-center justify-center p-6 relative overflow-hidden">
+                        
+                        <h1 class="hero-title">${kod}</h1>
+
+                        <div class="absolute top-4 right-4 flex gap-2 z-10">
+                             <button onclick="deleteClass(${rowIndex})" class="bg-white/20 hover:bg-red-500 w-8 h-8 rounded-full text-white backdrop-blur-md transition-all border border-white/30">
                                 <i class="fas fa-trash-alt text-xs"></i>
                             </button>
                         </div>
-                        <span class="bg-white/20 backdrop-blur-md text-white text-[10px] font-black px-3 py-1 rounded-lg uppercase tracking-widest border border-white/30">${kod}</span>
+                        
+                        <span class="z-10 bg-white/20 backdrop-blur-md text-white text-[11px] font-black px-4 py-1.5 rounded-xl uppercase tracking-widest border border-white/30 shadow-lg">
+                            ${kod}
+                        </span>
                     </div>
-                    <div class="p-6 text-left bg-white">
-                        <h4 class="font-black text-slate-800 text-xl mb-1 leading-tight">${subjek}</h4>
-                        <p class="text-blue-600 font-bold text-xs mb-6">Set ${set}</p>
+                    
+                    <div class="p-8 text-left bg-white">
+                        <h4 class="font-black text-slate-800 text-2xl mb-1 leading-tight">${subjek}</h4>
+                        <p class="font-extrabold text-sm mb-6" style="color: ${warna}">Set ${set}</p>
                         
                         <div class="space-y-3">
-                            <div class="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                                <i class="fas fa-user-tie text-slate-400 w-4"></i>
+                            <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <i class="fas fa-user-tie text-slate-400 text-lg"></i>
                                 <div>
-                                    <p class="text-[8px] font-bold text-slate-400 uppercase">Pensyarah</p>
-                                    <p class="font-bold text-slate-700 text-xs">${pensyarah || 'Tiada Maklumat'}</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Pensyarah</p>
+                                    <p class="font-bold text-slate-700 text-sm">${pensyarah || 'Tiada Maklumat'}</p>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                                <i class="fas fa-clock text-slate-400 w-4"></i>
+                            <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <i class="fas fa-clock text-slate-400 text-lg"></i>
                                 <div>
-                                    <p class="text-[8px] font-bold text-slate-400 uppercase">Waktu</p>
-                                    <p class="font-bold text-slate-700 text-xs">${hariNama}, ${mula} - ${tamat}</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Waktu Kuliah</p>
+                                    <p class="font-bold text-slate-700 text-sm">${hariNama}, ${mula} - ${tamat}</p>
                                 </div>
                             </div>
-                            <div class="flex items-center gap-3 p-3 rounded-2xl bg-slate-50 border border-slate-100">
-                                <i class="fas fa-map-marker-alt text-slate-400 w-4"></i>
+                            <div class="flex items-center gap-4 p-4 rounded-2xl bg-slate-50 border border-slate-100">
+                                <i class="fas fa-map-marker-alt text-slate-400 text-lg"></i>
                                 <div>
-                                    <p class="text-[8px] font-bold text-slate-400 uppercase">Lokasi</p>
-                                    <p class="font-bold text-slate-700 text-xs">${tempat || 'Atas Talian'}</p>
+                                    <p class="text-[9px] font-bold text-slate-400 uppercase tracking-wider">Lokasi</p>
+                                    <p class="font-bold text-slate-700 text-sm">${tempat || 'Atas Talian'}</p>
                                 </div>
                             </div>
                         </div>
-                        <button onclick="Swal.close()" class="w-full mt-6 py-3 bg-slate-100 rounded-xl font-bold text-slate-500 text-xs hover:bg-slate-200 transition-all">Tutup</button>
+                        <button onclick="Swal.close()" class="w-full mt-8 py-4 bg-slate-900 rounded-2xl font-bold text-white text-xs hover:opacity-90 transition-all shadow-lg">Tutup Paparan</button>
                     </div>
                 `,
                 showConfirmButton: false
