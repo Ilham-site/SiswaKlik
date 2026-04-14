@@ -83,6 +83,8 @@
     </div>
 
     <script>
+        window.onload = sendHeight;
+        window.onresize = sendHeight;
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         
         const ACCESS_TOKEN = localStorage.getItem('siswaklik_access_token');
@@ -264,13 +266,6 @@
             height: height
         }, '*');
     }
-
-    // Jalankan setiap kali data dimuatkan atau tetingkap berubah saiz
-    window.onload = sendHeight;
-    window.onresize = sendHeight;
-    
-    // Jika anda menggunakan pengumpukan data dinamik (seperti fetch), 
-    // jalankan sendHeight() selepas senarai subjek selesai di-render.
     </script>
 </body>
 </html>
