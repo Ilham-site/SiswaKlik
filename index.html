@@ -21,12 +21,12 @@
         .user-profile-glow {
             box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
         }
-        /* Styling untuk iframe agar masuk cantik dalam box */
-        #kmjpFrame {
+
+        /* Styling untuk iframe auto-resize */
+        #kmjpIframe {
             width: 100%;
-            height: 500px;
             border: none;
-            border-radius: 2rem;
+            overflow: hidden;
         }
     </style>
 </head>
@@ -101,8 +101,20 @@
             </header>
 
             <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-2"> <div class="lg:col-span-2">
-                    <div class="bg-white rounded-[3rem] shadow-sm border border-slate-100 h-full overflow-hidden">
-                        <iframe src="kmjp.html" id="kmjpFrame" title="Jadual Peperiksaan"></iframe>
+                    <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 h-full">
+                        <div class="flex justify-between items-center mb-6">
+                            <h2 class="text-xl font-black text-slate-800 flex items-center gap-2">
+                                <i class="fas fa-file-signature text-orange-500"></i> Jadual Peperiksaan
+                            </h2>
+                            <button onclick="document.getElementById('kmjpInput').click()" class="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100 transition">
+                                <i class="fas fa-file-import mr-1"></i> Import KMJP
+                            </button>
+                            <input type="file" id="kmjpInput" class="hidden" accept=".pdf" onchange="processKMJP(this)">
+                        </div>
+                        
+                        <div id="examContainer" class="w-full">
+                            <iframe id="kmjpIframe" src="kmjp.html" onload="resizeIframe(this)"></iframe>
+                        </div>
                     </div>
                 </div>
 
@@ -150,11 +162,6 @@
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
 
-        // Fungsi Refresh Dashboard
-        function loadDashboard() {
-            window.location.reload(); 
-        }
-
         let timeout;
         function resetTimer() {
             clearTimeout(timeout);
@@ -162,6 +169,9 @@
         }
         window.onmousemove = resetTimer;
         window.onmousedown = resetTimer;
+        window.onclick = resetTimer;
+        window.onkeydown = resetTimer;
+        window.ontouchstart = resetTimer;
 
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('drawerOverlay');
@@ -172,6 +182,16 @@
         document.getElementById('menuBtn').onclick = () => toggleSidebar(true);
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
+
+        // Fungsi Dashboard untuk Refresh Halaman
+        function loadDashboard() {
+            window.location.reload();
+        }
+
+        // Fungsi Auto-Resize Iframe
+        function resizeIframe(obj) {
+            obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';
+        }
 
         async function loadPage(page, element) {
             try {
@@ -185,7 +205,6 @@
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) element.classList.add('nav-active');
                 toggleSidebar(false);
-                
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -206,7 +225,7 @@
                 document.getElementById('welcomeText').innerText = `Hai, ${userData.given_name || userData.name.split(' ')[0]}!`;
                 document.getElementById('userSubtext').innerText = userData.email;
                 if(document.getElementById('userNameDisplay')) {
-                    document.getElementById('userNameDisplay').innerText = (userData.given_name || userData.name.split(' ')[0]).toUpperCase();
+                    document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
                 }
                 
                 if (userData.picture) {
@@ -217,6 +236,7 @@
                 }
             }
             updateAcademicStats();
+            // Jadual Peperiksaan kini diuruskan oleh iframe kmjp.html
         }
 
         function parseDate(dateStr) {
@@ -265,10 +285,46 @@
             } catch (e) { console.error(e); }
         }
 
+        async function processKMJP(input) {
+            const file = input.files[0];
+            if (!file) return;
+            try {
+                Swal.fire({ title: 'Memproses...', text: 'Mengekstrak jadual peperiksaan', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
+                const reader = new FileReader();
+                reader.onload = async function() {
+                    const typedarray = new Uint8Array(this.result);
+                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
+                    let text = '';
+                    for (let i = 1; i <= pdf.numPages; i++) {
+                        const page = await pdf.getPage(i);
+                        const content = await page.getTextContent();
+                        text += content.items.map(item => item.str).join(' ');
+                    }
+                    const cleanText = text.replace(/\s+/g, ' ');
+                    const pattern = /([A-Z]{4}\d{4})\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+.*?(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+)/gi;
+                    const found = [];
+                    let m;
+                    while ((m = pattern.exec(cleanText)) !== null) {
+                        if (m[2].includes("Penilaian Berterusan")) continue;
+                        found.push({ id: 'ex-'+Math.random().toString(36).substr(2,7), code: m[1], title: m[2].trim(), date: m[3].split('/').reverse().join('-'), time: m[4], location: m[5].trim() });
+                    }
+                    localStorage.setItem('siswa_exams', JSON.stringify(found));
+                    
+                    // Refresh iframe selepas import
+                    const iframe = document.getElementById('kmjpIframe');
+                    iframe.src = iframe.src; 
+
+                    Swal.fire('Berjaya!', `${found.length} subjek dikesan.`, 'success');
+                };
+                reader.readAsArrayBuffer(file);
+            } catch(e) { Swal.fire('Ralat', 'Gagal memproses PDF', 'error'); }
+            input.value = "";
+        }
+
         function updateDate() {
             const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
             const el = document.getElementById('systemDate');
-            if(el) el.innerText = new Date().toLocaleDateString('ms-MY', options).toUpperCase();
+            if(el) el.innerText = new Date().toLocaleDateString('ms-MY', options);
         }
 
         function logout() {
