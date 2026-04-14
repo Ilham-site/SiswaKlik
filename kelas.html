@@ -187,31 +187,9 @@
             </div>
         </div>
     </div>
-    
+
     <script>
-        let currentSheetId = null; // Tambah pembolehubah global di bahagian atas script 
-        async function loadTimetable() {
-            updateStatus("Menyegerak...");
-            try {
-                // Ambil meta data untuk dapatkan GID/SheetId bagi 'Sheet2'
-                const meta = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
-                    headers: { Authorization: `Bearer ${accessToken}` }
-                }).then(r => r.json());
-        
-                const sheet2 = meta.sheets.find(s => s.properties.title === 'Sheet2');
-                currentSheetId = sheet2.properties.sheetId;
-
-                const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet2!A2:I100`, {
-                    headers: { Authorization: `Bearer ${accessToken}` }
-                }).then(r => r.json());
-
-                renderTimetable(res.values || []);
-                updateStatus("Terkini", "bg-emerald-500");
-            } catch (err) { 
-                updateStatus("Ralat Cloud", "bg-red-500"); 
-            }
-        }
-        
+        let currentSheetId = null;
         let selectedColor = '#3b82f6';
         let accessToken = localStorage.getItem('siswaklik_access_token');
         let spreadsheetId = localStorage.getItem('siswaklik_spreadsheet_id');
@@ -226,23 +204,20 @@
             '#a855f7': 'ungu.jpg'
         };
 
-        // Mendengar data dari parent (kalendar.html)
+        // Mendengar data dari parent
         window.addEventListener('message', function(event) {
             if (event.data.type === 'SISWAKLIK_AUTH') {
                 accessToken = event.data.token;
                 spreadsheetId = event.data.spreadsheetId;
-                console.log("Token diterima dari Parent.");
                 if (accessToken && spreadsheetId) initSheet2();
             }
         });
 
         document.addEventListener('DOMContentLoaded', () => {
-            // Jika token sudah ada dalam localStorage (dari login.html), terus guna
             if (accessToken && spreadsheetId) {
                 initSheet2();
             } else {
                 updateStatus("Menunggu Akses...", "bg-amber-400");
-                // Cuba semak semula setiap 2 saat jika token baru masuk
                 const checkStorage = setInterval(() => {
                     accessToken = localStorage.getItem('siswaklik_access_token');
                     spreadsheetId = localStorage.getItem('siswaklik_spreadsheet_id');
@@ -273,32 +248,35 @@
 
         async function initSheet2() {
             if (!accessToken || !spreadsheetId) return;
-            
             try {
                 const meta = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
                     headers: { Authorization: `Bearer ${accessToken}` }
                 }).then(r => r.json());
 
-                const sheet2Exists = meta.sheets.some(s => s.properties.title === 'Sheet2');
+                const sheet2 = meta.sheets.find(s => s.properties.title === 'Sheet2');
 
-                if (!sheet2Exists) {
-                    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+                if (!sheet2) {
+                    const createRes = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
                         method: 'POST',
                         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             requests: [{ addSheet: { properties: { title: 'Sheet2' } } }]
                         })
-                    });
+                    }).then(r => r.json());
+                    
+                    currentSheetId = createRes.replies[0].addSheet.properties.sheetId;
+
                     await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet2!A1:I1?valueInputOption=USER_ENTERED`, {
                         method: 'PUT',
                         headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
                         body: JSON.stringify({ values: [["Kod", "Subjek", "Set", "Pensyarah", "Hari", "Masa Mula", "Masa Tamat", "Tempat", "Warna"]] })
                     });
+                } else {
+                    currentSheetId = sheet2.properties.sheetId;
                 }
                 loadTimetable();
             } catch (err) { 
                 updateStatus("Sesi Tamat/Ralat", "bg-red-500");
-                console.error("Auth Error:", err);
             }
         }
 
@@ -343,106 +321,120 @@
             } catch (err) { updateStatus("Ralat Cloud", "bg-red-500"); }
         }
 
-// 2. Kemaskini renderTimetable untuk menghantar rowIndex yang betul
-function renderTimetable(data) {
-    const container = document.getElementById('timetableContent');
-    container.innerHTML = '';
-    const dayColumns = { 1: [], 2: [], 3: [], 4: [], 5: [] };
+        function renderTimetable(data) {
+            const container = document.getElementById('timetableContent');
+            container.innerHTML = '';
+            const dayColumns = { 1: [], 2: [], 3: [], 4: [], 5: [] };
 
-    data.forEach((row, index) => {
-        if(row[0]) {
-            const day = parseInt(row[4]);
-            // index + 2 kerana data bermula dari baris 2 dalam Sheets (indeks 0 + 2 = baris 2)
-            if(dayColumns[day]) dayColumns[day].push({...row, rowIndex: index + 2}); 
-        }
-    });
-
-    Object.keys(dayColumns).forEach(d => {
-        dayColumns[d].sort((a, b) => (a[5] || "").localeCompare(b[5] || ""));
-    });
-
-    for (let i = 1; i <= 5; i++) {
-        let columnHtml = `<div class="flex flex-col gap-3 min-w-0">`;
-        if (dayColumns[i].length === 0) {
-            columnHtml += `<div class="border border-dashed border-slate-200 rounded-3xl h-24 flex items-center justify-center text-[9px] text-slate-300 font-bold uppercase">Tiada Kelas</div>`;
-        } else {
-            dayColumns[i].forEach(row => {
-                // Stringify row dengan selamat untuk digunakan dalam HTML attribute
-                const rowData = JSON.stringify(row).replace(/"/g, '&quot;');
-                columnHtml += `
-                    <div onclick="showDetail(${rowData})" 
-                         class="class-card p-4 rounded-3xl text-white shadow-md" 
-                         style="background: linear-gradient(135deg, ${row[8]}, ${row[8]}cc)">
-                        <div class="mb-1 truncate">
-                            <span class="text-[8px] font-black bg-white/20 px-2 py-0.5 rounded-md uppercase">${row[0]}</span>
-                        </div>
-                        <p class="text-[13px] font-extrabold mb-3 leading-tight truncate-text h-8">${row[1]}</p>
-                        <div class="text-[9px] font-bold opacity-90">
-                            <p class="truncate"><i class="far fa-clock mr-1"></i> ${row[5]} - ${row[6]}</p>
-                            <p class="truncate"><i class="fas fa-map-marker-alt mr-1"></i> ${row[7] || 'N/A'}</p>
-                        </div>
-                    </div>
-                `;
-            });
-        }
-        columnHtml += `</div>`;
-        container.innerHTML += columnHtml;
-    }
-}
-
-// 3. Fungsi deleteClass yang telah dibetulkan
-async function deleteClass(rowIndex) {
-    if (!currentSheetId) {
-        return Swal.fire('Ralat', 'ID Helaian tidak dijumpai. Sila refresh.', 'error');
-    }
-
-    const result = await Swal.fire({
-        title: 'Padam Kelas?',
-        text: "Data akan dibuang secara kekal dari Google Sheets.",
-        icon: 'warning',
-        showCancelButton: true,
-        confirmButtonColor: '#ef4444',
-        confirmButtonText: 'Ya, Padam',
-        cancelButtonText: 'Batal',
-        borderRadius: '1.5rem'
-    });
-
-    if (result.isConfirmed) {
-        Swal.fire({ title: 'Memadam...', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-
-        try {
-            const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
-                method: 'POST',
-                headers: { 
-                    Authorization: `Bearer ${accessToken}`, 
-                    'Content-Type': 'application/json' 
-                },
-                body: JSON.stringify({
-                    requests: [{
-                        deleteDimension: {
-                            range: { 
-                                sheetId: currentSheetId,
-                                dimension: "ROWS", 
-                                startIndex: rowIndex - 1, // Google API guna 0-based index
-                                endIndex: rowIndex 
-                            }
-                        }
-                    }]
-                })
+            data.forEach((row, index) => {
+                if(row[0]) {
+                    const day = parseInt(row[4]);
+                    if(dayColumns[day]) dayColumns[day].push({...row, rowIndex: index + 2}); 
+                }
             });
 
-            if (!response.ok) throw new Error('Gagal padam');
+            Object.keys(dayColumns).forEach(d => {
+                dayColumns[d].sort((a, b) => (a[5] || "").localeCompare(b[5] || ""));
+            });
 
-            Swal.fire({ icon: 'success', title: 'Berjaya', text: 'Kelas dipadam!', timer: 1500, showConfirmButton: false });
-            loadTimetable(); 
-        } catch (err) { 
-            Swal.fire('Ralat', 'Gagal memadam data. Sila cuba lagi.', 'error'); 
+            for (let i = 1; i <= 5; i++) {
+                let columnHtml = `<div class="flex flex-col gap-3 min-w-0">`;
+                
+                if (dayColumns[i].length === 0) {
+                    columnHtml += `<div class="border border-dashed border-slate-200 rounded-3xl h-24 flex items-center justify-center text-[9px] text-slate-300 font-bold uppercase">Tiada Kelas</div>`;
+                } else {
+                    dayColumns[i].forEach(row => {
+                        columnHtml += `
+                            <div onclick="showDetail(${JSON.stringify(row).replace(/"/g, '&quot;')})" 
+                                 class="class-card p-4 rounded-3xl text-white shadow-md" 
+                                 style="background: linear-gradient(135deg, ${row[8]}, ${row[8]}cc)">
+                                <div class="mb-1 truncate">
+                                    <span class="text-[8px] font-black bg-white/20 px-2 py-0.5 rounded-md uppercase">${row[0]}</span>
+                                </div>
+                                <p class="text-[13px] font-extrabold mb-3 leading-tight truncate-text h-8">${row[1]}</p>
+                                <div class="text-[9px] font-bold opacity-90">
+                                    <p class="truncate"><i class="far fa-clock mr-1"></i> ${row[5]} - ${row[6]}</p>
+                                    <p class="truncate"><i class="fas fa-map-marker-alt mr-1"></i> ${row[7] || 'N/A'}</p>
+                                </div>
+                            </div>
+                        `;
+                    });
+                }
+                columnHtml += `</div>`;
+                container.innerHTML += columnHtml;
+            }
         }
-    }
-}
+
+        async function deleteClass(rowIndex) {
+            const result = await Swal.fire({
+                title: 'Padam Kelas?',
+                text: "Data akan dibuang dari Cloud secara kekal.",
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Padam',
+                cancelButtonText: 'Batal',
+                borderRadius: '1.5rem'
+            });
+
+            if (result.isConfirmed) {
+                Swal.fire({ 
+                    title: 'Memadam...', 
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading() 
+                });
+
+                try {
+                    // Menggunakan batchUpdate untuk deleteDimension
+                    const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+                        method: 'POST',
+                        headers: { 
+                            Authorization: `Bearer ${accessToken}`, 
+                            'Content-Type': 'application/json' 
+                        },
+                        body: JSON.stringify({
+                            requests: [{
+                                deleteDimension: {
+                                    range: { 
+                                        sheetId: currentSheetId,
+                                        dimension: "ROWS", 
+                                        startIndex: rowIndex - 1, 
+                                        endIndex: rowIndex 
+                                    }
+                                }
+                            }]
+                        })
+                    });
+
+                    if (!response.ok) throw new Error('Gagal memadam');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berjaya',
+                        text: 'Kelas telah dipadam.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+            
+                    loadTimetable();
+                } catch (err) { 
+                    Swal.fire('Ralat', 'Gagal memadam data.', 'error'); 
+                }
+            }
+        }
 
         function showDetail(row) {
-            const {0: kod, 1: subjek, 2: set, 3: pensyarah, 4: hari, 5: mula, 6: tamat, 7: tempat, 8: warna, rowIndex} = row;
+            const kod = row[0];
+            const subjek = row[1];
+            const set = row[2];
+            const pensyarah = row[3];
+            const hari = row[4];
+            const mula = row[5];
+            const tamat = row[6];
+            const tempat = row[7];
+            const warna = row[8];
+            const rowIndex = row.rowIndex;
+
             const hariNama = ["", "Isnin", "Selasa", "Rabu", "Khamis", "Jumaat"][hari];
             const bgImg = colorMap[warna] || 'biru.jpg';
 
