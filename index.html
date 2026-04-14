@@ -21,6 +21,13 @@
         .user-profile-glow {
             box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
         }
+        /* Styling untuk iframe agar masuk cantik dalam box */
+        #kmjpFrame {
+            width: 100%;
+            height: 500px;
+            border: none;
+            border-radius: 2rem;
+        }
     </style>
 </head>
 <body class="bg-slate-50 min-h-screen">
@@ -69,7 +76,7 @@
         </div>
         
         <nav class="p-4 space-y-2 flex-1 mt-4">
-            <button onclick="loadDashboard()" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
+            <button id="dashBtn" onclick="loadDashboard()" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-th-large"></i> Dashboard
             </button>
             <button onclick="loadPage('kalendar.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
@@ -86,36 +93,16 @@
             </button>
         </div>
     </aside>
-     <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
-        <div id="dashboard-content" class="max-w-6xl mx-auto space-y-8">
-            <header class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-3xl font-extrabold text-slate-900">Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Pelajar</span>!</h1>
-                    <p class="text-slate-500 font-medium mt-1">Hari ini adalah hari yang hebat untuk belajar sesuatu yang baru.</p>
+
+    <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
+        <div id="dashboard-content" class="max-w-6xl mx-auto space-y-6"> <header>
+                <h1 class="text-3xl font-extrabold text-slate-900">Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Pelajar</span>!</h1>
+                <p class="text-slate-500 font-medium mt-1">Hari ini adalah hari yang hebat untuk belajar sesuatu yang baru.</p>
             </header>
 
-             <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
-        <div id="dashboard-content" class="max-w-6xl mx-auto space-y-8">
-            <header class="flex justify-between items-start">
-                    
-<div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                <div class="lg:col-span-2">
-                    <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 h-full">
-                        <div class="flex justify-between items-center mb-6">
-                            <h2 class="text-xl font-black text-slate-800 flex items-center gap-2">
-                                <i class="fas fa-file-signature text-orange-500"></i> Jadual Peperiksaan
-                            </h2>
-                            <button onclick="document.getElementById('kmjpInput').click()" class="text-xs font-bold bg-blue-50 text-blue-600 px-4 py-2 rounded-xl hover:bg-blue-100 transition">
-                                <i class="fas fa-file-import mr-1"></i> Import KMJP
-                            </button>
-                            <input type="file" id="kmjpInput" class="hidden" accept=".pdf" onchange="processKMJP(this)">
-                        </div>
-                        <div id="examContainer" class="space-y-4">
-                            <div class="text-center py-10">
-                                <img src="https://cdn-icons-png.flaticon.com/512/6592/6592963.png" class="w-16 h-16 mx-auto opacity-20 mb-4 grayscale" alt="No Data">
-                                <p class="text-slate-400 text-sm font-medium italic">Tiada jadual peperiksaan dikesan.<br>Sila muat naik fail KMJP anda.</p>
-                            </div>
-                        </div>
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-2"> <div class="lg:col-span-2">
+                    <div class="bg-white rounded-[3rem] shadow-sm border border-slate-100 h-full overflow-hidden">
+                        <iframe src="kmjp.html" id="kmjpFrame" title="Jadual Peperiksaan"></iframe>
                     </div>
                 </div>
 
@@ -158,11 +145,15 @@
                 </div>
             </div>
         </div>
-     <main>
+    </main>
 
-            
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Fungsi Refresh Dashboard
+        function loadDashboard() {
+            window.location.reload(); 
+        }
 
         let timeout;
         function resetTimer() {
@@ -171,9 +162,6 @@
         }
         window.onmousemove = resetTimer;
         window.onmousedown = resetTimer;
-        window.onclick = resetTimer;
-        window.onkeydown = resetTimer;
-        window.ontouchstart = resetTimer;
 
         const sidebar = document.getElementById('sidebar');
         const overlay = document.getElementById('drawerOverlay');
@@ -184,19 +172,6 @@
         document.getElementById('menuBtn').onclick = () => toggleSidebar(true);
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
-
-        const originalDashboardHTML = document.getElementById('app-root').innerHTML;
-
-        function loadDashboard() {
-            const appRoot = document.getElementById('app-root');
-            appRoot.innerHTML = originalDashboardHTML;
-            document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
-            document.getElementById('dashBtn').classList.add('nav-active');
-            
-            initDashboard();
-            toggleSidebar(false);
-            window.scrollTo(0, 0);
-        }
 
         async function loadPage(page, element) {
             try {
@@ -210,6 +185,7 @@
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) element.classList.add('nav-active');
                 toggleSidebar(false);
+                
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -227,11 +203,10 @@
         function initDashboard() {
             const userData = JSON.parse(localStorage.getItem('siswaklik_user'));
             if(userData) {
-                // Update UI Profil di Header
                 document.getElementById('welcomeText').innerText = `Hai, ${userData.given_name || userData.name.split(' ')[0]}!`;
                 document.getElementById('userSubtext').innerText = userData.email;
                 if(document.getElementById('userNameDisplay')) {
-                    document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
+                    document.getElementById('userNameDisplay').innerText = (userData.given_name || userData.name.split(' ')[0]).toUpperCase();
                 }
                 
                 if (userData.picture) {
@@ -242,7 +217,6 @@
                 }
             }
             updateAcademicStats();
-            renderExams();
         }
 
         function parseDate(dateStr) {
@@ -291,75 +265,10 @@
             } catch (e) { console.error(e); }
         }
 
-        function renderExams() {
-            const exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
-            const container = document.getElementById('examContainer');
-            if (!container) return;
-            if (exams.length > 0) {
-                container.innerHTML = exams.map(exam => `
-                    <div class="flex items-center gap-4 p-5 rounded-[2rem] border border-slate-100 hover:border-blue-100 hover:bg-blue-50/30 transition group">
-                        <div class="bg-white shadow-sm border border-slate-100 p-3 rounded-2xl text-center min-w-[70px]">
-                            <p class="text-[10px] font-bold text-slate-400 uppercase">${new Date(exam.date).toLocaleString('ms-MY', {month: 'short'})}</p>
-                            <p class="text-xl font-black text-blue-600">${new Date(exam.date).getDate()}</p>
-                        </div>
-                        <div class="flex-1">
-                            <h4 class="font-bold text-slate-800 leading-tight">${exam.title}</h4>
-                            <p class="text-xs text-slate-500 mt-1 uppercase font-medium tracking-tighter">
-                                <i class="far fa-clock mr-1 text-blue-400"></i> ${exam.time} • 
-                                <i class="fas fa-map-marker-alt mr-1 text-rose-400"></i> ${exam.location}
-                            </p>
-                        </div>
-                        <button onclick="deleteExam('${exam.id}')" class="p-2 text-slate-200 hover:text-red-500 transition">
-                            <i class="fas fa-trash-alt text-xs"></i>
-                        </button>
-                    </div>
-                `).join('');
-            }
-        }
-
-        async function processKMJP(input) {
-            const file = input.files[0];
-            if (!file) return;
-            try {
-                Swal.fire({ title: 'Memproses...', text: 'Mengekstrak jadual peperiksaan', allowOutsideClick: false, didOpen: () => Swal.showLoading() });
-                const reader = new FileReader();
-                reader.onload = async function() {
-                    const typedarray = new Uint8Array(this.result);
-                    const pdf = await pdfjsLib.getDocument(typedarray).promise;
-                    let text = '';
-                    for (let i = 1; i <= pdf.numPages; i++) {
-                        const page = await pdf.getPage(i);
-                        const content = await page.getTextContent();
-                        text += content.items.map(item => item.str).join(' ');
-                    }
-                    const cleanText = text.replace(/\s+/g, ' ');
-                    const pattern = /([A-Z]{4}\d{4})\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+.*?(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+)/gi;
-                    const found = [];
-                    let m;
-                    while ((m = pattern.exec(cleanText)) !== null) {
-                        if (m[2].includes("Penilaian Berterusan")) continue;
-                        found.push({ id: 'ex-'+Math.random().toString(36).substr(2,7), code: m[1], title: m[2].trim(), date: m[3].split('/').reverse().join('-'), time: m[4], location: m[5].trim() });
-                    }
-                    localStorage.setItem('siswa_exams', JSON.stringify(found));
-                    renderExams();
-                    Swal.fire('Berjaya!', `${found.length} subjek dikesan.`, 'success');
-                };
-                reader.readAsArrayBuffer(file);
-            } catch(e) { Swal.fire('Ralat', 'Gagal memproses PDF', 'error'); }
-            input.value = "";
-        }
-
-        function deleteExam(id) {
-            let exams = JSON.parse(localStorage.getItem('siswa_exams')) || [];
-            exams = exams.filter(e => e.id !== id);
-            localStorage.setItem('siswa_exams', JSON.stringify(exams));
-            renderExams();
-        }
-
         function updateDate() {
             const options = { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' };
             const el = document.getElementById('systemDate');
-            if(el) el.innerText = new Date().toLocaleDateString('ms-MY', options);
+            if(el) el.innerText = new Date().toLocaleDateString('ms-MY', options).toUpperCase();
         }
 
         function logout() {
@@ -375,6 +284,7 @@
                 window.location.href = 'login.html';
             } else {
                 initDashboard();
+                document.getElementById('dashBtn').classList.add('nav-active');
             }
         };
     </script>
