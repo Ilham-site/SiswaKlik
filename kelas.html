@@ -189,6 +189,30 @@
     </div>
 
     <script>
+                let currentSheetId = null; // Tambah pembolehubah global di bahagian atas script
+
+        async function loadTimetable() {
+            updateStatus("Menyegerak...");
+            try {
+                // Ambil meta data untuk dapatkan GID/SheetId bagi 'Sheet2'
+                const meta = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                }).then(r => r.json());
+        
+                const sheet2 = meta.sheets.find(s => s.properties.title === 'Sheet2');
+                currentSheetId = sheet2.properties.sheetId;
+
+                const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}/values/Sheet2!A2:I100`, {
+                    headers: { Authorization: `Bearer ${accessToken}` }
+                }).then(r => r.json());
+
+                renderTimetable(res.values || []);
+                updateStatus("Terkini", "bg-emerald-500");
+            } catch (err) { 
+                updateStatus("Ralat Cloud", "bg-red-500"); 
+            }
+        }
+        
         let selectedColor = '#3b82f6';
         let accessToken = localStorage.getItem('siswaklik_access_token');
         let spreadsheetId = localStorage.getItem('siswaklik_spreadsheet_id');
@@ -367,32 +391,58 @@
         async function deleteClass(rowIndex) {
             const result = await Swal.fire({
                 title: 'Padam Kelas?',
-                text: "Data akan dibuang dari Cloud.",
+                text: "Data akan dibuang dari Cloud secara kekal.",
                 icon: 'warning',
                 showCancelButton: true,
                 confirmButtonColor: '#ef4444',
                 confirmButtonText: 'Ya, Padam',
-                cancelButtonText: 'Batal'
+                cancelButtonText: 'Batal',
+                borderRadius: '1.5rem'
             });
 
             if (result.isConfirmed) {
-                Swal.fire({ title: 'Memadam...', didOpen: () => Swal.showLoading() });
+                Swal.fire({ 
+                    title: 'Memadam...', 
+                    allowOutsideClick: false,
+                    didOpen: () => Swal.showLoading() 
+                });
+
                 try {
-                    await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+                    const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
                         method: 'POST',
-                        headers: { Authorization: `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
+                        headers: { 
+                            Authorization: `Bearer ${accessToken}`, 
+                            'Content-Type': 'application/json' 
+                        },
                         body: JSON.stringify({
                             requests: [{
                                 deleteDimension: {
-                                    range: { sheetId: 0, dimension: "ROWS", startIndex: rowIndex - 1, endIndex: rowIndex }
+                                    range: { 
+                                        sheetId: currentSheetId, // Guna ID yang dinamik
+                                        dimension: "ROWS", 
+                                        startIndex: rowIndex - 1, 
+                                        endIndex: rowIndex 
+                                    }
                                 }
                             }]
                         })
                     });
-                    Swal.close();
-                    Swal.fire('Berjaya', 'Kelas dipadam.', 'success');
-                    loadTimetable();
-                } catch (err) { Swal.fire('Ralat', 'Gagal memadam.', 'error'); }
+
+                    if (!response.ok) throw new Error('Gagal memadam di server');
+
+                    Swal.fire({
+                        icon: 'success',
+                        title: 'Berjaya',
+                        text: 'Kelas telah dipadam dari jadual.',
+                        timer: 1500,
+                        showConfirmButton: false
+                    });
+            
+                    loadTimetable(); // Refresh jadual selepas padam
+                } catch (err) { 
+                    console.error(err);
+                    Swal.fire('Ralat', 'Gagal memadam data. Sila cuba lagi.', 'error'); 
+                }
             }
         }
 
