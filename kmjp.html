@@ -256,6 +256,21 @@
                 renderExamsFromSheet();
             }
         };
+        // Menghantar ketinggian kandungan ke index.html
+    function sendHeight() {
+        const height = document.body.scrollHeight;
+        window.parent.postMessage({
+            type: 'resize-iframe',
+            height: height
+        }, '*');
+    }
+
+    // Jalankan setiap kali data dimuatkan atau tetingkap berubah saiz
+    window.onload = sendHeight;
+    window.onresize = sendHeight;
+    
+    // Jika anda menggunakan pengumpukan data dinamik (seperti fetch), 
+    // jalankan sendHeight() selepas senarai subjek selesai di-render.
     </script>
 </body>
 </html>
