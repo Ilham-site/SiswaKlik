@@ -191,10 +191,26 @@
             window.location.reload();
         }
 
-        // Fungsi Auto-Resize Iframe
-        function resizeIframe(obj) {
-            obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';
-        }
+       // Skrip Auto-Resize Iframe
+        const iframe = document.getElementById('examIframe');
+        
+        // Pendengar mesej daripada kmjp.html
+        window.addEventListener('message', function(e) {
+            if (e.data.type === 'resize-iframe') {
+                iframe.style.height = e.data.height + 'px';
+            }
+        }, false);
+
+        // Backup resize jika kmjp.html sudah siap dimuatkan
+        iframe.onload = function() {
+            try {
+                // Hanya berfungsi jika dalam domain yang sama
+                const height = iframe.contentWindow.document.body.scrollHeight;
+                iframe.style.height = height + 'px';
+            } catch (e) {
+                console.log("Menunggu data resize daripada iframe...");
+            }
+        };
 
         async function loadPage(page, element) {
             try {
