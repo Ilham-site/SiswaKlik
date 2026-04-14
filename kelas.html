@@ -334,9 +334,14 @@
             });
 
             Object.keys(dayColumns).forEach(d => {
-                dayColumns[d].sort((a, b) => (a[5] || "").localeCompare(b[5] || ""));
+                dayColumns[d].sort((a, b) => {
+                    // Mengambil nilai Masa Mula (Index 5 dalam Sheet2)
+                    const timeA = a[5] || "00:00";
+                    const timeB = b[5] || "00:00";
+                    return timeA.localeCompare(timeB);
+                });
             });
-
+            
             for (let i = 1; i <= 5; i++) {
                 let columnHtml = `<div class="flex flex-col gap-3 min-w-0">`;
                 
