@@ -10,7 +10,17 @@
     <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
-        body { font-family: 'Plus Jakarta Sans', sans-serif; transition: background 0.3s; }
+        
+        body { 
+            font-family: 'Plus Jakarta Sans', sans-serif; 
+            transition: background 0.3s;
+            /* Tukar background kepada wallpaper.jpg */
+            background-image: url('wallpaper.jpg');
+            background-attachment: fixed;
+            background-size: cover;
+            background-position: center;
+        }
+
         .drawer-transition { transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1); }
         .glass-nav { background: rgba(255, 255, 255, 0.9); backdrop-filter: blur(12px); }
         .nav-active { background-color: #eff6ff; color: #2563eb; font-weight: 700; border-right: 4px solid #2563eb; }
@@ -22,7 +32,7 @@
             box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
         }
 
-        /* Styling untuk iframe auto-resize */
+        /* Styling untuk hilangkan border/scroll pada iframe */
         #kmjpIframe {
             width: 100%;
             border: none;
@@ -30,7 +40,7 @@
         }
     </style>
 </head>
-<body class="bg-slate-50 min-h-screen">
+<body class="min-h-screen">
 
     <nav class="glass-nav border-b sticky top-0 z-50 px-6 py-4 flex justify-between items-center shadow-sm">
         <div class="flex items-center gap-4">
@@ -95,13 +105,15 @@
     </aside>
 
     <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
-        <div id="dashboard-content" class="max-w-6xl mx-auto space-y-6"> <header>
-                <h1 class="text-3xl font-extrabold text-slate-900">Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Pelajar</span>!</h1>
-                <p class="text-slate-500 font-medium mt-1">Hari ini adalah hari yang hebat untuk belajar sesuatu yang baru.</p>
+        <div id="dashboard-content" class="max-w-6xl mx-auto space-y-6"> <header class="flex justify-between items-start">
+                <div>
+                    <h1 class="text-3xl font-extrabold text-slate-900">Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Pelajar</span>!</h1>
+                    <p class="text-slate-500 font-medium mt-1">Hari ini adalah hari yang hebat untuk belajar sesuatu yang baru.</p>
+                </div>
             </header>
 
-            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-2"> <div class="lg:col-span-2">
-                    <div class="bg-white p-8 rounded-[3rem] shadow-sm border border-slate-100 h-full">
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 mt-4"> <div class="lg:col-span-2">
+                    <div class="bg-white/80 backdrop-blur-md p-8 rounded-[3rem] shadow-sm border border-slate-100 h-full">
                         <div class="flex justify-between items-center mb-6">
                             <h2 class="text-xl font-black text-slate-800 flex items-center gap-2">
                                 <i class="fas fa-file-signature text-orange-500"></i> Jadual Peperiksaan
@@ -113,7 +125,7 @@
                         </div>
                         
                         <div id="examContainer" class="w-full">
-                            <iframe id="kmjpIframe" src="kmjp.html" onload="resizeIframe(this)"></iframe>
+                            <iframe src="kmjp.html" id="kmjpIframe" scrolling="no" onload="resizeIframe(this)"></iframe>
                         </div>
                     </div>
                 </div>
@@ -140,12 +152,12 @@
                         </div>
                     </div>
 
-                    <div class="bg-white p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
+                    <div class="bg-white/80 backdrop-blur-md p-6 rounded-[2.5rem] shadow-sm border border-slate-100">
                         <h3 class="font-bold text-slate-800 mb-4 flex items-center gap-2">
                             <i class="fas fa-calendar-alt text-blue-500"></i> Aktiviti Terdekat
                         </h3>
                         <div id="upcomingEvents" class="space-y-4">
-                            <div class="p-4 bg-slate-50 rounded-2xl border border-slate-100">
+                            <div class="p-4 bg-slate-50/50 rounded-2xl border border-slate-100">
                                 <p id="nextActivityTitle" class="font-bold text-slate-700 text-sm">Sila kemaskini kalendar</p>
                                 <p id="nextActivityDate" class="text-[10px] text-slate-500 mt-1 uppercase font-bold tracking-wider">Tiada Data</p>
                             </div>
@@ -161,6 +173,11 @@
 
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
+
+        // Auto resize iframe based on content
+        function resizeIframe(obj) {
+            obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';
+        }
 
         let timeout;
         function resetTimer() {
@@ -183,14 +200,9 @@
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        // Fungsi Dashboard untuk Refresh Halaman
+        // Betulkan button Dashboard supaya refresh page
         function loadDashboard() {
-            window.location.reload();
-        }
-
-        // Fungsi Auto-Resize Iframe
-        function resizeIframe(obj) {
-            obj.style.height = obj.contentWindow.document.documentElement.scrollHeight + 'px';
+            window.location.reload(); 
         }
 
         async function loadPage(page, element) {
@@ -205,6 +217,7 @@
                 document.querySelectorAll('.nav-item').forEach(btn => btn.classList.remove('nav-active'));
                 if(element) element.classList.add('nav-active');
                 toggleSidebar(false);
+                
                 const scripts = appRoot.querySelectorAll('script');
                 scripts.forEach(oldScript => {
                     const newScript = document.createElement('script');
@@ -214,7 +227,7 @@
                 });
                 window.scrollTo(0, 0);
             } catch (err) {
-                appRoot.innerHTML = `<div class="text-center py-20">Ralat: Fail tidak ditemui.</div>`;
+                appRoot.innerHTML = `<div class="text-center py-20 bg-white/80 rounded-3xl">Ralat: Fail <b>${page}</b> tidak ditemui.</div>`;
                 appRoot.style.opacity = '1';
             }
         }
@@ -225,7 +238,7 @@
                 document.getElementById('welcomeText').innerText = `Hai, ${userData.given_name || userData.name.split(' ')[0]}!`;
                 document.getElementById('userSubtext').innerText = userData.email;
                 if(document.getElementById('userNameDisplay')) {
-                    document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0];
+                    document.getElementById('userNameDisplay').innerText = userData.name.split(' ')[0].toUpperCase();
                 }
                 
                 if (userData.picture) {
@@ -236,7 +249,6 @@
                 }
             }
             updateAcademicStats();
-            // Jadual Peperiksaan kini diuruskan oleh iframe kmjp.html
         }
 
         function parseDate(dateStr) {
@@ -310,10 +322,9 @@
                     }
                     localStorage.setItem('siswa_exams', JSON.stringify(found));
                     
-                    // Refresh iframe selepas import
-                    const iframe = document.getElementById('kmjpIframe');
-                    iframe.src = iframe.src; 
-
+                    // Refresh iframe sahaja selepas data masuk
+                    document.getElementById('kmjpIframe').contentWindow.location.reload();
+                    
                     Swal.fire('Berjaya!', `${found.length} subjek dikesan.`, 'success');
                 };
                 reader.readAsArrayBuffer(file);
