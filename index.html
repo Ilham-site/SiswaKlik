@@ -13,7 +13,6 @@
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
             transition: background 0.3s;
-            /* Latar belakang wallpaper.jpg */
             background: url('wallpaper.jpg') no-repeat center center fixed;
             background-size: cover;
         }
@@ -28,11 +27,18 @@
             box-shadow: 0 0 15px rgba(37, 99, 235, 0.2);
         }
 
-        /* Hilangkan sempadan iframe */
+        /* Hilangkan sempadan iframe dan set ketelusan */
         iframe#examIframe {
             width: 100%;
             border: none;
             overflow: hidden;
+            background: transparent;
+            opacity: 0.85; /* Mengurangkan ketelusan iframe */
+            transition: opacity 0.3s ease;
+        }
+        
+        iframe#examIframe:hover {
+            opacity: 1; /* Terang semula bila di-hover */
         }
     </style>
 </head>
@@ -115,8 +121,8 @@
                                 <i class="fas fa-file-signature text-orange-500"></i> Jadual Peperiksaan
                             </h2>
                         </div>
-                        <div id="examContainer" class="w-full">
-                            <iframe src="kmjp.html" id="examIframe" scrolling="no" onload="resizeIframe(this)"></iframe>
+                        <div id="examContainer" class="w-full overflow-hidden">
+                            <iframe src="kmjp.html" id="examIframe" scrolling="no"></iframe>
                         </div>
                     </div>
                 </div>
@@ -186,31 +192,34 @@
         document.getElementById('closeBtn').onclick = () => toggleSidebar(false);
         overlay.onclick = () => toggleSidebar(false);
 
-        // Dashboard kini akan refresh halaman sepenuhnya
         function loadDashboard() {
             window.location.reload();
         }
 
-       // Skrip Auto-Resize Iframe
+       // Skrip Auto-Resize Iframe Dinamik
         const iframe = document.getElementById('examIframe');
         
-        // Pendengar mesej daripada kmjp.html
         window.addEventListener('message', function(e) {
-            if (e.data.type === 'resize-iframe') {
+            // Menerima data ketinggian daripada kmjp.html
+            if (e.data && e.data.type === 'resize-iframe') {
                 iframe.style.height = e.data.height + 'px';
             }
         }, false);
 
-        // Backup resize jika kmjp.html sudah siap dimuatkan
-        iframe.onload = function() {
+        // Fungsi sokongan untuk cuba resize jika iframe dalam domain sama
+        function manualResize() {
             try {
-                // Hanya berfungsi jika dalam domain yang sama
-                const height = iframe.contentWindow.document.body.scrollHeight;
-                iframe.style.height = height + 'px';
+                if (iframe.contentWindow && iframe.contentWindow.document.body) {
+                    const height = iframe.contentWindow.document.body.scrollHeight;
+                    if(height > 0) iframe.style.height = height + 'px';
+                }
             } catch (e) {
-                console.log("Menunggu data resize daripada iframe...");
+                // Ignore cross-origin errors, depend on postMessage
             }
-        };
+        }
+
+        iframe.onload = manualResize;
+        window.addEventListener('resize', manualResize);
 
         async function loadPage(page, element) {
             try {
