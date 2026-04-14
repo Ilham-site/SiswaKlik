@@ -69,7 +69,7 @@
         </div>
         
         <nav class="p-4 space-y-2 flex-1 mt-4">
-            <button onclick="loadDashboard('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all nav-active" id="dashBtn">
+            <button onclick="loadPage('dashboard.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
                 <i class="fas fa-th-large"></i> Dashboard
             </button>
             <button onclick="loadPage('kalendar.html', this)" class="nav-item w-full flex items-center gap-4 p-4 hover:bg-blue-50 rounded-2xl text-gray-600 transition-all">
@@ -86,15 +86,6 @@
             </button>
         </div>
     </aside>
-    
-    <main id="app-root" class="p-4 md:p-10 max-w-7xl mx-auto min-h-screen animate-fade">
-        <div id="dashboard-content" class="max-w-6xl mx-auto space-y-8">
-            <header class="flex justify-between items-start">
-                <div>
-                    <h1 class="text-3xl font-extrabold text-slate-900">Selamat Kembali, <span id="userNameDisplay" class="text-blue-600">Pelajar</span>!</h1>
-                    <p class="text-slate-500 font-medium mt-1">Hari ini adalah hari yang hebat untuk belajar sesuatu yang baru.</p>
-                </div>
-            </header>
             
     <script>
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js';
