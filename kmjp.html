@@ -14,6 +14,10 @@
         body { 
             font-family: 'Plus Jakarta Sans', sans-serif; 
             background-color: #f8fafc;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            overflow: hidden; /* Halang seluruh page dari scrolling */
         }
 
         .glass-card {
@@ -23,68 +27,66 @@
         }
 
         .exam-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 12px 20px -5px rgba(0, 0, 0, 0.05);
+            transform: scale(1.01);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
 
         .blue-gradient {
             background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
         }
 
-        /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 6px; }
-        ::-webkit-scrollbar-track { background: #f1f1f1; }
-        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+        /* Scrollbar kustom untuk bahagian senarai sahaja */
+        #exam-list-container::-webkit-scrollbar { width: 5px; }
+        #exam-list-container::-webkit-scrollbar-track { background: transparent; }
+        #exam-list-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
     </style>
 </head>
-<body class="p-4 md:p-8 max-w-4xl mx-auto">
+<body class="p-4 md:p-6 max-w-4xl mx-auto w-full">
 
-    <div class="blue-gradient rounded-[2rem] p-8 md:p-10 text-white shadow-2xl shadow-blue-200/50 mb-10 relative overflow-hidden">
-        <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-8">
+    <div class="blue-gradient rounded-[2.5rem] p-6 md:p-8 text-white shadow-2xl shadow-blue-200/50 mb-6 relative overflow-hidden shrink-0">
+        <div class="relative z-10 flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="text-center md:text-left">
-                <div class="inline-block p-2 bg-white/20 rounded-xl mb-4 backdrop-blur-md">
-                    <i class="fas fa-file-pdf text-2xl"></i>
+                <div class="inline-block p-2 bg-white/20 rounded-xl mb-3 backdrop-blur-md">
+                    <i class="fas fa-cloud-upload-alt text-xl"></i>
                 </div>
-                <h1 class="text-2xl md:text-3xl font-extrabold tracking-tight">Pengurusan KMJP Cloud</h1>
-                <p class="text-blue-100/80 text-sm mt-2 font-medium">Ekstrak jadual peperiksaan ke Google Sheets secara automatik.</p>
+                <h1 class="text-xl md:text-2xl font-extrabold tracking-tight">KMJP Cloud Manager</h1>
+                <p class="text-blue-100/80 text-xs mt-1 font-medium">Sistem Pengurusan Jadual Peperiksaan UKM [cite: 4]</p>
             </div>
             
             <div class="flex flex-col items-center">
                 <input type="file" id="pdfInput" class="hidden" accept=".pdf" onchange="handleKMJPUpload(this)">
                 <button onclick="document.getElementById('pdfInput').click()" 
-                        class="bg-white text-blue-700 px-8 py-4 rounded-2xl font-bold hover:bg-blue-50 transition-all shadow-xl flex items-center gap-3 group">
-                    <i class="fas fa-cloud-upload-alt group-hover:bounce"></i> 
-                    Muat Naik Fail PDF
+                        class="bg-white text-blue-700 px-6 py-3 rounded-2xl font-bold hover:bg-blue-50 transition-all shadow-lg flex items-center gap-2 text-sm group">
+                    <i class="fas fa-file-pdf group-hover:scale-110 transition-transform"></i> 
+                    Muat Naik PDF
                 </button>
-                <p class="text-[10px] mt-3 text-blue-200 font-semibold uppercase tracking-widest">Sokongan: Slip KMJP UKM</p>
             </div>
         </div>
-        <div class="absolute -bottom-10 -right-10 w-40 h-40 bg-white/10 rounded-full blur-2xl"></div>
     </div>
 
-    <div class="flex justify-between items-end mb-6 px-2">
+    <div class="flex justify-between items-center mb-4 px-4 shrink-0">
         <div>
-            <h2 class="text-xl font-extrabold text-slate-800">Jadual Peperiksaan</h2>
-            <p class="text-xs text-slate-500 font-semibold">Senarai subjek yang telah didaftarkan</p>
+            <h2 class="text-lg font-extrabold text-slate-800">Senarai Kursus</h2>
+            <p class="text-[10px] text-slate-500 font-bold uppercase tracking-wider">Semester 1 Sesi 2025/2026 [cite: 5]</p>
         </div>
         <div id="exam-count-badge" class="hidden">
-            <span id="exam-count" class="bg-blue-600 text-white text-[10px] font-bold px-4 py-1.5 rounded-full shadow-lg shadow-blue-200">
-                -- Subjek
+            <span id="exam-count" class="bg-slate-800 text-white text-[10px] font-bold px-3 py-1 rounded-full">
+                -- SUBJEK
             </span>
         </div>
     </div>
 
-    <div id="exam-list" class="grid gap-5">
-        <div class="animate-pulse space-y-4">
-            <div class="h-24 bg-slate-200 rounded-[2rem]"></div>
-            <div class="h-24 bg-slate-200 rounded-[2rem]"></div>
+    <div id="exam-list-container" class="flex-1 overflow-y-auto px-2 pb-6">
+        <div id="exam-list" class="grid gap-4">
+            <div class="animate-pulse space-y-4">
+                <div class="h-20 bg-slate-200 rounded-[1.5rem]"></div>
+                <div class="h-20 bg-slate-200 rounded-[1.5rem]"></div>
+                <div class="h-20 bg-slate-200 rounded-[1.5rem]"></div>
+            </div>
         </div>
     </div>
 
     <script>
-        window.onload = sendHeight;
-        window.onresize = sendHeight;
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
         
         const ACCESS_TOKEN = localStorage.getItem('siswaklik_access_token');
@@ -107,10 +109,9 @@
             if(!file || !ACCESS_TOKEN) return;
             
             Swal.fire({ 
-                title: 'Sedang Memproses...', 
-                html: '<p class="text-sm">SiswaKlik sedang membaca data PDF anda.</p>',
+                title: 'Memproses PDF...', 
+                html: '<span class="text-xs">Sila tunggu sebentar.</span>',
                 showConfirmButton: false,
-                allowOutsideClick: false,
                 didOpen: () => Swal.showLoading() 
             });
 
@@ -130,18 +131,19 @@
                     if(extractedData.length > 0) {
                         await updateSiswaKlikSheet(extractedData);
                     } else {
-                        Swal.fire('Ralat', 'Tiada data peperiksaan ditemui dalam PDF tersebut.', 'warning');
+                        Swal.fire('Ralat', 'Tiada data ditemui.', 'warning');
                     }
                 };
                 reader.readAsArrayBuffer(file);
             } catch(e) { 
-                Swal.fire('Ralat', 'Gagal memproses fail PDF.', 'error'); 
+                Swal.fire('Ralat', 'Gagal memproses fail.', 'error'); 
             }
         }
 
         function parseKMJP(text) {
             const cleanText = text.replace(/\s+/g, ' ');
-            const pattern = /([A-Z]{4}\d{4})\s+(\d+)\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+(\d+[:\d]*\s*j?)\s+(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+)\s+(\d+)/gi;
+            // Regex diperkukuh untuk menangkap "Penilaian Berterusan" atau "-"
+            const pattern = /([A-Z]{4}\d{4})\s+(\d+)\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4}|-|Penilaian\sBerterusan)\s*(\d{2}:\d{2}|-|)\s*(\d+[:\d]*\s*j?|-|)\s*(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+|Penilaian\sBerterusan|-|)\s*(\d+|-|)/gi;
             
             const rows = [];
             let m;
@@ -155,7 +157,7 @@
             try {
                 let ssId = await getFileId(SPREADSHEET_NAME, 'application/vnd.google-apps.spreadsheet');
                 if (!ssId) {
-                    Swal.fire('Fail Tidak Ditemui', 'Sila pastikan fail Spreadsheet SiswaKlik wujud di Drive.', 'error');
+                    Swal.fire('Fail Tidak Ditemui', 'Sila pastikan fail Spreadsheet wujud.', 'error');
                     return;
                 }
 
@@ -170,17 +172,11 @@
                     body: JSON.stringify({ values: dataRows })
                 });
 
-                Swal.fire({
-                    icon: 'success',
-                    title: 'Berjaya Disimpan!',
-                    text: 'Jadual anda kini selamat di dalam Cloud.',
-                    timer: 2000,
-                    showConfirmButton: false
-                });
+                Swal.close();
                 renderExamsFromSheet();
 
             } catch (err) {
-                Swal.fire('Ralat Cloud', 'Gagal menyambung ke Google Sheets', 'error');
+                Swal.fire('Ralat Cloud', 'Gagal menyambung ke Drive', 'error');
             }
         }
 
@@ -191,13 +187,7 @@
 
             try {
                 let ssId = await getFileId(SPREADSHEET_NAME, 'application/vnd.google-apps.spreadsheet');
-                if(!ssId) {
-                    container.innerHTML = `<div class="text-center py-16 bg-white rounded-[2rem] border-2 border-dashed border-slate-200">
-                        <i class="fas fa-search text-slate-300 text-4xl mb-4"></i>
-                        <p class="text-slate-500 font-bold">Fail Spreadsheet tidak ditemui</p>
-                    </div>`;
-                    return;
-                }
+                if(!ssId) return;
 
                 const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/Sheet3!A2:H30`, {
                     headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
@@ -206,48 +196,52 @@
                 const exams = data.values || [];
 
                 badge.classList.remove('hidden');
-                countSpan.innerText = `${exams.length} SUBJEK`;
+                countSpan.innerText = `${exams.length} KURSUS`;
 
                 if(exams.length === 0) {
-                    container.innerHTML = `<div class="text-center py-16 bg-white rounded-[2rem] border border-slate-200">
-                        <p class="text-slate-400 font-medium">Tiada peperiksaan aktif dikesan.</p>
-                    </div>`;
+                    container.innerHTML = `<div class="text-center py-12 bg-white rounded-[2rem] border border-slate-200 text-slate-400 font-medium">Tiada data aktif.</div>`;
                     return;
                 }
 
                 container.innerHTML = exams.map(ex => {
-                    const dateParts = ex[3].split('/');
-                    const dateObj = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
-                    const month = dateObj.toLocaleString('ms-MY', {month: 'short'});
-                    
+                    const isPB = !ex[3] || ex[3] === '-' || ex[3].toLowerCase().includes('penilaian');
+                    let dateDisplay = "PB";
+                    let monthDisplay = "N/A";
+                    let dayDisplay = "-";
+
+                    if (!isPB) {
+                        const dateParts = ex[3].split('/');
+                        const dateObj = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
+                        monthDisplay = dateObj.toLocaleString('ms-MY', {month: 'short'});
+                        dayDisplay = dateObj.getDate();
+                        dateDisplay = ""; // Gunakan ikon tarikh biasa
+                    }
+
                     return `
-                    <div class="glass-card p-5 rounded-[2rem] flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 exam-card transition-all duration-300">
-                        <div class="flex items-center gap-5 w-full">
-                            <div class="h-16 w-16 min-w-[64px] bg-indigo-50 text-indigo-600 rounded-2xl flex flex-col items-center justify-center border border-indigo-100 shadow-inner">
-                                <span class="text-[10px] uppercase font-bold tracking-wider">${month}</span>
-                                <span class="text-2xl font-extrabold leading-none">${dateObj.getDate()}</span>
+                    <div class="glass-card p-4 rounded-[1.5rem] flex items-center justify-between gap-4 exam-card transition-all duration-300">
+                        <div class="flex items-center gap-4 w-full">
+                            <div class="h-14 w-14 min-w-[56px] ${isPB ? 'bg-amber-50 text-amber-600 border-amber-100' : 'bg-blue-50 text-blue-600 border-blue-100'} rounded-2xl flex flex-col items-center justify-center border shadow-inner">
+                                <span class="text-[9px] uppercase font-bold tracking-wider">${isPB ? 'STATUS' : monthDisplay}</span>
+                                <span class="${isPB ? 'text-sm' : 'text-xl'} font-extrabold leading-none">${isPB ? 'PB' : dayDisplay}</span>
                             </div>
                             <div class="flex-1 overflow-hidden">
                                 <div class="flex items-center gap-2 mb-0.5">
-                                    <h4 class="font-extrabold text-slate-800 tracking-tight truncate">${ex[0]}</h4>
-                                    <span class="text-[9px] bg-slate-100 px-2 py-0.5 rounded-full text-slate-500 font-bold">SET ${ex[1]}</span>
+                                    <h4 class="font-bold text-slate-800 text-sm truncate">${ex[0]}</h4>
+                                    <span class="text-[8px] bg-slate-100 px-1.5 py-0.5 rounded text-slate-500 font-bold">SET ${ex[1]}</span>
                                 </div>
-                                <p class="text-xs text-slate-500 font-semibold truncate mb-2 uppercase">${ex[2]}</p>
-                                <div class="flex flex-wrap gap-x-4 gap-y-2 text-[10px] font-bold text-slate-400 uppercase">
-                                    <span class="flex items-center gap-1.5"><i class="fas fa-clock text-blue-500"></i> ${ex[4]}</span>
-                                    <span class="flex items-center gap-1.5"><i class="fas fa-map-marker-alt text-rose-500"></i> ${ex[6]}</span>
-                                    <span class="flex items-center gap-1.5"><i class="fas fa-chair text-amber-500"></i> NO: ${ex[7]}</span>
+                                <p class="text-[10px] text-slate-500 font-semibold truncate mb-1 uppercase">${ex[2]}</p>
+                                <div class="flex flex-wrap gap-x-3 gap-y-1 text-[9px] font-bold text-slate-400 uppercase">
+                                    <span class="flex items-center gap-1"><i class="fas fa-clock text-blue-400"></i> ${isPB ? '-' : ex[4]}</span>
+                                    <span class="flex items-center gap-1"><i class="fas fa-map-marker-alt text-rose-400"></i> ${isPB ? 'Penilaian Berterusan' : ex[6]} </span>
+                                    ${!isPB ? `<span class="flex items-center gap-1"><i class="fas fa-chair text-amber-400"></i> NO: ${ex[7]}</span>` : ''}
                                 </div>
                             </div>
-                        </div>
-                        <div class="hidden md:block">
-                            <i class="fas fa-chevron-right text-slate-200"></i>
                         </div>
                     </div>
                 `}).join('');
 
             } catch (err) {
-                container.innerHTML = `<div class="text-center py-10 text-rose-500 font-bold bg-rose-50 rounded-2xl border border-rose-100">Gagal memuatkan data dari Cloud.</div>`;
+                container.innerHTML = `<div class="text-center py-6 text-rose-500 text-xs font-bold bg-rose-50 rounded-xl">Gagal memuatkan data cloud.</div>`;
             }
         }
 
@@ -258,14 +252,6 @@
                 renderExamsFromSheet();
             }
         };
-        // Menghantar ketinggian kandungan ke index.html
-    function sendHeight() {
-        const height = document.body.scrollHeight;
-        window.parent.postMessage({
-            type: 'resize-iframe',
-            height: height
-        }, '*');
-    }
     </script>
 </body>
 </html>
