@@ -27,7 +27,7 @@
         <div class="flex flex-col md:flex-row justify-between items-center gap-6">
             <div class="text-center md:text-left">
                 <h3 class="text-xl font-bold">Simpan KMJP ke Cloud</h3>
-                <p class="text-blue-100 text-sm mt-2">Fail akan disimpan di Drive & data diekstrak ke Google Sheets.</p>
+                <p class="text-blue-100 text-sm mt-2">Data akan disimpan secara automatik dalam Spreadsheet SiswaKlik.</p>
             </div>
             <input type="file" id="pdfInput" class="hidden" accept=".pdf" onchange="handleKMJPUpload(this)">
             <button onclick="document.getElementById('pdfInput').click()" class="bg-white text-blue-700 px-8 py-4 rounded-2xl font-bold hover:scale-105 transition-all shadow-lg shrink-0">
@@ -48,77 +48,29 @@
 <script>
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.4.120/pdf.worker.min.js';
     
+    // Konfigurasi Global
+    const ACCESS_TOKEN = localStorage.getItem('siswaklik_access_token');
+    const PARENT_FOLDER_ID = localStorage.getItem('siswaklik_drive_folder_id');
     const SPREADSHEET_NAME = "SiswaKlik Time Management";
-    const SHEET_NAME = "Sheet3";
 
-    // Fungsi mendapatkan Access Token & Folder ID
-    function getAuthData() {
-        return {
-            token: localStorage.getItem('siswaklik_access_token'),
-            folderId: localStorage.getItem('siswaklik_drive_folder_id')
-        };
-    }
-
-    // 1. Cari atau Cipta Folder 'KMJP' dalam SiswaKlik
-    async function getKMJPFolderId() {
-        const { token, folderId } = getAuthData();
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='KMJP' and '${folderId}' in parents and mimeType='application/vnd.google-apps.folder' and trashed=false`, {
-            headers: { 'Authorization': `Bearer ${token}` }
+    // 1. Dapatkan atau Cipta Folder/Sheet
+    async function getFileId(name, mimeType, parentId = PARENT_FOLDER_ID) {
+        const q = encodeURIComponent(`name='${name}' and '${parentId}' in parents and mimeType='${mimeType}' and trashed=false`);
+        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=${q}`, {
+            headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
         });
         const data = await res.json();
-        if (data.files && data.files.length > 0) return data.files[0].id;
-
-        const createRes = await fetch('https://www.googleapis.com/drive/v3/files', {
-            method: 'POST',
-            headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-            body: JSON.stringify({ name: 'KMJP', mimeType: 'application/vnd.google-apps.folder', parents: [folderId] })
-        });
-        const newFolder = await createRes.json();
-        return newFolder.id;
+        return data.files.length > 0 ? data.files[0].id : null;
     }
 
-    // 2. Cari ID Spreadsheet "SiswaKlik Time Management"
-    async function getSpreadsheetId() {
-        const { token, folderId } = getAuthData();
-        const res = await fetch(`https://www.googleapis.com/drive/v3/files?q=name='${SPREADSHEET_NAME}' and '${folderId}' in parents and trashed=false`, {
-            headers: { 'Authorization': `Bearer ${token}` }
-        });
-        const data = await res.json();
-        return data.files && data.files.length > 0 ? data.files[0].id : null;
-    }
-
-    // 3. Proses Muat Naik & Ekstrak
     async function handleKMJPUpload(input) {
         const file = input.files[0];
-        if(!file) return;
+        if(!file || !ACCESS_TOKEN) return;
         
-        const { token } = getAuthData();
-        if(!token) {
-            Swal.fire('Sesi Tamat', 'Sila log masuk semula.', 'error');
-            return;
-        }
-
-        Swal.fire({ title: 'Memproses KMJP...', html: 'Mengupload fail dan mengemaskini Sheets.', didOpen: () => Swal.showLoading() });
+        Swal.fire({ title: 'Memproses KMJP...', html: 'Mengekstrak data dan mengemaskini Spreadsheet', didOpen: () => Swal.showLoading() });
 
         try {
-            const kmjpFolderId = await getKMJPFolderId();
-            const ssId = await getSpreadsheetId();
-
-            if(!ssId) throw new Error("Spreadsheet 'SiswaKlik Time Management' tidak dijumpai.");
-
-            // A. Upload PDF ke Drive
-            const metadata = { name: `KMJP_${new Date().toLocaleDateString()}.pdf`, parents: [kmjpFolderId] };
-            const formData = new FormData();
-            formData.append('metadata', new Blob([JSON.stringify(metadata)], { type: 'application/json' }));
-            formData.append('file', file);
-
-            await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart', {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` },
-                body: formData
-            });
-
-            // B. Ekstrak Teks PDF
+            // Ekstrak Teks PDF
             const reader = new FileReader();
             reader.onload = async function() {
                 const typedarray = new Uint8Array(this.result);
@@ -129,69 +81,84 @@
                     const content = await page.getTextContent();
                     text += content.items.map(item => item.str).join(" ") + "\n";
                 }
-                saveDataToSheets(ssId, text);
+                
+                const extractedData = parseKMJP(text);
+                await updateSiswaKlikSheet(extractedData);
             };
             reader.readAsArrayBuffer(file);
 
         } catch(e) { 
             console.error(e);
-            Swal.fire('Ralat', e.message || 'Gagal memproses fail', 'error'); 
+            Swal.fire('Ralat', 'Gagal memproses fail.', 'error'); 
         }
     }
 
-    // 4. Regex & Simpan ke Sheets
-    async function saveDataToSheets(ssId, text) {
-        const { token } = getAuthData();
+    function parseKMJP(text) {
         const cleanText = text.replace(/\s+/g, ' ');
-        // Regex mengikut format KMJP UKM
-        const pattern = /([A-Z]{4}\d{4})\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+(\d+:\d+)\s+(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+)\s+(\d+)/gi;
+        // Regex diperkukuh untuk tangkap semua 8 kolum
+        const pattern = /([A-Z]{4}\d{4})\s+(\d+)\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4})\s+(\d{2}:\d{2})\s+(\d+[:\d]*\s*j?)\s+(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+)\s+(\d+)/gi;
         
         const rows = [];
         let m;
         while ((m = pattern.exec(cleanText)) !== null) {
-            // Urutan: KOD, SET, TAJUK, TARIKH, MASA, TEMPOH, TEMPAT, MEJA
-            // Nota: Susunan m[index] bergantung pada ketepatan regex terhadap text
-            rows.push([m[1], "N/A", m[2].trim(), m[3], m[4], m[5], m[6].trim(), m[7]]);
+            rows.push([
+                m[1], // KOD KURSUS
+                m[2], // SET
+                m[3].trim(), // TAJUK
+                m[4], // TARIKH
+                m[5], // MASA
+                m[6].trim(), // TEMPOH
+                m[7].trim(), // TEMPAT
+                m[8]  // MEJA
+            ]);
         }
+        return rows;
+    }
 
+    async function updateSiswaKlikSheet(dataRows) {
         try {
-            // Padam data lama dalam Sheet3 (Clear range A2:H100)
-            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/${SHEET_NAME}!A2:H100:clear`, {
+            let ssId = await getFileId(SPREADSHEET_NAME, 'application/vnd.google-apps.spreadsheet');
+            
+            if (!ssId) {
+                Swal.fire('Ralat', 'Spreadsheet SiswaKlik Time Management tidak ditemui.', 'error');
+                return;
+            }
+
+            // Padam data lama & Masukkan data baru (Sheet3)
+            // Nota: Kita 'clear' range A2:H100 supaya header kekal
+            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/Sheet3!A2:H100:clear`, {
                 method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}` }
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
             });
 
-            // Masukkan data baru
-            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/${SHEET_NAME}!A2:append?valueInputOption=USER_ENTERED`, {
-                method: 'POST',
-                headers: { 'Authorization': `Bearer ${token}`, 'Content-Type': 'application/json' },
-                body: JSON.stringify({ values: rows })
+            // Update data baru
+            await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/Sheet3!A2?valueInputOption=RAW`, {
+                method: 'PUT',
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+                body: JSON.stringify({ values: dataRows })
             });
 
-            Swal.fire('Berjaya!', 'Data telah dikemaskini dalam Google Sheets.', 'success');
-            renderExams(); // Refresh paparan
+            Swal.fire('Berjaya!', 'Data telah dikemaskini dalam Cloud.', 'success');
+            renderExamsFromSheet();
 
         } catch (err) {
-            Swal.fire('Ralat Sheets', 'Gagal menyimpan data ke spreadsheet.', 'error');
+            Swal.fire('Ralat Cloud', 'Gagal menyambung ke Google Sheets', 'error');
         }
     }
 
-    // 5. Paparkan Data daripada Google Sheets
-    async function renderExams() {
-        const { token } = getAuthData();
+    async function renderExamsFromSheet() {
         const container = document.getElementById('exam-list');
         const countSpan = document.getElementById('exam-count');
-        
-        const ssId = await getSpreadsheetId();
-        if(!ssId || !token) {
-            container.innerHTML = `<div class="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-slate-200 text-slate-400">Sila muat naik KMJP untuk melihat jadual.</div>`;
-            countSpan.innerText = "0 Subjek";
-            return;
-        }
 
         try {
-            const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/${SHEET_NAME}!A2:H`, {
-                headers: { 'Authorization': `Bearer ${token}` }
+            let ssId = await getFileId(SPREADSHEET_NAME, 'application/vnd.google-apps.spreadsheet');
+            if(!ssId) {
+                container.innerHTML = `<div class="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-slate-200 text-slate-400 font-medium">Sila pastikan fail Spreadsheet wujud.</div>`;
+                return;
+            }
+
+            const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/Sheet3!A2:H30`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
             });
             const data = await res.json();
             const exams = data.values || [];
@@ -199,42 +166,50 @@
             countSpan.innerText = `${exams.length} Subjek`;
 
             if(exams.length === 0) {
-                container.innerHTML = `<div class="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-slate-200 text-slate-400">Tiada peperiksaan ditemui dalam fail.</div>`;
+                container.innerHTML = `<div class="text-center py-20 bg-white rounded-[2.5rem] border border-dashed border-slate-200 text-slate-400 font-medium">Tiada data peperiksaan dikesan.</div>`;
                 return;
             }
 
             container.innerHTML = exams.map(ex => {
-                // ex[0]=Kod, ex[2]=Tajuk, ex[3]=Tarikh, ex[4]=Masa, ex[6]=Tempat
+                // ex[3] = Tarikh (DD/MM/YYYY)
                 const dateParts = ex[3].split('/');
                 const dateObj = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
                 
                 return `
-                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center justify-between group shadow-sm">
+                <div class="bg-white p-6 rounded-[2rem] border border-slate-100 flex items-center justify-between group">
                     <div class="flex items-center gap-5">
                         <div class="h-14 w-14 bg-blue-50 text-blue-600 rounded-2xl flex flex-col items-center justify-center border border-blue-100 font-black">
                             <span class="text-[9px] uppercase">${dateObj.toLocaleString('ms-MY', {month: 'short'})}</span>
                             <span class="text-xl">${dateObj.getDate()}</span>
                         </div>
                         <div>
-                            <h4 class="font-black text-slate-800 uppercase">${ex[0]}</h4>
+                            <div class="flex items-center gap-2">
+                                <h4 class="font-black text-slate-800 uppercase">${ex[0]}</h4>
+                                <span class="text-[10px] bg-slate-100 px-2 py-0.5 rounded-md text-slate-500">Set ${ex[1]}</span>
+                            </div>
                             <p class="text-xs text-slate-400 font-bold mb-1">${ex[2]}</p>
-                            <div class="flex gap-4 text-[10px] font-bold text-slate-500 uppercase">
-                                <span><i class="fas fa-clock text-blue-400 mr-1"></i> ${ex[4]}</span>
+                            <div class="flex flex-wrap gap-4 text-[10px] font-bold text-slate-500 uppercase">
+                                <span><i class="fas fa-clock text-blue-400 mr-1"></i> ${ex[4]} (${ex[5]})</span>
                                 <span><i class="fas fa-map-marker-alt text-rose-400 mr-1"></i> ${ex[6]}</span>
-                                <span><i class="fas fa-chair text-amber-400 mr-1"></i> MEJA ${ex[7]}</span>
+                                <span><i class="fas fa-chair text-amber-400 mr-1"></i> No. Meja: ${ex[7]}</span>
                             </div>
                         </div>
                     </div>
                 </div>
-                `;
-            }).join('');
+            `}).join('');
 
         } catch (err) {
-            container.innerHTML = `<div class="text-center py-10 text-red-400">Gagal menarik data dari Sheets.</div>`;
+            container.innerHTML = `<div class="text-center py-10 text-rose-500">Gagal memuatkan data dari Cloud.</div>`;
         }
     }
 
-    window.onload = renderExams;
+    window.onload = () => {
+        if(!ACCESS_TOKEN) {
+            window.location.href = 'login.html';
+        } else {
+            renderExamsFromSheet();
+        }
+    };
 </script>
 </body>
 </html>
