@@ -17,7 +17,7 @@
             height: 100vh;
             display: flex;
             flex-direction: column;
-            overflow: hidden; /* Halang seluruh page dari scrolling */
+            overflow: hidden; 
         }
 
         .glass-card {
@@ -35,7 +35,6 @@
             background: linear-gradient(135deg, #1e40af 0%, #3b82f6 100%);
         }
 
-        /* Scrollbar kustom untuk bahagian senarai sahaja */
         #exam-list-container::-webkit-scrollbar { width: 5px; }
         #exam-list-container::-webkit-scrollbar-track { background: transparent; }
         #exam-list-container::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
@@ -104,6 +103,27 @@
             } catch (e) { return null; }
         }
 
+        // FUNGSI BARU: Memastikan Sheet3 wujud
+        async function ensureSheet3Exists(spreadsheetId) {
+            const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}`, {
+                headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
+            });
+            const ssMetadata = await res.json();
+            const sheetExists = ssMetadata.sheets.some(s => s.properties.title === 'Sheet3');
+
+            if (!sheetExists) {
+                await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
+                    method: 'POST',
+                    headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        requests: [{
+                            addSheet: { properties: { title: 'Sheet3' } }
+                        }]
+                    })
+                });
+            }
+        }
+
         async function handleKMJPUpload(input) {
             const file = input.files[0];
             if(!file || !ACCESS_TOKEN) return;
@@ -142,7 +162,6 @@
 
         function parseKMJP(text) {
             const cleanText = text.replace(/\s+/g, ' ');
-            // Regex diperkukuh untuk menangkap "Penilaian Berterusan" atau "-"
             const pattern = /([A-Z]{4}\d{4})\s+(\d+)\s+(.*?)\s+(\d{2}\/\d{2}\/\d{4}|-|Penilaian\sBerterusan)\s*(\d{2}:\d{2}|-|)\s*(\d+[:\d]*\s*j?|-|)\s*(DEWAN\s\(.*?\)|DGEMILANG|DT\s[A-Z\s]+|DEWAN\s[A-Z]+|DEWAN\sPEP[A-Z0-9\s]+|Penilaian\sBerterusan|-|)\s*(\d+|-|)/gi;
             
             const rows = [];
@@ -161,11 +180,16 @@
                     return;
                 }
 
+                // Jalankan semakan Sheet3 sebelum tulis data
+                await ensureSheet3Exists(ssId);
+
+                // Clear data lama
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/Sheet3!A2:H100:clear`, {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
                 });
 
+                // Masukkan data baru
                 await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/Sheet3!A2?valueInputOption=RAW`, {
                     method: 'PUT',
                     headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}`, 'Content-Type': 'application/json' },
@@ -192,6 +216,13 @@
                 const res = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${ssId}/values/Sheet3!A2:H30`, {
                     headers: { 'Authorization': `Bearer ${ACCESS_TOKEN}` }
                 });
+                
+                // Jika Sheet3 belum ada masa render awal, abaikan ralat dan tunjuk empty state
+                if (res.status === 400) {
+                     container.innerHTML = `<div class="text-center py-12 bg-white rounded-[2rem] border border-slate-200 text-slate-400 font-medium">Tiada data aktif (Sheet3 tidak ditemui).</div>`;
+                     return;
+                }
+
                 const data = await res.json();
                 const exams = data.values || [];
 
@@ -214,7 +245,7 @@
                         const dateObj = new Date(`${dateParts[2]}-${dateParts[1]}-${dateParts[0]}`);
                         monthDisplay = dateObj.toLocaleString('ms-MY', {month: 'short'});
                         dayDisplay = dateObj.getDate();
-                        dateDisplay = ""; // Gunakan ikon tarikh biasa
+                        dateDisplay = ""; 
                     }
 
                     return `
