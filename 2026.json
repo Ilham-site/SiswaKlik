@@ -1,384 +1,354 @@
 {
   "tahun": 2026,
+  "sumber": "Bahagian Kabinet, Perlembagaan Dan Perhubungan Antara Kerajaan, Jabatan Perdana Menteri",
   "hari_kelepasan_am": [
     {
+      "bil": 1,
       "peristiwa": "Tahun Baharu 2026",
-      "tarikh": "2026-01-01",
+      "tarikh": "1 Januari 2026",
       "hari": "Khamis",
-      "jenis": "Negeri",
-      "negeri": ["Kuala Lumpur", "Putrajaya", "Labuan", "Negeri Sembilan", "Selangor", "Melaka", "Perak", "Pahang", "Pulau Pinang", "Perlis", "Sabah", "Sarawak"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 2,
       "peristiwa": "Hari Keputeraan Yang di-Pertuan Besar Negeri Sembilan",
-      "tarikh": "2026-01-14",
+      "tarikh": "14 Januari 2026",
       "hari": "Rabu",
-      "jenis": "Negeri",
-      "negeri": ["Negeri Sembilan"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 3,
       "peristiwa": "Israk dan Mikraj",
-      "tarikh": "2026-01-17",
+      "tarikh": "17 Januari 2026",
       "hari": "Sabtu",
-      "jenis": "Negeri",
-      "negeri": ["Kedah", "Negeri Sembilan", "Perlis", "Terengganu"]
+      "jenis": "Negeri"
     },
     {
-      "peristiwa": "Hari Thaipusam",
-      "tarikh": "2026-02-01",
-      "hari": "Ahad",
-      "jenis": "Negeri",
-      "negeri": ["Kuala Lumpur", "Putrajaya", "Johor", "Negeri Sembilan", "Perak", "Pulau Pinang", "Selangor"]
-    },
-    {
+      "bil": 4,
       "peristiwa": "Hari Wilayah Persekutuan",
-      "tarikh": "2026-02-01",
+      "tarikh": "1 Februari 2026",
       "hari": "Ahad",
-      "jenis": "Negeri",
-      "negeri": ["Kuala Lumpur", "Putrajaya", "Labuan"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 5,
+      "peristiwa": "Hari Thaipusam",
+      "tarikh": "1 Februari 2026",
+      "hari": "Ahad",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 6,
       "peristiwa": "Tahun Baharu Cina",
-      "tarikh": "2026-02-17",
+      "tarikh": "17 Februari 2026",
       "hari": "Selasa",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 7,
       "peristiwa": "Tahun Baharu Cina (Hari Kedua)",
-      "tarikh": "2026-02-18",
+      "tarikh": "18 Februari 2026",
       "hari": "Rabu",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan/Negeri"
     },
     {
+      "bil": 8,
       "peristiwa": "Awal Ramadan",
-      "tarikh": "2026-02-19",
+      "tarikh": "19 Februari 2026",
       "hari": "Khamis",
-      "jenis": "Negeri",
-      "negeri": ["Johor", "Kedah", "Melaka"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 9,
       "peristiwa": "Hari Pengisytiharan Tarikh Kemerdekaan",
-      "tarikh": "2026-02-20",
+      "tarikh": "20 Februari 2026",
       "hari": "Jumaat",
-      "jenis": "Negeri",
-      "negeri": ["Melaka"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 10,
       "peristiwa": "Hari Ulang Tahun Pertabalan Sultan Terengganu",
-      "tarikh": "2026-03-04",
+      "tarikh": "4 Mac 2026",
       "hari": "Rabu",
-      "jenis": "Negeri",
-      "negeri": ["Terengganu"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 11,
       "peristiwa": "Hari Nuzul Al-Quran",
-      "tarikh": "2026-03-07",
+      "tarikh": "7 Mac 2026",
       "hari": "Sabtu",
-      "jenis": "Negeri",
-      "negeri": ["Kuala Lumpur", "Putrajaya", "Labuan", "Kelantan", "Pahang", "Perak", "Perlis", "Pulau Pinang", "Selangor", "Terengganu"]
+      "jenis": "Negeri"
     },
     {
-      "peristiwa": "Hari Raya Puasa (Aidilfitri)",
-      "tarikh": "2026-03-21",
+      "bil": 12,
+      "peristiwa": "Hari Raya Puasa",
+      "tarikh": "21 Mac 2026",
       "hari": "Sabtu",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 13,
       "peristiwa": "Hari Raya Puasa (Hari Kedua)",
-      "tarikh": "2026-03-22",
+      "tarikh": "22 Mac 2026",
       "hari": "Ahad",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 14,
       "peristiwa": "Hari Keputeraan Sultan Johor",
-      "tarikh": "2026-03-23",
+      "tarikh": "23 Mac 2026",
       "hari": "Isnin",
-      "jenis": "Negeri",
-      "negeri": ["Johor"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 15,
       "peristiwa": "Hari Raya Puasa (Hari Ketiga)",
-      "tarikh": "2026-03-23",
+      "tarikh": "23 Mac 2026",
       "hari": "Isnin",
-      "jenis": "Negeri",
-      "negeri": ["Melaka"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 16,
       "peristiwa": "Hari Jadi Yang di-Pertua Negeri Sabah",
-      "tarikh": "2026-03-30",
+      "tarikh": "30 Mac 2026",
       "hari": "Isnin",
-      "jenis": "Negeri",
-      "negeri": ["Sabah"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 17,
       "peristiwa": "Good Friday",
-      "tarikh": "2026-04-03",
+      "tarikh": "3 April 2026",
       "hari": "Jumaat",
-      "jenis": "Negeri",
-      "negeri": ["Sabah", "Sarawak"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 18,
       "peristiwa": "Hari Keputeraan Sultan Terengganu",
-      "tarikh": "2026-04-26",
+      "tarikh": "26 April 2026",
       "hari": "Ahad",
-      "jenis": "Negeri",
-      "negeri": ["Terengganu"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 19,
       "peristiwa": "Hari Pekerja",
-      "tarikh": "2026-05-01",
+      "tarikh": "1 Mei 2026",
       "hari": "Jumaat",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 20,
       "peristiwa": "Hari Ulang Tahun Keputeraan Raja Perlis",
-      "tarikh": "2026-05-17",
+      "tarikh": "17 Mei 2026",
       "hari": "Ahad",
-      "jenis": "Negeri",
-      "negeri": ["Perlis"]
+      "jenis": "Negeri"
     },
     {
-      "peristiwa": "Hari Hol Almarhum Sultan Ahmad Shah",
-      "tarikh": "2026-05-22",
+      "bil": 21,
+      "peristiwa": "Hari Hol Almarhum Sultan Ahmad Shah Al-Musta'in Billah",
+      "tarikh": "22 Mei 2026",
       "hari": "Jumaat",
-      "jenis": "Negeri",
-      "negeri": ["Pahang"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 22,
       "peristiwa": "Hari Arafah",
-      "tarikh": "2026-05-26",
+      "tarikh": "26 Mei 2026",
       "hari": "Selasa",
-      "jenis": "Negeri",
-      "negeri": ["Terengganu"]
+      "jenis": "Negeri"
     },
     {
-      "peristiwa": "Hari Raya Qurban (Aidiladha)",
-      "tarikh": "2026-05-27",
+      "bil": 23,
+      "peristiwa": "Hari Raya Qurban",
+      "tarikh": "27 Mei 2026",
       "hari": "Rabu",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 24,
       "peristiwa": "Hari Raya Qurban (Hari Kedua)",
-      "tarikh": "2026-05-28",
+      "tarikh": "28 Mei 2026",
       "hari": "Khamis",
-      "jenis": "Persekutuan/Negeri",
-      "negeri": ["Perlis", "Kedah", "Kelantan", "Terengganu"]
+      "jenis": "Persekutuan/Negeri"
     },
     {
-      "peristiwa": "Pesta Kaamatan",
-      "tarikh": ["2026-05-30", "2026-05-31"],
-      "hari": ["Sabtu", "Ahad"],
-      "jenis": "Negeri",
-      "negeri": ["Sabah", "Labuan"]
+      "bil": 25,
+      "peristiwa": "Pesta Kaamatan (Pesta Menuai)",
+      "tarikh": "30 Mei 2026",
+      "hari": "Sabtu",
+      "jenis": "Negeri"
     },
     {
+      "bil": 26,
       "peristiwa": "Hari Wesak",
-      "tarikh": "2026-05-31",
+      "tarikh": "31 Mei 2026",
       "hari": "Ahad",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
-      "peristiwa": "Hari Keputeraan Rasmi YDP Agong",
-      "tarikh": "2026-06-01",
+      "bil": 27,
+      "peristiwa": "Pesta Kaamatan (Pesta Menuai) - Hari Kedua",
+      "tarikh": "31 Mei 2026",
+      "hari": "Ahad",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 28,
+      "peristiwa": "Hari Keputeraan Rasmi Seri Paduka Baginda Yang di-Pertuan Agong",
+      "tarikh": "1 Jun 2026",
       "hari": "Isnin",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 29,
       "peristiwa": "Perayaan Hari Gawai Dayak",
-      "tarikh": ["2026-06-01", "2026-06-02"],
-      "hari": ["Isnin", "Selasa"],
-      "jenis": "Negeri",
-      "negeri": ["Sarawak"]
+      "tarikh": "1 Jun 2026",
+      "hari": "Isnin",
+      "jenis": "Negeri"
     },
     {
-      "peristiwa": "Awal Muharam",
-      "tarikh": "2026-06-17",
+      "bil": 30,
+      "peristiwa": "Perayaan Hari Gawai Dayak (Hari Kedua)",
+      "tarikh": "2 Jun 2026",
+      "hari": "Selasa",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 31,
+      "peristiwa": "Awal Muharam (Maal Hijrah)",
+      "tarikh": "17 Jun 2026",
       "hari": "Rabu",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 32,
       "peristiwa": "Hari Keputeraan Sultan Kedah",
-      "tarikh": "2026-06-21",
+      "tarikh": "21 Jun 2026",
       "hari": "Ahad",
-      "jenis": "Negeri",
-      "negeri": ["Kedah"]
+      "jenis": "Negeri"
     },
     {
-      "peristiwa": "Ulang Tahun Perisytiharan Tapak Warisan Dunia",
-      "tarikh": "2026-07-07",
+      "bil": 33,
+      "peristiwa": "Hari Ulang Tahun Perisytiharan Tapak Warisan Dunia",
+      "tarikh": "7 Julai 2026",
       "hari": "Selasa",
-      "jenis": "Negeri",
-      "negeri": ["Pulau Pinang"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 34,
       "peristiwa": "Hari Jadi Yang di-Pertua Negeri Pulau Pinang",
-      "tarikh": "2026-07-11",
+      "tarikh": "11 Julai 2026",
       "hari": "Sabtu",
-      "jenis": "Negeri",
-      "negeri": ["Pulau Pinang"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 35,
       "peristiwa": "Hari Hol Almarhum Sultan Iskandar",
-      "tarikh": "2026-07-21",
+      "tarikh": "21 Julai 2026",
       "hari": "Selasa",
-      "jenis": "Negeri",
-      "negeri": ["Johor"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 36,
       "peristiwa": "Hari Kemerdekaan Sarawak",
-      "tarikh": "2026-07-22",
+      "tarikh": "22 Julai 2026",
       "hari": "Rabu",
-      "jenis": "Negeri",
-      "negeri": ["Sarawak"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 37,
       "peristiwa": "Hari Keputeraan Sultan Pahang",
-      "tarikh": "2026-07-31",
+      "tarikh": "31 Julai 2026",
       "hari": "Jumaat",
-      "jenis": "Negeri",
-      "negeri": ["Pahang"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 38,
       "peristiwa": "Hari Jadi Yang di-Pertua Negeri Melaka",
-      "tarikh": "2026-08-24",
+      "tarikh": "24 Ogos 2026",
       "hari": "Isnin",
-      "jenis": "Negeri",
-      "negeri": ["Melaka"]
+      "jenis": "Negeri"
     },
     {
-      "peristiwa": "Maulidur Rasul",
-      "tarikh": "2026-08-25",
+      "bil": 39,
+      "peristiwa": "Hari Keputeraan Nabi Muhammad S.A.W. (Maulidur Rasul)",
+      "tarikh": "25 Ogos 2026",
       "hari": "Selasa",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 40,
       "peristiwa": "Hari Kebangsaan",
-      "tarikh": "2026-03-31",
+      "tarikh": "31 Ogos 2026",
       "hari": "Isnin",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 41,
       "peristiwa": "Hari Malaysia",
-      "tarikh": "2026-09-16",
+      "tarikh": "16 September 2026",
       "hari": "Rabu",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 42,
       "peristiwa": "Hari Keputeraan Sultan Kelantan",
-      "tarikh": ["2026-09-29", "2026-09-30"],
-      "hari": ["Selasa", "Rabu"],
-      "jenis": "Negeri",
-      "negeri": ["Kelantan"]
+      "tarikh": "29 September 2026",
+      "hari": "Selasa",
+      "jenis": "Negeri"
     },
     {
+      "bil": 43,
+      "peristiwa": "Hari Keputeraan Sultan Kelantan (Hari Kedua)",
+      "tarikh": "30 September 2026",
+      "hari": "Rabu",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 44,
       "peristiwa": "Hari Jadi Yang di-Pertua Negeri Sarawak",
-      "tarikh": "2026-10-10",
+      "tarikh": "10 Oktober 2026",
       "hari": "Sabtu",
-      "jenis": "Negeri",
-      "negeri": ["Sarawak"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 45,
       "peristiwa": "Hari Keputeraan Sultan Perak",
-      "tarikh": "2026-11-06",
+      "tarikh": "6 November 2026",
       "hari": "Jumaat",
-      "jenis": "Negeri",
-      "negeri": ["Perak"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 46,
       "peristiwa": "Hari Deepavali",
-      "tarikh": "2026-11-08",
+      "tarikh": "8 November 2026",
       "hari": "Ahad",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri (kecuali Sarawak)"
+      "jenis": "Persekutuan"
     },
     {
+      "bil": 47,
       "peristiwa": "Hari Keputeraan Sultan Selangor",
-      "tarikh": "2026-12-11",
+      "tarikh": "11 Disember 2026",
       "hari": "Jumaat",
-      "jenis": "Negeri",
-      "negeri": ["Selangor"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 48,
       "peristiwa": "Christmas Eve",
-      "tarikh": "2026-12-24",
+      "tarikh": "24 Disember 2026",
       "hari": "Khamis",
-      "jenis": "Negeri",
-      "negeri": ["Sabah"]
+      "jenis": "Negeri"
     },
     {
+      "bil": 49,
       "peristiwa": "Hari Krismas",
-      "tarikh": "2026-12-25",
+      "tarikh": "25 Disember 2026",
       "hari": "Jumaat",
-      "jenis": "Persekutuan",
-      "negeri": "Semua Negeri"
+      "jenis": "Persekutuan"
     }
   ],
-  "kalendar_akademik_kpm": {
-    "kumpulan_a": {
-      "negeri": ["Kedah", "Kelantan", "Terengganu"],
-      "penggal_1": {
-        "mula": "2026-01-11",
-        "akhir": "2026-03-19",
-        "cuti_penggal": "2026-03-20 - 2026-03-28"
-      },
-      "penggal_2": {
-        "mula": "2026-03-29",
-        "akhir": "2026-08-27",
-        "cuti_pertengahan_tahun": "2026-05-22 - 2026-06-06",
-        "cuti_penggal": "2026-08-28 - 2026-09-05"
-      },
-      "penggal_3": {
-        "mula": "2026-09-06",
-        "akhir": "2026-12-03",
-        "cuti_akhir_tahun": "2026-12-04 - 2026-12-31"
-      }
-    },
-    "kumpulan_b": {
-      "negeri": ["Johor", "Melaka", "Negeri Sembilan", "Pahang", "Perak", "Perlis", "Pulau Pinang", "Sabah", "Sarawak", "Selangor", "WP Kuala Lumpur", "WP Labuan", "WP Putrajaya"],
-      "penggal_1": {
-        "mula": "2026-01-12",
-        "akhir": "2026-03-20",
-        "cuti_penggal": "2026-03-21 - 2026-03-29"
-      },
-      "penggal_2": {
-        "mula": "2026-03-30",
-        "akhir": "2026-08-28",
-        "cuti_pertengahan_tahun": "2026-05-23 - 2026-06-07",
-        "cuti_penggal": "2026-08-29 - 2026-09-06"
-      },
-      "penggal_3": {
-        "mula": "2026-09-07",
-        "akhir": "2026-12-04",
-        "cuti_akhir_tahun": "2026-12-05 - 2026-12-31"
-      }
-    },
-    "cuti_perayaan_tambahan_kpm": {
-      "tahun_baru_cina": {
-        "kumpulan_a": ["2026-02-15", "2026-02-16", "2026-02-19"],
-        "kumpulan_b": ["2026-02-16", "2026-02-19", "2026-02-20"]
-      },
-      "hari_raya_aidilfitri": {
-        "kumpulan_a": ["2026-03-19"],
-        "kumpulan_b": ["2026-03-19", "2026-03-20"]
-      },
-      "hari_deepavali": {
-        "kumpulan_a": ["2026-11-09"],
-        "kumpulan_b": {
-          "semua_kecuali_sarawak": ["2026-11-10"],
-          "sarawak_sahaja": ["2026-11-09"]
-        }
-      }
-    }
-  }
+  "nota": [
+    "Tertakluk kepada perubahan",
+    "(P): Hari Kelepasan Am Persekutuan",
+    "(N): Hari Kelepasan Am Negeri"
+  ]
 }
