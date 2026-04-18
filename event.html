@@ -306,46 +306,25 @@
         }
 
         // --- FUNGSI BARU: PADAM DARI GOOGLE SHEETS ---
-        // Memuatkan data dari fail 2026.json
-fetch('2026.json')
-    .then(response => {
-        if (!response.ok) {
-            throw new Error("Gagal memuatkan fail JSON");
-        }
-        return response.json();
-    })
-    .then(data => {
-        const eventList = document.getElementById('event-list');
-        const holidays = data.hari_kelepasan_am; // Mengambil array cuti umum
-
-        // Padam kandungan asal jika ada
-        eventList.innerHTML = '';
-
-        holidays.forEach(event => {
-            const eventItem = document.createElement('div');
-            eventItem.className = 'event-item';
-
-            // Mengendalikan tarikh yang mungkin dalam bentuk string atau array
-            let dateDisplay = Array.isArray(event.tarikh) ? event.tarikh.join(' & ') : event.tarikh;
+        async function deleteEventFromCloud(rowIdx, eventInstance) {
+            if (!rowIdx) return Swal.fire('Ralat', 'ID Aktiviti tidak ditemui.', 'error');
             
-            // Mengendalikan negeri yang mungkin dalam bentuk string atau array
-            let stateDisplay = Array.isArray(event.negeri) ? event.negeri.join(', ') : event.negeri;
+            Swal.fire({ title: 'Memadam...', didOpen: () => Swal.showLoading() });
 
-            eventItem.innerHTML = `
-                <div class="event-date">${dateDisplay} (${Array.isArray(event.hari) ? event.hari.join('/') : event.hari})</div>
-                <div class="event-details">
-                    <div class="event-title">${event.peristiwa}</div>
-                    <div class="event-location">${stateDisplay}</div>
-                    <span class="category-tag">${event.jenis}</span>
-                </div>
-            `;
-            eventList.appendChild(eventItem);
-        });
-    })
-    .catch(error => {
-        console.error("Ralat:", error);
-        document.getElementById('event-list').innerHTML = '<p>Ralat memuatkan data cuti.</p>';
-    });
+            const requestBody = {
+                requests: [
+                    {
+                        deleteDimension: {
+                            range: {
+                                sheetId: 0, // Default sheet pertama
+                                dimension: "ROWS",
+                                startIndex: rowIdx, // rowIdx dah mewakili baris yang betul
+                                endIndex: rowIdx + 1
+                            }
+                        }
+                    }
+                ]
+            };
 
             try {
                 const response = await fetch(`https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}:batchUpdate`, {
