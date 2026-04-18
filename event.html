@@ -349,7 +349,7 @@
         // --- DATA LUARAN & UI ---
         async function loadExternalData() {
             try {
-                const jsonResponse = await fetch('2026.json');
+                const jsonResponse = await fetch('2025.json', '2026.json');
                 const jsonData = await jsonResponse.json();
                 if (jsonData.hari_kelepasan_am) {
                     jsonData.hari_kelepasan_am.forEach(item => {
