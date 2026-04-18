@@ -347,25 +347,51 @@
         }
 
         // --- DATA LUARAN & UI ---
-        async function loadExternalData() {
-            try {
-                const jsonResponse = await fetch('2026.json');
-                const jsonData = await jsonResponse.json();
-                if (jsonData.hari_kelepasan_am) {
-                    jsonData.hari_kelepasan_am.forEach(item => {
-                        const dateParts = item.tarikh.split(' ');
-                        const months = {"Januari":"01","Februari":"02","Mac":"03","April":"04","Mei":"05","Jun":"06","Julai":"07","Ogos":"08","September":"09","Oktober":"10","November":"11","Disember":"12"};
-                        const formattedDate = `2026-${months[dateParts[1]]}-${dateParts[0].padStart(2, '0')}`;
-                        calendar.addEvent({
-                            title: `[CUTI] ${item.peristiwa}`,
-                            start: formattedDate,
-                            backgroundColor: item.jenis === 'Persekutuan' ? '#ef4444' : '#f97316',
-                            extendedProps: { type: 'holiday', location: 'Seluruh Malaysia' }
-                        });
+async function loadExternalData() {
+    // 1. Senaraikan fail yang ingin dibaca
+    const files = ['2025.json', '2026.json'];
+
+    try {
+        // 2. Map setiap nama fail ke dalam fetch promise
+        const fetchPromises = files.map(file => fetch(file).then(res => {
+            if (!res.ok) throw new Error(`Gagal memuatkan ${file}`);
+            return res.json();
+        }));
+
+        // 3. Jalankan semua fetch serentak
+        const allData = await Promise.all(fetchPromises);
+
+        // 4. Proses setiap data yang diterima
+        allData.forEach(jsonData => {
+            if (jsonData.hari_kelepasan_am) {
+                jsonData.hari_kelepasan_am.forEach(item => {
+                    const dateParts = item.tarikh.split(' ');
+                    const months = {
+                        "Januari":"01","Februari":"02","Mac":"03","April":"04",
+                        "Mei":"05","Jun":"06","Julai":"07","Ogos":"08",
+                        "September":"09","Oktober":"10","November":"11","Disember":"12"
+                    };
+
+                    // Ambil tahun secara dinamik dari tarikh atau tetapkan manual
+                    // Sini kita guna tahun dari fail jika perlu, atau kekalkan logik anda
+                    const year = item.tarikh.split(' ').pop(); // Mengambil tahun di hujung ayat jika ada
+                    
+                    const formattedDate = `${year}-${months[dateParts[1]]}-${dateParts[0].padStart(2, '0')}`;
+
+                    calendar.addEvent({
+                        title: `[CUTI] ${item.peristiwa}`,
+                        start: formattedDate,
+                        backgroundColor: item.jenis === 'Persekutuan' ? '#ef4444' : '#f97316',
+                        extendedProps: { type: 'holiday', location: 'Seluruh Malaysia' }
                     });
-                }
-            } catch (err) { console.warn("Fail 2026.json tidak dijumpai."); }
-        }
+                });
+            }
+        });
+
+    } catch (err) {
+        console.warn("Ralat memuatkan data JSON:", err);
+    }
+}
 
         function openModal() { 
             // Reset form
