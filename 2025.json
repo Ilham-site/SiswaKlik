@@ -1,0 +1,151 @@
+{
+  "tahun": 2025,
+  "sumber": "Kementerian Pendidikan Malaysia (KPM) & Takwim Hari Kelepasan Am 2025",
+  "hari_kelepasan_am": [
+    {
+      "bil": 1,
+      "peristiwa": "Tahun Baharu 2025",
+      "tarikh": "1 Januari 2025",
+      "hari": "Rabu",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 2,
+      "peristiwa": "Israk dan Mikraj",
+      "tarikh": "27 Januari 2025",
+      "hari": "Isnin",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 3,
+      "peristiwa": "Tahun Baharu Cina",
+      "tarikh": "29 Januari 2025",
+      "hari": "Rabu",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 4,
+      "peristiwa": "Tahun Baharu Cina (Hari Kedua)",
+      "tarikh": "30 Januari 2025",
+      "hari": "Khamis",
+      "jenis": "Persekutuan/Negeri"
+    },
+    {
+      "bil": 5,
+      "peristiwa": "Hari Wilayah Persekutuan",
+      "tarikh": "1 Februari 2025",
+      "hari": "Sabtu",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 6,
+      "peristiwa": "Hari Thaipusam",
+      "tarikh": "11 Februari 2025",
+      "hari": "Selasa",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 7,
+      "peristiwa": "Awal Ramadan",
+      "tarikh": "1 Mac 2025",
+      "hari": "Sabtu",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 8,
+      "peristiwa": "Hari Nuzul Al-Quran",
+      "tarikh": "17 Mac 2025",
+      "hari": "Isnin",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 9,
+      "peristiwa": "Hari Raya Puasa (Aidilfitri)",
+      "tarikh": "31 Mac 2025",
+      "hari": "Isnin",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 10,
+      "peristiwa": "Hari Raya Puasa (Aidilfitri) (Hari Kedua)",
+      "tarikh": "1 April 2025",
+      "hari": "Selasa",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 11,
+      "peristiwa": "Hari Pekerja",
+      "tarikh": "1 Mei 2025",
+      "hari": "Khamis",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 12,
+      "peristiwa": "Hari Wesak",
+      "tarikh": "12 Mei 2025",
+      "hari": "Isnin",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 13,
+      "peristiwa": "Hari Raya Qurban (Aidiladha)",
+      "tarikh": "6 Jun 2025",
+      "hari": "Jumaat",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 14,
+      "peristiwa": "Hari Raya Qurban (Hari Kedua)",
+      "tarikh": "7 Jun 2025",
+      "hari": "Sabtu",
+      "jenis": "Negeri"
+    },
+    {
+      "bil": 15,
+      "peristiwa": "Awal Muharam (Maal Hijrah)",
+      "tarikh": "27 Jun 2025",
+      "hari": "Jumaat",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 16,
+      "peristiwa": "Hari Kebangsaan",
+      "tarikh": "31 Ogos 2025",
+      "hari": "Ahad",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 17,
+      "peristiwa": "Maulidur Rasul",
+      "tarikh": "5 September 2025",
+      "hari": "Jumaat",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 18,
+      "peristiwa": "Hari Malaysia",
+      "tarikh": "16 September 2025",
+      "hari": "Selasa",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 19,
+      "peristiwa": "Hari Deepavali",
+      "tarikh": "20 Oktober 2025",
+      "hari": "Isnin",
+      "jenis": "Persekutuan"
+    },
+    {
+      "bil": 20,
+      "peristiwa": "Hari Krismas",
+      "tarikh": "25 Disember 2025",
+      "hari": "Khamis",
+      "jenis": "Persekutuan"
+    }
+  ],
+  "nota": [
+    "Tertakluk kepada perubahan",
+    "(P): Hari Kelepasan Am Persekutuan",
+    "(N): Hari Kelepasan Am Negeri"
+  ]
+}
