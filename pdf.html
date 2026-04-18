@@ -19,7 +19,7 @@
             </button>
 
             <button id="edit-lumin-btn" onclick="openLuminPDF()" class="p-3 bg-blue-50 text-blue-600 hover:bg-blue-600 hover:text-white rounded-2xl transition-all flex items-center gap-2 font-bold px-5 text-sm border border-blue-100">
-                <i class="fas fa-pencil-alt"></i> <span>EDIT PDF</span>
+                <i class="fas fa-external-link-alt"></i> <span>BUKA DI DRIVE</span>
             </button>
 
             <button onclick="confirmDelete()" class="p-3 bg-red-50 text-red-500 hover:bg-red-500 hover:text-white rounded-2xl transition-all flex items-center gap-2 font-bold px-5 text-sm border border-red-100">
@@ -62,20 +62,20 @@
             if (typeof loadView === 'function') loadView('folder.html');
         };
 
-        // Fungsi Baharu: Buka Lumin PDF
+        // Fungsi Dikemaskini: Buka Terus di Google Drive
         window.openLuminPDF = function() {
             if (!editingId || editingId.startsWith('local-')) {
                 Swal.fire({
                     title: 'Fail Luar Talian',
-                    text: 'Sila simpan fail ke Drive terlebih dahulu sebelum menggunakan editor Lumin PDF.',
+                    text: 'Sila simpan fail ke Drive terlebih dahulu sebelum membuka di Google Drive.',
                     icon: 'info',
                     confirmButtonColor: '#2563eb'
                 });
                 return;
             }
-            // URL integrasi Lumin PDF untuk Google Drive
-            const luminUrl = `https://www.luminpdf.com/viewer/${editingId}`;
-            window.open(luminUrl, '_blank');
+            // URL terus ke Google Drive Viewer
+            const driveUrl = `https://drive.google.com/file/d/${editingId}/view`;
+            window.open(driveUrl, '_blank');
         };
 
         async function initViewer() {
@@ -94,7 +94,6 @@
                         document.getElementById('upload-drive-btn').classList.remove('hidden');
                         statusLabel.innerText = "Mod Luar Talian (Offline)";
                         dot.className = "w-2 h-2 rounded-full bg-amber-500 animate-pulse";
-                        // Sembunyikan butang edit jika fail offline (kerana Lumin perlu Drive ID)
                         editBtn.classList.add('opacity-50');
                     }
                     pdfData = dataURLtoUint8Array(localData.content);
