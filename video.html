@@ -51,7 +51,7 @@
             if (typeof loadView === 'function') loadView('folder.html');
         };
 
-async function initVideo() {
+        async function initVideo() {
             const statusLabel = document.getElementById('video-sync-status');
             const dot = document.getElementById('video-sync-dot');
 
@@ -60,7 +60,7 @@ async function initVideo() {
                 const localData = localFiles.find(f => f.id === videoId || f.driveId === videoId);
 
                 if (localData && localData.content) {
-                    // Mod Offline - Data URI memang sedia ada dalam memori
+                    // Mod Offline
                     if (!localData.driveId) {
                         document.getElementById('video-upload-btn').classList.remove('hidden');
                         statusLabel.innerText = "Mod Luar Talian (Offline)";
@@ -69,40 +69,24 @@ async function initVideo() {
                     player.src = localData.content;
                 } 
                 else if (accessToken && videoId && !videoId.startsWith('local-')) {
-                    // Mod Cloud - Gunakan teknik Streaming
+                    // Mod Cloud
                     statusLabel.innerText = "Menyambung ke Cloud...";
-                    
-                    // Nota: Kita gunakan URL webContentLink untuk streaming yang lebih stabil
-                    // atau akses terus ke API media endpoint
                     const videoUrl = `https://www.googleapis.com/drive/v3/files/${videoId}?alt=media`;
                     
-                    // Untuk streaming fail besar tanpa menunggu Blob:
-                    // Kita fetch headers sahaja untuk pastikan fail wujud/boleh diakses
                     const response = await fetch(videoUrl, {
-                        method: 'GET',
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
 
                     if (!response.ok) throw new Error("Akses video ditolak.");
 
-                    // Tukar response stream kepada ReadableStream atau gunakan URL terus
-                    // Cara paling pantas untuk start playing:
                     const blob = await response.blob();
                     player.src = URL.createObjectURL(blob);
                     
-                    // PENTING: Untuk video yang sangat besar (>50MB), 
-                    // disyorkan guna tag <source> dengan src API Drive terus
-                    // tetapi memerlukan penetapan CORS yang betul di pihak Google.
-                    
-                    statusLabel.innerText = "Paparan Cloud (Streaming)";
+                    statusLabel.innerText = "Paparan Cloud Google Drive";
                     dot.className = "w-2 h-2 rounded-full bg-blue-500";
                 }
 
-                // Supaya video boleh mula main sebaik sahaja metadata (durasi/saiz) diterima
-                player.onloadedmetadata = () => {
-                    loader.classList.add('hidden');
-                    player.play().catch(e => console.log("Autoplay blocked"));
-                };
+                player.onloadeddata = () => loader.classList.add('hidden');
                 
             } catch (err) {
                 loader.innerHTML = `<div class="text-center p-6"><i class="fas fa-exclamation-circle text-red-500 text-4xl mb-4"></i><p class="text-white font-bold">${err.message}</p></div>`;
