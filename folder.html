@@ -39,10 +39,30 @@
         </div>
         <h3 class="text-2xl font-black text-slate-800 mb-2">Cipta Folder Baru</h3>
         <p class="text-slate-500 mb-8">Folder ini akan diselaraskan secara automatik ke Google Drive anda.</p>
-        <input type="text" id="folderNameInput" placeholder="Contoh: Nota Kuliah" class="w-full px-6 py-4 bg-slate-100 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none font-bold mb-8 transition-all">
+        
+        <input type="text" id="folderNameInput" placeholder="Contoh: Nota Kuliah" 
+            class="w-full px-6 py-4 bg-slate-100 border-2 border-transparent focus:border-blue-600 focus:bg-white rounded-2xl outline-none font-bold mb-8 transition-all">
+        
         <div class="flex gap-4">
             <button onclick="closeFolderModal()" class="flex-1 py-4 font-bold text-slate-400 hover:text-slate-600 transition">Batal</button>
             <button onclick="createNewFolder()" id="confirmFolderBtn" class="flex-1 py-4 bg-blue-600 text-white font-bold rounded-2xl shadow-xl hover:bg-blue-700 transition-transform active:scale-95">Cipta</button>
+        </div>
+    </div>
+</div>
+
+<div id="uploadProgressModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+    <div class="bg-white rounded-[2.5rem] p-10 w-full max-w-sm shadow-2xl flex flex-col items-center text-center scale-in-center">
+        <h3 class="text-xl font-black text-slate-800 mb-2 truncate w-full" id="uploadFileName">Muat Naik Fail...</h3>
+        <p class="text-slate-500 mb-6 text-sm font-medium">Sila tunggu, jangan tutup tetingkap ini.</p>
+        
+        <div class="relative w-36 h-36 mb-4">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#f1f5f9" stroke-width="8"></circle>
+                <circle id="uploadProgressCircle" cx="50" cy="50" r="45" fill="none" stroke="#2563eb" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round" class="transition-all duration-300 ease-out"></circle>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="uploadProgressText" class="text-3xl font-black text-blue-600">0%</span>
+            </div>
         </div>
     </div>
 </div>
@@ -60,27 +80,30 @@
         box-shadow: 0 20px 25px -5px rgb(0 0 0 / 0.05), 0 8px 10px -6px rgb(0 0 0 / 0.05);
         border-color: rgba(37, 99, 235, 0.1);
     }
-    .progress-ring-circle {
-        transition: stroke-dashoffset 0.35s;
-        transform: rotate(-90deg);
-        transform-origin: 50% 50%;
-    }
 </style>
 
 <script>
     (function() {
         let rootFolderId = localStorage.getItem('siswaklik_drive_folder_id') || 'root';
         let currentFolderId = localStorage.getItem('siswaklik_current_folder_id') || rootFolderId;
-        let uploadingFiles = {}; // Simpan status muat naik fail semasa
 
+        // Pemetaan Ikon Berdasarkan Jenis Fail
         function getFileIcon(mimeType, fileName = '') {
             const ext = fileName.split('.').pop().toLowerCase();
+            
             if (mimeType === 'application/vnd.google-apps.folder') return 'fas fa-folder text-amber-400';
+            
             if (mimeType === 'application/pdf') return 'fas fa-file-pdf text-red-500';
-            if (mimeType.includes('word') || ['doc', 'docx'].includes(ext)) return 'fas fa-file-word text-blue-500';
-            if (mimeType.includes('spreadsheet') || ['xls', 'xlsx'].includes(ext)) return 'fas fa-file-excel text-green-600';
+            if (mimeType.includes('word') || ['doc', 'docx', 'rtf', 'odt'].includes(ext)) return 'fas fa-file-word text-blue-500';
+            if (mimeType.includes('text/plain') || ext === 'txt') return 'fas fa-file-alt text-slate-400';
+            if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || ['xls', 'xlsx', 'csv', 'ods'].includes(ext)) return 'fas fa-file-excel text-green-600';
+            if (mimeType.includes('presentation') || mimeType.includes('powerpoint') || ['ppt', 'pptx', 'odp'].includes(ext)) return 'fas fa-file-powerpoint text-orange-500';
             if (mimeType.includes('image/')) return 'fas fa-file-image text-emerald-500';
             if (mimeType.includes('video/')) return 'fas fa-file-video text-purple-500';
+            if (mimeType.includes('audio/')) return 'fas fa-file-audio text-pink-500';
+            if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'fas fa-file-archive text-yellow-600';
+            if (['js', 'gs', 'py', 'html', 'css', 'java', 'cpp', 'json', 'sql', 'php'].includes(ext)) return 'fas fa-file-code text-indigo-500';
+
             return 'fas fa-file-alt text-slate-400';
         }
 
@@ -92,10 +115,11 @@
             const currentName = localStorage.getItem('siswaklik_current_folder_name') || '';
             pathLabel.innerHTML = currentName ? `<i class="fas fa-chevron-right text-[10px] text-slate-300"></i> <span class="text-blue-600">${currentName}</span>` : '';
 
-            // Loading state
-            if (Object.keys(uploadingFiles).length === 0) {
-                container.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-400"><i class="fas fa-circle-notch fa-spin text-3xl mb-4 text-blue-600"></i><p class="font-bold animate-pulse">Menghubungi Cloud Storage...</p></div>`;
-            }
+            container.innerHTML = `
+                <div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-400">
+                    <i class="fas fa-circle-notch fa-spin text-3xl mb-4 text-blue-600"></i>
+                    <p class="font-bold animate-pulse">Menghubungi Cloud Storage...</p>
+                </div>`;
 
             let driveItems = [];
             if (accessToken) {
@@ -104,24 +128,31 @@
                     const response = await fetch(`https://www.googleapis.com/drive/v3/files?q=${encodeURIComponent(q)}&fields=files(id, name, mimeType, size, webViewLink)&orderBy=folder,name&pageSize=1000`, {
                         headers: { 'Authorization': `Bearer ${accessToken}` }
                     });
-                    if (response.ok) {
-                        const data = await response.json();
-                        driveItems = data.files || [];
-                    }
-                } catch (e) { console.error(e); }
+                    
+                    if (!response.ok) throw new Error("Akses Drive Ditolak");
+                    
+                    const data = await response.json();
+                    driveItems = data.files || [];
+                } catch (e) { 
+                    container.innerHTML = `<div class="col-span-full text-center py-10 text-red-500 font-bold bg-red-50 rounded-2xl">Sesi tamat atau ralat sambungan. Sila log masuk semula.</div>`;
+                    return;
+                }
+            }
+
+            const allLocal = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
+            const localFiles = allLocal.filter(f => f.parentId === currentFolderId && f.status === 'pending_sync');
+
+            if (driveItems.length === 0 && localFiles.length === 0) {
+                container.innerHTML = `
+                    <div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-300">
+                        <i class="fas fa-folder-open text-6xl mb-4"></i>
+                        <p class="text-lg font-bold">Folder ini masih kosong</p>
+                    </div>`;
+                return;
             }
 
             container.innerHTML = '';
 
-            // 1. Render Fail yang sedang dimuat naik (Virtual Cards)
-            Object.keys(uploadingFiles).forEach(tempId => {
-                const file = uploadingFiles[tempId];
-                if (file.parentId === currentFolderId) {
-                    container.innerHTML += renderUploadProgressCard(file);
-                }
-            });
-
-            // 2. Render Fail dari Drive
             driveItems.forEach(item => {
                 const isFolder = item.mimeType === 'application/vnd.google-apps.folder';
                 const iconClass = getFileIcon(item.mimeType, item.name);
@@ -131,7 +162,9 @@
                         <div onclick="enterFolder('${item.id}', '${item.name.replace(/'/g, "\\'")}')" class="bg-white p-6 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all cursor-pointer group file-card relative">
                             <div class="flex justify-between items-start mb-4">
                                 <div class="text-4xl group-hover:scale-110 transition-transform"><i class="${iconClass}"></i></div>
-                                <button onclick="deleteItem(event, '${item.id}', '${item.name.replace(/'/g, "\\'")}')" class="text-slate-200 hover:text-red-500 p-2 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                                <button onclick="deleteItem(event, '${item.id}', '${item.name.replace(/'/g, "\\'")}')" class="text-slate-200 hover:text-red-500 p-2 transition-colors">
+                                    <i class="fas fa-trash-alt"></i>
+                                </button>
                             </div>
                             <h4 class="font-bold text-slate-800 truncate" title="${item.name}">${item.name}</h4>
                             <p class="text-[10px] text-slate-400 font-black uppercase tracking-widest mt-2">Folder</p>
@@ -141,151 +174,226 @@
                 }
             });
 
-            if (container.innerHTML === '') {
-                container.innerHTML = `<div class="col-span-full flex flex-col items-center justify-center py-20 text-slate-300"><i class="fas fa-folder-open text-6xl mb-4"></i><p class="text-lg font-bold">Folder ini masih kosong</p></div>`;
-            }
+            // Tunjuk fail offline (jika masih ada dalam queue lama)
+            localFiles.forEach(file => {
+                const existsInDrive = driveItems.some(di => di.name === file.name);
+                if (!existsInDrive) {
+                    container.innerHTML += renderFileCard({ id: file.id, name: file.name, mimeType: file.mimeType || 'application/octet-stream' }, false);
+                }
+            });
         };
-
-        function renderUploadProgressCard(file) {
-            const iconClass = getFileIcon(file.type, file.name);
-            const percent = file.progress || 0;
-            const offset = 113 - (percent / 100) * 113; // Circle circumference approx 113 for r=18
-
-            return `
-                <div class="bg-white p-6 rounded-[2.5rem] shadow-md border-2 border-blue-50 file-card opacity-80">
-                    <div class="flex justify-between items-start mb-4">
-                        <div class="text-4xl animate-pulse"><i class="${iconClass}"></i></div>
-                        <div class="relative flex items-center justify-center w-10 h-10">
-                            <svg class="w-full h-full transform -rotate-90">
-                                <circle cx="20" cy="20" r="18" stroke="#f1f5f9" stroke-width="4" fill="none" />
-                                <circle cx="20" cy="20" r="18" stroke="#2563eb" stroke-width="4" fill="none" 
-                                    stroke-dasharray="113" stroke-dashoffset="${offset}" stroke-linecap="round" class="transition-all duration-300" />
-                            </svg>
-                            <span class="absolute text-[9px] font-black text-blue-600">${Math.round(percent)}%</span>
-                        </div>
-                    </div>
-                    <h4 class="font-bold text-slate-800 truncate">${file.name}</h4>
-                    <p class="text-[9px] text-blue-500 font-black mt-1 uppercase tracking-tighter animate-bounce">Sinking...</p>
-                    <div class="w-full bg-slate-100 h-1.5 rounded-full mt-4 overflow-hidden">
-                        <div class="bg-blue-600 h-full transition-all duration-300" style="width: ${percent}%"></div>
-                    </div>
-                </div>`;
-        }
 
         function renderFileCard(file, isSynced) {
             const iconClass = getFileIcon(file.mimeType || '', file.name);
             const typeLabel = (file.name.split('.').pop() || 'FAIL').toUpperCase();
+            
             return `
                 <div class="bg-white p-6 rounded-[2.5rem] shadow-sm hover:shadow-xl transition-all file-card">
                     <div class="flex justify-between items-start mb-4">
                         <div class="text-4xl"><i class="${iconClass}"></i></div>
-                        <button onclick="deleteItem(event, '${file.id}', '${file.name.replace(/'/g, "\\'")}')" class="text-slate-200 hover:text-red-500 p-2 transition-colors"><i class="fas fa-trash-alt"></i></button>
+                        ${isSynced ? `<button onclick="deleteItem(event, '${file.id}', '${file.name.replace(/'/g, "\\'")}')" class="text-slate-200 hover:text-red-500 p-2 transition-colors"><i class="fas fa-trash-alt"></i></button>` : ''}
                     </div>
                     <h4 class="font-bold text-slate-800 truncate" title="${file.name}">${file.name}</h4>
-                    <p class="text-[9px] text-slate-400 font-bold mt-1">${typeLabel} • Cloud</p>
+                    <p class="text-[9px] text-slate-400 font-bold mt-1">${typeLabel} • ${isSynced ? 'Cloud' : 'Offline'}</p>
                     <div class="flex items-center justify-between mt-4">
-                        <span class="text-[9px] px-3 py-1 rounded-full font-black uppercase tracking-tighter bg-green-50 text-green-600">● Synced</span>
+                        <span class="text-[9px] px-3 py-1 rounded-full font-black uppercase tracking-tighter ${isSynced ? 'bg-green-50 text-green-600' : 'bg-amber-50 text-amber-600 animate-pulse'}">
+                            ${isSynced ? '● Synced' : '● Pending'}
+                        </span>
                         <button onclick="handleFileAction('${file.id}', '${file.name.replace(/'/g, "\\'")}', '${file.mimeType}')" class="text-blue-600 font-black text-sm hover:text-blue-800 transition-colors">Lihat</button>
                     </div>
                 </div>`;
         }
 
-        window.handleLocalUpload = async function(input) {
-            const file = input.files[0];
-            if (!file) return;
+        window.handleFileAction = function(id, name, mimeType) {
+            const isPdf = mimeType === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
+            const isVideo = mimeType.includes('video/') || ['mp4', 'mkv', 'webm', 'mov', 'avi'].some(ext => name.toLowerCase().endsWith('.' + ext));
+            const isPhoto = mimeType.includes('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].some(ext => name.toLowerCase().endsWith('.' + ext));
 
-            const accessToken = localStorage.getItem('siswaklik_access_token');
-            if (!accessToken) {
-                Swal.fire('Ralat', 'Sila log masuk semula.', 'error');
-                return;
-            }
+            localStorage.setItem('editing_file_id', id);
+            localStorage.setItem('editing_file_name', name);
 
-            const tempId = 'up-' + Date.now();
-            uploadingFiles[tempId] = { name: file.name, type: file.type, progress: 0, parentId: currentFolderId };
-            renderFiles(); // Tunjuk kad muat naik serta-merta
-
-            try {
-                const metadata = { name: file.name, parents: [currentFolderId] };
-                const initResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
-                    method: 'POST',
-                    headers: {
-                        'Authorization': `Bearer ${accessToken}`,
-                        'Content-Type': 'application/json',
-                        'X-Upload-Content-Type': file.type || 'application/octet-stream'
-                    },
-                    body: JSON.stringify(metadata)
-                });
-
-                const uploadUrl = initResponse.headers.get('Location');
-                const xhr = new XMLHttpRequest();
-                xhr.open('PUT', uploadUrl, true);
-                
-                xhr.upload.onprogress = (e) => {
-                    if (e.lengthComputable) {
-                        uploadingFiles[tempId].progress = (e.loaded / e.total) * 100;
-                        renderFiles(); // Update progres pada kad
-                    }
-                };
-
-                xhr.onload = () => {
-                    delete uploadingFiles[tempId]; // Buang kad virtual
-                    input.value = "";
-                    renderFiles(); // Refresh senarai sebenar
-                };
-
-                xhr.send(file);
-            } catch (err) {
-                delete uploadingFiles[tempId];
-                renderFiles();
-                Swal.fire('Ralat', 'Gagal memuat naik fail.', 'error');
+            if (isPdf) {
+                if (typeof loadView === 'function') loadView('pdf.html');
+            } else if (isVideo) {
+                if (typeof loadView === 'function') loadView('video.html');
+            } else if (isPhoto) {
+                if (typeof loadView === 'function') loadView('photo.html');
+            } else {
+                if (id.startsWith('local-')) {
+                    Swal.fire('Fail Offline', 'Sila tunggu sehingga fail diselaraskan.', 'info');
+                } else {
+                    window.open(`https://drive.google.com/file/d/${id}/view`, '_blank');
+                }
             }
         };
 
-        // Fungsi-fungsi lain (Folder, Navigation, Delete) dikekalkan sama
-        window.enterFolder = (id, name) => {
+        window.enterFolder = function(id, name) {
             currentFolderId = id;
             localStorage.setItem('siswaklik_current_folder_id', id);
             localStorage.setItem('siswaklik_current_folder_name', name);
             renderFiles();
         };
 
-        window.navigateToRoot = () => {
+        window.navigateToRoot = function() {
             currentFolderId = rootFolderId;
             localStorage.setItem('siswaklik_current_folder_id', rootFolderId);
             localStorage.removeItem('siswaklik_current_folder_name');
             renderFiles();
         };
 
-        window.openFolderModal = () => document.getElementById('folderModal').classList.remove('hidden');
+        window.openFolderModal = () => {
+            document.getElementById('folderModal').classList.remove('hidden');
+            document.getElementById('folderNameInput').focus();
+        };
+        
         window.closeFolderModal = () => document.getElementById('folderModal').classList.add('hidden');
 
         window.createNewFolder = async function() {
             const nameInput = document.getElementById('folderNameInput');
             const name = nameInput.value;
             const accessToken = localStorage.getItem('siswaklik_access_token');
+            const btn = document.getElementById('confirmFolderBtn');
+
             if (!name || !accessToken) return;
+            btn.disabled = true;
+            btn.innerHTML = '<i class="fas fa-circle-notch animate-spin"></i>';
 
             try {
-                await fetch('https://www.googleapis.com/drive/v3/files', {
+                const response = await fetch('https://www.googleapis.com/drive/v3/files', {
                     method: 'POST',
                     headers: { 'Authorization': `Bearer ${accessToken}`, 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ name: name, mimeType: 'application/vnd.google-apps.folder', parents: [currentFolderId] })
+                    body: JSON.stringify({ 
+                        name: name, 
+                        mimeType: 'application/vnd.google-apps.folder', 
+                        parents: [currentFolderId] 
+                    })
                 });
-                nameInput.value = '';
-                closeFolderModal();
-                renderFiles();
-            } catch (err) { alert("Gagal."); }
+                if (response.ok) {
+                    nameInput.value = '';
+                    closeFolderModal();
+                    renderFiles();
+                }
+            } catch (err) { alert("Gagal mencipta folder."); }
+            finally { btn.disabled = false; btn.innerHTML = 'Cipta'; }
+        };
+
+        // ====== FUNGSI MUAT NAIK BARU (SOKONGAN FAIL BESAR & PROGRESS PERATUSAN) ======
+        function showProgress(fileName) {
+            document.getElementById('uploadFileName').innerText = fileName;
+            document.getElementById('uploadProgressModal').classList.remove('hidden');
+            updateProgress(0);
+        }
+
+        function updateProgress(percent) {
+            const text = document.getElementById('uploadProgressText');
+            const circle = document.getElementById('uploadProgressCircle');
+            
+            text.innerText = Math.round(percent) + '%';
+            // Formula mengira stroke-dashoffset (283 adalah ukur lilit bulatan)
+            const offset = 283 - (percent / 100) * 283;
+            circle.style.strokeDashoffset = offset;
+        }
+
+        function hideProgress() {
+            document.getElementById('uploadProgressModal').classList.add('hidden');
+        }
+
+        window.handleLocalUpload = async function(input) {
+            const file = input.files[0];
+            if (!file) return;
+
+            // Had maksimum fail 2GB
+            const MAX_SIZE = 2 * 1024 * 1024 * 1024; 
+            if (file.size > MAX_SIZE) {
+                if(typeof Swal !== 'undefined') Swal.fire('Ralat', 'Saiz fail melebihi 2GB.', 'error');
+                else alert('Ralat: Saiz fail melebihi 2GB.');
+                input.value = "";
+                return;
+            }
+
+            const accessToken = localStorage.getItem('siswaklik_access_token');
+            if (!accessToken) {
+                if(typeof Swal !== 'undefined') Swal.fire('Ralat', 'Sila log masuk untuk muat naik.', 'error');
+                return;
+            }
+
+            showProgress(file.name);
+
+            try {
+                // 1. Dapatkan Resumable Session URI
+                const metadata = { name: file.name, parents: [currentFolderId] };
+                const initResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                        'X-Upload-Content-Type': file.type || 'application/octet-stream',
+                        'X-Upload-Content-Length': file.size.toString()
+                    },
+                    body: JSON.stringify(metadata)
+                });
+
+                if (!initResponse.ok) throw new Error("Gagal mulakan sesi muat naik.");
+                const uploadUrl = initResponse.headers.get('Location'); // Dapatkan URL unik muat naik
+
+                // 2. Muat naik fail sebenar menggunakan XMLHttpRequest (Untuk dapatkan Progress %)
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', uploadUrl, true);
+                
+                // Mula mengira peratusan (Formula: Dimuat naik / Saiz Asal * 100%)
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        updateProgress(percentComplete);
+                    }
+                };
+
+                xhr.onload = function() {
+                    hideProgress();
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        if(typeof Swal !== 'undefined') Swal.fire('Berjaya', 'Fail selamat dimuat naik!', 'success');
+                        input.value = ""; // Reset input
+                        renderFiles();    // Refresh senarai fail
+                    } else {
+                        if(typeof Swal !== 'undefined') Swal.fire('Ralat', 'Gagal memuat naik. Sila cuba lagi.', 'error');
+                    }
+                };
+
+                xhr.onerror = function() {
+                    hideProgress();
+                    if(typeof Swal !== 'undefined') Swal.fire('Ralat', 'Sambungan terputus semasa muat naik.', 'error');
+                };
+
+                // Hantar fail
+                xhr.send(file);
+
+            } catch (err) {
+                hideProgress();
+                if(typeof Swal !== 'undefined') Swal.fire('Ralat', err.message, 'error');
+            }
         };
 
         window.deleteItem = async function(event, id, name) {
             event.stopPropagation();
-            const result = await Swal.fire({ title: 'Padam?', text: name, icon: 'warning', showCancelButton: true, confirmButtonText: 'Ya' });
+            const result = await Swal.fire({
+                title: 'Padam Fail/Folder?',
+                text: `Adakah anda pasti untuk memadam "${name}"?`,
+                icon: 'warning',
+                showCancelButton: true,
+                confirmButtonColor: '#ef4444',
+                confirmButtonText: 'Ya, Padam',
+                cancelButtonText: 'Batal'
+            });
+
             if (result.isConfirmed) {
-                await fetch(`https://www.googleapis.com/drive/v3/files/${id}`, {
-                    method: 'DELETE',
-                    headers: { 'Authorization': `Bearer ${accessToken}` }
-                });
-                renderFiles();
+                const accessToken = localStorage.getItem('siswaklik_access_token');
+                try {
+                    const res = await fetch(`https://www.googleapis.com/drive/v3/files/${id}`, {
+                        method: 'DELETE',
+                        headers: { 'Authorization': `Bearer ${accessToken}` }
+                    });
+                    if(res.ok) renderFiles();
+                } catch (err) { Swal.fire('Ralat', 'Gagal memadam.', 'error'); }
             }
         };
 
