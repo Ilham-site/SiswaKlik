@@ -50,6 +50,23 @@
     </div>
 </div>
 
+<div id="uploadProgressModal" class="hidden fixed inset-0 bg-slate-900/80 backdrop-blur-md z-[100] flex items-center justify-center p-4">
+    <div class="bg-white rounded-[2.5rem] p-10 w-full max-w-sm shadow-2xl flex flex-col items-center text-center scale-in-center">
+        <h3 class="text-xl font-black text-slate-800 mb-2 truncate w-full" id="uploadFileName">Muat Naik Fail...</h3>
+        <p class="text-slate-500 mb-6 text-sm font-medium">Sila tunggu, jangan tutup tetingkap ini.</p>
+        
+        <div class="relative w-36 h-36 mb-4">
+            <svg class="w-full h-full transform -rotate-90" viewBox="0 0 100 100">
+                <circle cx="50" cy="50" r="45" fill="none" stroke="#f1f5f9" stroke-width="8"></circle>
+                <circle id="uploadProgressCircle" cx="50" cy="50" r="45" fill="none" stroke="#2563eb" stroke-width="8" stroke-dasharray="283" stroke-dashoffset="283" stroke-linecap="round" class="transition-all duration-300 ease-out"></circle>
+            </svg>
+            <div class="absolute inset-0 flex flex-col items-center justify-center">
+                <span id="uploadProgressText" class="text-3xl font-black text-blue-600">0%</span>
+            </div>
+        </div>
+    </div>
+</div>
+
 <style>
     .scale-in-center { animation: scale-in-center 0.25s cubic-bezier(0.250, 0.460, 0.450, 0.940) both; }
     @keyframes scale-in-center { 0% { transform: scale(0.95); opacity: 0; } 100% { transform: scale(1); opacity: 1; } }
@@ -76,30 +93,15 @@
             
             if (mimeType === 'application/vnd.google-apps.folder') return 'fas fa-folder text-amber-400';
             
-            // 1. Dokumen
             if (mimeType === 'application/pdf') return 'fas fa-file-pdf text-red-500';
             if (mimeType.includes('word') || ['doc', 'docx', 'rtf', 'odt'].includes(ext)) return 'fas fa-file-word text-blue-500';
             if (mimeType.includes('text/plain') || ext === 'txt') return 'fas fa-file-alt text-slate-400';
-            
-            // 2. Hamparan Data
             if (mimeType.includes('spreadsheet') || mimeType.includes('excel') || ['xls', 'xlsx', 'csv', 'ods'].includes(ext)) return 'fas fa-file-excel text-green-600';
-            
-            // 3. Persembahan
             if (mimeType.includes('presentation') || mimeType.includes('powerpoint') || ['ppt', 'pptx', 'odp'].includes(ext)) return 'fas fa-file-powerpoint text-orange-500';
-            
-            // 4. Imej
             if (mimeType.includes('image/')) return 'fas fa-file-image text-emerald-500';
-            
-            // 5. Video
             if (mimeType.includes('video/')) return 'fas fa-file-video text-purple-500';
-            
-            // 6. Audio
             if (mimeType.includes('audio/')) return 'fas fa-file-audio text-pink-500';
-            
-            // 7. Arkib
             if (['zip', 'rar', '7z', 'tar', 'gz'].includes(ext)) return 'fas fa-file-archive text-yellow-600';
-            
-            // 8. Kod & Pembangunan
             if (['js', 'gs', 'py', 'html', 'css', 'java', 'cpp', 'json', 'sql', 'php'].includes(ext)) return 'fas fa-file-code text-indigo-500';
 
             return 'fas fa-file-alt text-slate-400';
@@ -172,10 +174,11 @@
                 }
             });
 
+            // Tunjuk fail offline (jika masih ada dalam queue lama)
             localFiles.forEach(file => {
                 const existsInDrive = driveItems.some(di => di.name === file.name);
                 if (!existsInDrive) {
-                    container.innerHTML += renderFileCard({ id: file.id, name: file.name, mimeType: 'application/pdf' }, false);
+                    container.innerHTML += renderFileCard({ id: file.id, name: file.name, mimeType: file.mimeType || 'application/octet-stream' }, false);
                 }
             });
         };
@@ -203,27 +206,19 @@
 
         window.handleFileAction = function(id, name, mimeType) {
             const isPdf = mimeType === 'application/pdf' || name.toLowerCase().endsWith('.pdf');
-            const isVideo = mimeType.includes('video/') || 
-                            ['mp4', 'mkv', 'webm', 'mov', 'avi'].some(ext => name.toLowerCase().endsWith('.' + ext));
-    
-            // TAMBAH LOGIK GAMBAR DI SINI
-            const isPhoto = mimeType.includes('image/') || 
-                            ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].some(ext => name.toLowerCase().endsWith('.' + ext));
+            const isVideo = mimeType.includes('video/') || ['mp4', 'mkv', 'webm', 'mov', 'avi'].some(ext => name.toLowerCase().endsWith('.' + ext));
+            const isPhoto = mimeType.includes('image/') || ['jpg', 'jpeg', 'png', 'gif', 'webp', 'svg'].some(ext => name.toLowerCase().endsWith('.' + ext));
 
             localStorage.setItem('editing_file_id', id);
             localStorage.setItem('editing_file_name', name);
 
             if (isPdf) {
                 if (typeof loadView === 'function') loadView('pdf.html');
-            } 
-            else if (isVideo) {
+            } else if (isVideo) {
                 if (typeof loadView === 'function') loadView('video.html');
-            } 
-            else if (isPhoto) {
-                // LINK KE PHOTO.HTML
+            } else if (isPhoto) {
                 if (typeof loadView === 'function') loadView('photo.html');
-            }
-            else {
+            } else {
                 if (id.startsWith('local-')) {
                     Swal.fire('Fail Offline', 'Sila tunggu sehingga fail diselaraskan.', 'info');
                 } else {
@@ -282,29 +277,100 @@
             finally { btn.disabled = false; btn.innerHTML = 'Cipta'; }
         };
 
-        window.handleLocalUpload = function(input) {
+        // ====== FUNGSI MUAT NAIK BARU (SOKONGAN FAIL BESAR & PROGRESS PERATUSAN) ======
+        function showProgress(fileName) {
+            document.getElementById('uploadFileName').innerText = fileName;
+            document.getElementById('uploadProgressModal').classList.remove('hidden');
+            updateProgress(0);
+        }
+
+        function updateProgress(percent) {
+            const text = document.getElementById('uploadProgressText');
+            const circle = document.getElementById('uploadProgressCircle');
+            
+            text.innerText = Math.round(percent) + '%';
+            // Formula mengira stroke-dashoffset (283 adalah ukur lilit bulatan)
+            const offset = 283 - (percent / 100) * 283;
+            circle.style.strokeDashoffset = offset;
+        }
+
+        function hideProgress() {
+            document.getElementById('uploadProgressModal').classList.add('hidden');
+        }
+
+        window.handleLocalUpload = async function(input) {
             const file = input.files[0];
             if (!file) return;
 
-            const reader = new FileReader();
-            reader.onload = function(e) {
-                const localFiles = JSON.parse(localStorage.getItem('siswa_local_files')) || [];
-                const newFile = {
-                    id: 'local-' + Date.now(),
-                    name: file.name,
-                    content: e.target.result,
-                    status: 'pending_sync',
-                    parentId: currentFolderId, 
-                    date: new Date().toISOString(),
-                    mimeType: file.type
-                };
-                localFiles.push(newFile);
-                localStorage.setItem('siswa_local_files', JSON.stringify(localFiles));
+            // Had maksimum fail 2GB
+            const MAX_SIZE = 2 * 1024 * 1024 * 1024; 
+            if (file.size > MAX_SIZE) {
+                if(typeof Swal !== 'undefined') Swal.fire('Ralat', 'Saiz fail melebihi 2GB.', 'error');
+                else alert('Ralat: Saiz fail melebihi 2GB.');
                 input.value = "";
-                renderFiles();
-                if(window.backgroundSync) window.backgroundSync();
-            };
-            reader.readAsDataURL(file);
+                return;
+            }
+
+            const accessToken = localStorage.getItem('siswaklik_access_token');
+            if (!accessToken) {
+                if(typeof Swal !== 'undefined') Swal.fire('Ralat', 'Sila log masuk untuk muat naik.', 'error');
+                return;
+            }
+
+            showProgress(file.name);
+
+            try {
+                // 1. Dapatkan Resumable Session URI
+                const metadata = { name: file.name, parents: [currentFolderId] };
+                const initResponse = await fetch('https://www.googleapis.com/upload/drive/v3/files?uploadType=resumable', {
+                    method: 'POST',
+                    headers: {
+                        'Authorization': `Bearer ${accessToken}`,
+                        'Content-Type': 'application/json',
+                        'X-Upload-Content-Type': file.type || 'application/octet-stream',
+                        'X-Upload-Content-Length': file.size.toString()
+                    },
+                    body: JSON.stringify(metadata)
+                });
+
+                if (!initResponse.ok) throw new Error("Gagal mulakan sesi muat naik.");
+                const uploadUrl = initResponse.headers.get('Location'); // Dapatkan URL unik muat naik
+
+                // 2. Muat naik fail sebenar menggunakan XMLHttpRequest (Untuk dapatkan Progress %)
+                const xhr = new XMLHttpRequest();
+                xhr.open('PUT', uploadUrl, true);
+                
+                // Mula mengira peratusan (Formula: Dimuat naik / Saiz Asal * 100%)
+                xhr.upload.onprogress = function(e) {
+                    if (e.lengthComputable) {
+                        const percentComplete = (e.loaded / e.total) * 100;
+                        updateProgress(percentComplete);
+                    }
+                };
+
+                xhr.onload = function() {
+                    hideProgress();
+                    if (xhr.status >= 200 && xhr.status < 300) {
+                        if(typeof Swal !== 'undefined') Swal.fire('Berjaya', 'Fail selamat dimuat naik!', 'success');
+                        input.value = ""; // Reset input
+                        renderFiles();    // Refresh senarai fail
+                    } else {
+                        if(typeof Swal !== 'undefined') Swal.fire('Ralat', 'Gagal memuat naik. Sila cuba lagi.', 'error');
+                    }
+                };
+
+                xhr.onerror = function() {
+                    hideProgress();
+                    if(typeof Swal !== 'undefined') Swal.fire('Ralat', 'Sambungan terputus semasa muat naik.', 'error');
+                };
+
+                // Hantar fail
+                xhr.send(file);
+
+            } catch (err) {
+                hideProgress();
+                if(typeof Swal !== 'undefined') Swal.fire('Ralat', err.message, 'error');
+            }
         };
 
         window.deleteItem = async function(event, id, name) {
