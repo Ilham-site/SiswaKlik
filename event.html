@@ -348,51 +348,122 @@
 
         // --- DATA LUARAN & UI ---
 async function loadExternalData() {
-    // 1. Senaraikan fail yang ingin dibaca
-    const files = ['kalendar_akademik_event.json', '2024.json', '2025.json', '2026.json'];
+    // 1. Senaraikan fail yang ingin dibaca (pastikan nama fail tepat dengan fail tempatan anda)
+    const files = ['kalendar_akademik.json', '2024.json', '2025.json', '2026.json'];
 
     try {
-        // 2. Map setiap nama fail ke dalam fetch promise
         const fetchPromises = files.map(file => fetch(file).then(res => {
             if (!res.ok) throw new Error(`Gagal memuatkan ${file}`);
             return res.json();
         }));
 
-        // 3. Jalankan semua fetch serentak
         const allData = await Promise.all(fetchPromises);
 
-        // 4. Proses setiap data yang diterima
+        // Tambah singkatan bulan supaya tarikh kalendar akademik dapat dibaca
+        const months = {
+            "Januari":"01", "Februari":"02", "Feb":"02", "Mac":"03", "April":"04",
+            "Mei":"05", "Jun":"06", "Julai":"07", "Jul":"07", "Ogos":"08",
+            "September":"09", "Sept":"09", "Oktober":"10", "Okt":"10", 
+            "November":"11", "Nov":"11", "Disember":"12", "Dis":"12"
+        };
+
+        // Fungsi Pintar untuk menukar pelbagai jenis teks tarikh kepada YYYY-MM-DD
+        function formatTarikhPiawai(tarikhStr) {
+            if (!tarikhStr || tarikhStr === "-") return null;
+            
+            // Buang simbol titik seperti pada "Okt."
+            const cleanStr = tarikhStr.replace(/\./g, '');
+            
+            // Cari 4 digit nombor untuk tahun di hujung ayat
+            const yearMatch = cleanStr.match(/\d{4}$/);
+            const year = yearMatch ? yearMatch[0] : new Date().getFullYear();
+
+            // Ekstrak hari pertama dan bulan pertama dari rentetan teks
+            const dayMatch = cleanStr.match(/\d+/); // Ambil nombor terawal
+            const monthMatch = cleanStr.match(/[a-zA-Z]+/); // Ambil huruf terawal
+
+            if (dayMatch && monthMatch) {
+                const day = dayMatch[0].padStart(2, '0');
+                const monthText = monthMatch[0];
+                const month = months[monthText] || "01"; // Default Januari jika gagal
+                return `${year}-${month}-${day}`;
+            }
+            return null;
+        }
+
         allData.forEach(jsonData => {
+            
+            // A. Pengekstrakan untuk fail format Kerajaan (contoh: 2026.json)
             if (jsonData.hari_kelepasan_am) {
                 jsonData.hari_kelepasan_am.forEach(item => {
-                    const dateParts = item.tarikh.split(' ');
-                    const months = {
-                        "Januari":"01","Februari":"02","Mac":"03","April":"04",
-                        "Mei":"05","Jun":"06","Julai":"07","Ogos":"08",
-                        "September":"09","Oktober":"10","November":"11","Disember":"12"
-                    };
+                    const formattedDate = formatTarikhPiawai(item.tarikh);
+                    if(formattedDate) {
+                        calendar.addEvent({
+                            title: `[CUTI] ${item.peristiwa}`,
+                            start: formattedDate,
+                            backgroundColor: item.jenis === 'Persekutuan' ? '#ef4444' : '#f97316',
+                            extendedProps: { type: 'holiday', location: 'Seluruh Malaysia' }
+                        });
+                    }
+                });
+            }
 
-                    // Ambil tahun secara dinamik dari tarikh atau tetapkan manual
-                    // Sini kita guna tahun dari fail jika perlu, atau kekalkan logik anda
-                    const year = item.tarikh.split(' ').pop(); // Mengambil tahun di hujung ayat jika ada
-                    
-                    const formattedDate = `${year}-${months[dateParts[1]]}-${dateParts[0].padStart(2, '0')}`;
-
-                    calendar.addEvent({
-                        title: `[CUTI] ${item.peristiwa}`,
-                        start: formattedDate,
-                        backgroundColor: item.jenis === 'Persekutuan' ? '#ef4444' : '#f97316',
-                        extendedProps: { type: 'holiday', location: 'Seluruh Malaysia' }
+            // B. Pengekstrakan untuk aktiviti_akademik (Fail kalendar_akademik.json)
+            if (jsonData.aktiviti_akademik) {
+                Object.keys(jsonData.aktiviti_akademik).forEach(sem => {
+                    jsonData.aktiviti_akademik[sem].forEach(item => {
+                        const formattedDate = formatTarikhPiawai(item.tarikh);
+                        if(formattedDate) {
+                            calendar.addEvent({
+                                title: `[AKADEMIK] ${item.perkara}`,
+                                start: formattedDate,
+                                backgroundColor: '#3b82f6', // Biru
+                                extendedProps: { type: 'school', location: 'Kampus' }
+                            });
+                        }
                     });
                 });
             }
+
+            // C. Pengekstrakan untuk cuti_umum (Fail kalendar_akademik.json)
+            if (jsonData.cuti_umum) {
+                Object.keys(jsonData.cuti_umum).forEach(sem => {
+                    jsonData.cuti_umum[sem].forEach(item => {
+                        const formattedDate = formatTarikhPiawai(item.tarikh);
+                        if(formattedDate) {
+                            calendar.addEvent({
+                                title: `[CUTI UNIVERSITI] ${item.hari}`,
+                                start: formattedDate,
+                                backgroundColor: '#a855f7', // Ungu
+                                extendedProps: { type: 'holiday', location: 'Kampus' }
+                            });
+                        }
+                    });
+                });
+            }
+            
+            // D. Jika anda menggunakan versi yang digabungkan (acara_akademik_dan_cuti)
+            if (jsonData.acara_akademik_dan_cuti) {
+                jsonData.acara_akademik_dan_cuti.forEach(item => {
+                    const formattedDate = formatTarikhPiawai(item.tarikh);
+                    if(formattedDate) {
+                        const isCuti = item.jenis.toLowerCase().includes("cuti");
+                        calendar.addEvent({
+                            title: `[${isCuti ? 'CUTI' : 'AKADEMIK'}] ${item.peristiwa}`,
+                            start: formattedDate,
+                            backgroundColor: isCuti ? '#f97316' : '#3b82f6',
+                            extendedProps: { type: 'school', location: 'Kampus' }
+                        });
+                    }
+                });
+            }
+
         });
 
     } catch (err) {
         console.warn("Ralat memuatkan data JSON:", err);
     }
 }
-
         function openModal() { 
             // Reset form
             document.getElementById('title').value = "";
