@@ -300,20 +300,31 @@
                     calendar.getEvents().forEach(ev => { if (ev.extendedProps.type !== 'holiday' && ev.extendedProps.type !== 'school') ev.remove(); });
                     
                     response.values.forEach((row, index) => {
-                        calendar.addEvent({
-                            title: row[0],
-                            backgroundColor: row[1],
-                            start: row[4] ? `${row[2]}T${row[4]}` : row[2],
-                            end: row[5] ? `${row[3]}T${row[5]}` : row[3],
-                            classNames: ['filter-personal'], /* Class Untuk Filter Peribadi */
-                            extendedProps: { 
-                                location: row[6], 
-                                repeat: row[7], 
-                                description: row[8],
-                                rowId: index + 1
-                            }
-                        });
-                    });
+    // Pastikan tarikh ada sebelum proses
+    if (!row[2]) return; 
+
+    let startStr = row[4] ? `${row[2].trim()}T${row[4].trim()}` : row[2].trim();
+    let endStr = row[3] ? row[3].trim() : row[2].trim();
+    
+    // Jika ada masa tamat, gabungkan
+    if (row[5]) {
+        endStr = `${endStr}T${row[5].trim()}`;
+    }
+
+    calendar.addEvent({
+        title: row[0],
+        backgroundColor: row[1],
+        start: startStr,
+        end: endStr,
+        classNames: ['filter-personal'],
+        extendedProps: { 
+            location: row[6], 
+            repeat: row[7], 
+            description: row[8],
+            rowId: index + 1
+        }
+    });
+});
                 }
                 document.getElementById('syncStatus').innerText = "Cloud Terkini";
             } catch (e) { 
