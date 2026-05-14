@@ -15,7 +15,7 @@
         body {
             font-family: 'Plus Jakarta Sans', sans-serif;
             background-color: transparent; 
-            overflow: hidden; 
+            overflow-x: hidden; 
         }
 
         .fc { 
@@ -28,9 +28,9 @@
             --fc-today-bg-color: #eff6ff;
         }
 
-        .fc .fc-day-today {
-            position: relative;
-            z-index: 0 !important;
+        /* Memastikan acara sentiasa kelihatan di atas sel hari */
+        .fc .fc-daygrid-day-events {
+            z-index: 5 !important;
         }
 
         .fc .fc-toolbar-title { font-size: 1.25rem; font-weight: 800; color: #1e293b; }
@@ -48,6 +48,7 @@
             padding: 2px 5px;
             border: none !important;
             transition: transform 0.1s;
+            margin-bottom: 1px !important;
         }
 
         .modal-overlay {
@@ -205,6 +206,7 @@
                 headerToolbar: { left: 'prev,next today', center: 'title', right: 'dayGridMonth,timeGridWeek,listMonth' },
                 locale: 'ms',
                 firstDay: 1,
+                eventOrder: "type", // Membantu menyusun urutan acara
                 events: [],
                 eventClick: function(info) {
                     const props = info.event.extendedProps;
@@ -241,7 +243,6 @@
             if (accessToken) initCloudStorage();
         });
 
-        // FUNGSI MENGAWAL TOGGLE CHECKBOX FILTER
         function toggleFilter(filterClass, isChecked) {
             if (isChecked) {
                 document.body.classList.remove('hide-' + filterClass);
@@ -250,7 +251,6 @@
             }
         }
 
-        // --- GOOGLE SHEETS & CLOUD SYNC ---
         async function initCloudStorage() {
             try {
                 if (!spreadsheetId) {
@@ -301,35 +301,40 @@
                     headers: { Authorization: `Bearer ${accessToken}` }
                 }).then(r => r.json());
                 
+                // Buang acara peribadi lama sebelum tambah yang baru (supaya tak bertindih)
+                const currentEvents = calendar.getEvents();
+                currentEvents.forEach(ev => {
+                    if (ev.extendedProps.type === 'personal') {
+                        ev.remove();
+                    }
+                });
+
                 if (response.values) {
-                    calendar.getEvents().forEach(ev => { if (ev.extendedProps.type !== 'holiday' && ev.extendedProps.type !== 'school') ev.remove(); });
-                    
                     response.values.forEach((row, index) => {
-    // Pastikan tarikh ada sebelum proses
-    if (!row[2]) return; 
+                        if (!row[2]) return; 
 
-    let startStr = row[4] ? `${row[2].trim()}T${row[4].trim()}` : row[2].trim();
-    let endStr = row[3] ? row[3].trim() : row[2].trim();
-    
-    // Jika ada masa tamat, gabungkan
-    if (row[5]) {
-        endStr = `${endStr}T${row[5].trim()}`;
-    }
+                        let startStr = (row[4] && row[4].trim() !== "") ? `${row[2].trim()}T${row[4].trim()}` : row[2].trim();
+                        let endStr = (row[3] && row[3].trim() !== "") ? row[3].trim() : row[2].trim();
+                        
+                        if (row[5] && row[5].trim() !== "") {
+                            endStr = `${endStr}T${row[5].trim()}`;
+                        }
 
-    calendar.addEvent({
-        title: row[0],
-        backgroundColor: row[1],
-        start: startStr,
-        end: endStr,
-        classNames: ['filter-personal'],
-        extendedProps: { 
-            location: row[6], 
-            repeat: row[7], 
-            description: row[8],
-            rowId: index + 1
-        }
-    });
-});
+                        calendar.addEvent({
+                            title: row[0],
+                            backgroundColor: row[1] || '#3b82f6',
+                            start: startStr,
+                            end: endStr,
+                            classNames: ['filter-personal'],
+                            extendedProps: { 
+                                type: 'personal',
+                                location: row[6], 
+                                repeat: row[7], 
+                                description: row[8],
+                                rowId: index + 1
+                            }
+                        });
+                    });
                 }
                 document.getElementById('syncStatus').innerText = "Cloud Terkini";
             } catch (e) { 
@@ -342,7 +347,18 @@
             const title = document.getElementById('title').value;
             const start = document.getElementById('startDate').value;
             if (!title || !start) return Swal.fire('Ralat', 'Tajuk & Tarikh wajib diisi', 'error');
-            const eventData = [title, selectedColor, start, document.getElementById('endDate').value || start, document.getElementById('startTime').value, document.getElementById('endTime').value, document.getElementById('location').value, document.getElementById('repeatType').value, document.getElementById('description').value];
+            
+            const eventData = [
+                title, 
+                selectedColor, 
+                start, 
+                document.getElementById('endDate').value || start, 
+                document.getElementById('startTime').value, 
+                document.getElementById('endTime').value, 
+                document.getElementById('location').value, 
+                document.getElementById('repeatType').value, 
+                document.getElementById('description').value
+            ];
             
             Swal.fire({ title: 'Menyimpan...', didOpen: () => Swal.showLoading() });
             try {
@@ -362,18 +378,16 @@
             Swal.fire({ title: 'Memadam...', didOpen: () => Swal.showLoading() });
 
             const requestBody = {
-                requests: [
-                    {
-                        deleteDimension: {
-                            range: {
-                                sheetId: 0,
-                                dimension: "ROWS",
-                                startIndex: rowIdx,
-                                endIndex: rowIdx + 1
-                            }
+                requests: [{
+                    deleteDimension: {
+                        range: {
+                            sheetId: 0,
+                            dimension: "ROWS",
+                            startIndex: rowIdx,
+                            endIndex: rowIdx + 1
                         }
                     }
-                ]
+                }]
             };
 
             try {
@@ -395,122 +409,117 @@
             }
         }
 
-        // --- DATA LUARAN (CUTI & AKADEMIK) ---
         async function loadExternalData() {
             const files = ['kalendar_akademik.json', '2024.json', '2025.json', '2026.json'];
+            const months = {
+                "Januari":"01", "Februari":"02", "Feb":"02", "Mac":"03", "April":"04",
+                "Mei":"05", "Jun":"06", "Julai":"07", "Jul":"07", "Ogos":"08",
+                "September":"09", "Sept":"09", "Oktober":"10", "Okt":"10", 
+                "November":"11", "Nov":"11", "Disember":"12", "Dis":"12"
+            };
+
+            function formatTarikhPiawai(tarikhStr) {
+                if (!tarikhStr || tarikhStr === "-") return null;
+                const cleanStr = tarikhStr.replace(/\./g, '');
+                const yearMatch = cleanStr.match(/\d{4}$/);
+                const year = yearMatch ? yearMatch[0] : new Date().getFullYear();
+                const dayMatch = cleanStr.match(/\d+/);
+                const monthMatch = cleanStr.match(/[a-zA-Z]+/);
+
+                if (dayMatch && monthMatch) {
+                    const day = dayMatch[0].padStart(2, '0');
+                    const monthText = monthMatch[0];
+                    const month = months[monthText] || "01";
+                    return `${year}-${month}-${day}`;
+                }
+                return null;
+            }
 
             try {
-                const fetchPromises = files.map(file => fetch(file).then(res => {
-                    if (!res.ok) throw new Error(`Gagal memuatkan ${file}`);
-                    return res.json();
-                }));
+                for (const file of files) {
+                    try {
+                        const res = await fetch(file);
+                        if (!res.ok) continue;
+                        const jsonData = await res.json();
 
-                const allData = await Promise.all(fetchPromises);
-
-                const months = {
-                    "Januari":"01", "Februari":"02", "Feb":"02", "Mac":"03", "April":"04",
-                    "Mei":"05", "Jun":"06", "Julai":"07", "Jul":"07", "Ogos":"08",
-                    "September":"09", "Sept":"09", "Oktober":"10", "Okt":"10", 
-                    "November":"11", "Nov":"11", "Disember":"12", "Dis":"12"
-                };
-
-                function formatTarikhPiawai(tarikhStr) {
-                    if (!tarikhStr || tarikhStr === "-") return null;
-                    const cleanStr = tarikhStr.replace(/\./g, '');
-                    const yearMatch = cleanStr.match(/\d{4}$/);
-                    const year = yearMatch ? yearMatch[0] : new Date().getFullYear();
-                    const dayMatch = cleanStr.match(/\d+/);
-                    const monthMatch = cleanStr.match(/[a-zA-Z]+/);
-
-                    if (dayMatch && monthMatch) {
-                        const day = dayMatch[0].padStart(2, '0');
-                        const monthText = monthMatch[0];
-                        const month = months[monthText] || "01";
-                        return `${year}-${month}-${day}`;
-                    }
-                    return null;
-                }
-
-                allData.forEach(jsonData => {
-                    // A. Fail Kerajaan (2026.json)
-                    if (jsonData.hari_kelepasan_am) {
-                        jsonData.hari_kelepasan_am.forEach(item => {
-                            const formattedDate = formatTarikhPiawai(item.tarikh);
-                            if(formattedDate) {
-                                const isPersekutuan = item.jenis === 'Persekutuan';
-                                calendar.addEvent({
-                                    title: `[CUTI] ${item.peristiwa}`,
-                                    start: formattedDate,
-                                    backgroundColor: isPersekutuan ? '#ef4444' : '#f97316',
-                                    classNames: [isPersekutuan ? 'filter-cuti-peristiwa' : 'filter-cuti-umum'], /* Class Filter Cuti */
-                                    extendedProps: { type: 'holiday', location: 'Seluruh Malaysia' }
-                                });
-                            }
-                        });
-                    }
-
-                    // B. Fail Kalendar Akademik (Aktiviti)
-                    if (jsonData.aktiviti_akademik) {
-                        Object.keys(jsonData.aktiviti_akademik).forEach(sem => {
-                            jsonData.aktiviti_akademik[sem].forEach(item => {
+                        if (jsonData.hari_kelepasan_am) {
+                            jsonData.hari_kelepasan_am.forEach(item => {
                                 const formattedDate = formatTarikhPiawai(item.tarikh);
                                 if(formattedDate) {
+                                    const isPersekutuan = item.jenis === 'Persekutuan';
                                     calendar.addEvent({
-                                        title: `[AKADEMIK] ${item.perkara}`,
+                                        title: `[CUTI] ${item.peristiwa}`,
                                         start: formattedDate,
-                                        backgroundColor: '#3b82f6',
-                                        classNames: ['filter-akademik'], /* Class Filter Akademik */
+                                        backgroundColor: isPersekutuan ? '#ef4444' : '#f97316',
+                                        classNames: [isPersekutuan ? 'filter-cuti-peristiwa' : 'filter-cuti-umum'],
+                                        extendedProps: { type: 'holiday', location: 'Seluruh Malaysia' }
+                                    });
+                                }
+                            });
+                        }
+
+                        if (jsonData.aktiviti_akademik) {
+                            Object.keys(jsonData.aktiviti_akademik).forEach(sem => {
+                                jsonData.aktiviti_akademik[sem].forEach(item => {
+                                    const formattedDate = formatTarikhPiawai(item.tarikh);
+                                    if(formattedDate) {
+                                        calendar.addEvent({
+                                            title: `[AKADEMIK] ${item.perkara}`,
+                                            start: formattedDate,
+                                            backgroundColor: '#3b82f6',
+                                            classNames: ['filter-akademik'],
+                                            extendedProps: { type: 'school', location: 'Kampus' }
+                                        });
+                                    }
+                                });
+                            });
+                        }
+
+                        if (jsonData.cuti_umum) {
+                            Object.keys(jsonData.cuti_umum).forEach(sem => {
+                                jsonData.cuti_umum[sem].forEach(item => {
+                                    const formattedDate = formatTarikhPiawai(item.tarikh);
+                                    if(formattedDate) {
+                                        calendar.addEvent({
+                                            title: `[CUTI UNIVERSITI] ${item.hari}`,
+                                            start: formattedDate,
+                                            backgroundColor: '#a855f7',
+                                            classNames: ['filter-akademik'],
+                                            extendedProps: { type: 'holiday', location: 'Kampus' }
+                                        });
+                                    }
+                                });
+                            });
+                        }
+
+                        if (jsonData.acara_akademik_dan_cuti) {
+                            jsonData.acara_akademik_dan_cuti.forEach(item => {
+                                const formattedDate = formatTarikhPiawai(item.tarikh);
+                                if(formattedDate) {
+                                    const isCuti = item.jenis.toLowerCase().includes("cuti");
+                                    calendar.addEvent({
+                                        title: `[${isCuti ? 'CUTI' : 'AKADEMIK'}] ${item.peristiwa}`,
+                                        start: formattedDate,
+                                        backgroundColor: isCuti ? '#f97316' : '#3b82f6',
+                                        classNames: ['filter-akademik'],
                                         extendedProps: { type: 'school', location: 'Kampus' }
                                     });
                                 }
                             });
-                        });
-                    }
-
-                    // C. Fail Kalendar Akademik (Cuti Universiti)
-                    if (jsonData.cuti_umum) {
-                        Object.keys(jsonData.cuti_umum).forEach(sem => {
-                            jsonData.cuti_umum[sem].forEach(item => {
-                                const formattedDate = formatTarikhPiawai(item.tarikh);
-                                if(formattedDate) {
-                                    calendar.addEvent({
-                                        title: `[CUTI UNIVERSITI] ${item.hari}`,
-                                        start: formattedDate,
-                                        backgroundColor: '#a855f7',
-                                        classNames: ['filter-akademik'], /* Class Filter Akademik */
-                                        extendedProps: { type: 'holiday', location: 'Kampus' }
-                                    });
-                                }
-                            });
-                        });
-                    }
-                    
-                    // D. Jika guna versi acara gabungan
-                    if (jsonData.acara_akademik_dan_cuti) {
-                        jsonData.acara_akademik_dan_cuti.forEach(item => {
-                            const formattedDate = formatTarikhPiawai(item.tarikh);
-                            if(formattedDate) {
-                                const isCuti = item.jenis.toLowerCase().includes("cuti");
-                                calendar.addEvent({
-                                    title: `[${isCuti ? 'CUTI' : 'AKADEMIK'}] ${item.peristiwa}`,
-                                    start: formattedDate,
-                                    backgroundColor: isCuti ? '#f97316' : '#3b82f6',
-                                    classNames: ['filter-akademik'], /* Class Filter Akademik */
-                                    extendedProps: { type: 'school', location: 'Kampus' }
-                                });
-                            }
-                        });
-                    }
-                });
-
-            } catch (err) {
-                console.warn("Ralat memuatkan data JSON:", err);
-            }
+                        }
+                    } catch (e) { console.warn(`Fail ${file} tidak ditemui.`); }
+                }
+            } catch (err) { console.error("Ralat data luaran:", err); }
         }
 
         function openModal() { 
             document.getElementById('title').value = "";
             document.getElementById('startDate').value = "";
+            document.getElementById('endDate').value = "";
+            document.getElementById('startTime').value = "";
+            document.getElementById('endTime').value = "";
+            document.getElementById('description').value = "";
+            document.getElementById('location').value = "";
             document.getElementById('eventModal').classList.remove('hidden'); 
         }
         function closeModal() { document.getElementById('eventModal').classList.add('hidden'); }
